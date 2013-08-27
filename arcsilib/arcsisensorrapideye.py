@@ -97,7 +97,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         try:
             print("Reading header file")
             tree = ET.parse(inputHeader)
-            root = tree.getroot()]
+            root = tree.getroot()
                 
             eoPlatform = root.find('{http://www.opengis.net/gml}using').find('{http://earth.esa.int/eop}EarthObservationEquipment').find('{http://earth.esa.int/eop}platform').find('{http://earth.esa.int/eop}Platform')               
             self.platShortHand = eoPlatform.find('{http://earth.esa.int/eop}shortName').text.strip()
