@@ -256,7 +256,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         outputImage = os.path.join(outputPath, outputName)
         if self.radioCorrApplied:
             # Rescale the data to be between 0 and 1.
-            rsgislib.imagecalc.imageMath(self.fileName, outputImage, "b1/1000", outFormat, rsgislib.TYPE_32FLOAT)
+            rsgislib.imagecalc.imageMath(self.fileName, outputImage, "b1/100", outFormat, rsgislib.TYPE_32FLOAT)
         else:
             raise ARCSIException("Radiometric correction has not been applied - this is not implemented within ARCSI yet. Check your data version.")
         
