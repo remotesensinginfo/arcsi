@@ -45,21 +45,21 @@ import argparse
 # Import the time module
 import time
 # Import the ARCSI exception class
-from arcsi.arcsiexception import ARCSIException
+from arcsilib.arcsiexception import ARCSIException
 # Import the ARCSI utilities class
-from arcsi.arcsiutils import ARCSIUtils
+from arcsilib.arcsiutils import ARCSIUtils
 # Import the sensor classes
-from arcsi.arcsisensor import ARCSIAbstractSensor
-from arcsi.arcsisensorlandsat7 import ARCSILandsat7Sensor
-from arcsi.arcsisensorlandsat5tm import ARCSILandsat5TMSensor
-from arcsi.arcsisensorlandsat4tm import ARCSILandsat4TMSensor
-from arcsi.arcsisensorlandsat5mss import ARCSILandsat5MSSSensor
-from arcsi.arcsisensorlandsat4mss import ARCSILandsat4MSSSensor
-from arcsi.arcsisensorlandsat3mss import ARCSILandsat3MSSSensor
-from arcsi.arcsisensorlandsat2mss import ARCSILandsat2MSSSensor
-from arcsi.arcsisensorlandsat1mss import ARCSILandsat1MSSSensor
-from arcsi.arcsisensorlandsat8 import ARCSILandsat8Sensor
-from arcsi.arcsisensorrapideye import ARCSIRapidEyeSensor
+from arcsilib.arcsisensor import ARCSIAbstractSensor
+from arcsilib.arcsisensorlandsat7 import ARCSILandsat7Sensor
+from arcsilib.arcsisensorlandsat5tm import ARCSILandsat5TMSensor
+from arcsilib.arcsisensorlandsat4tm import ARCSILandsat4TMSensor
+from arcsilib.arcsisensorlandsat5mss import ARCSILandsat5MSSSensor
+from arcsilib.arcsisensorlandsat4mss import ARCSILandsat4MSSSensor
+from arcsilib.arcsisensorlandsat3mss import ARCSILandsat3MSSSensor
+from arcsilib.arcsisensorlandsat2mss import ARCSILandsat2MSSSensor
+from arcsilib.arcsisensorlandsat1mss import ARCSILandsat1MSSSensor
+from arcsilib.arcsisensorlandsat8 import ARCSILandsat8Sensor
+from arcsilib.arcsisensorrapideye import ARCSIRapidEyeSensor
 # Import the image utilities module from rsgislib
 import rsgislib.imageutils
 # Import the py6s module for running 6S from python.
