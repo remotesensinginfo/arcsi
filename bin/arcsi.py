@@ -161,7 +161,7 @@ class ARCSI (object):
                 radianceImage = sensorClass.convertImageToRadiance(outFilePath, outName, outFormat)
                 if calcStatsPy:
                     print("Calculating Statistics...")
-                    #rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
+                    rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
             # Step 6: Convert to TOA
             if prodsToCalc["TOA"]:
                 # Execute conversion to top of atmosphere reflectance
@@ -169,7 +169,7 @@ class ARCSI (object):
                 toaImage = sensorClass.convertImageToTOARefl(radianceImage, outFilePath, outName, outFormat)
                 if calcStatsPy:
                     print("Calculating Statistics...")
-                    #rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
+                    rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
             # Step 7: Use image to estimate AOD values 
             if prodsToCalc["DDVAOT"]:
                 aeroProfile = None
@@ -312,7 +312,7 @@ class ARCSI (object):
                 
                 if calcStatsPy:
                     print("Calculating Statistics...")
-                    #rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+                    rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
                 
         except ARCSIException as e:
             print("Error: " + str(e))
@@ -353,7 +353,7 @@ class ARCSI (object):
         print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, SREFSTDMDL")
         print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, SREFSTDMDL")
         print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DDVAOT, SREFSTDMDL")
-        print("\tRapideye      | \'rapideye\'  | RAD, TOA")
+        print("\tRapideye      | \'rapideye\'  | RAD, TOA, SREFSTDMDL")
         #print("\tSPOT 5        | \'spot5\'     | RAD, TOA")
         #print("\tASTER         | \'aster\'     | RAD, TOA")
         #print("\tIRS P6        | \'irsp6\'     | RAD, TOA")

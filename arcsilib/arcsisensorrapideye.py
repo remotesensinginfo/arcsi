@@ -51,6 +51,8 @@ from osgeo import ogr
 import os.path
 # Import the RSGISLib Image Calibration Module.
 import rsgislib.imagecalibration
+# Import the RSGISLib Image Calculation Module
+import rsgislib.imagecalc
 # Import the collections module
 import collections
 # Import the py6s module for running 6S from python.
@@ -222,7 +224,8 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             self.geoCorrLevel = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}geoCorrectionLevel').text.strip()
             print 'self.geoCorrLevel = ', self.geoCorrLevel
             
-            self.fileName = productInfo.find('{http://earth.esa.int/eop}fileName').text.strip()
+            filesDIR = os.path.dirname(inputHeader)
+            self.fileName = os.path.join(filesDIR, productInfo.find('{http://earth.esa.int/eop}fileName').text.strip())
             print 'self.fileName = ', self.fileName
             
             self.xTL = 0.0
@@ -253,16 +256,10 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         outputImage = os.path.join(outputPath, outputName)
         if self.radioCorrApplied:
             # Rescale the data to be between 0 and 1.
+            rsgislib.imagecalc.imageMath(self.fileName, outputImage, "b1/1000", outFormat, rsgislib.TYPE_32FLOAT)
         else:
             raise ARCSIException("Radiometric correction has not been applied - this is not implemented within ARCSI yet. Check your data version.")
         
-        bandDefnSeq = list()
-        lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'lMin', 'lMax', 'qCalMin', 'qCalMax'])
-        bandDefnSeq.append(lsBand(bandName="Green", fileName=self.band4File, bandIndex=1, lMin=self.b4MinRad, lMax=self.b4MaxRad, qCalMin=self.b4CalMin, qCalMax=self.b4CalMax))
-        bandDefnSeq.append(lsBand(bandName="Red", fileName=self.band5File, bandIndex=1, lMin=self.b5MinRad, lMax=self.b5MaxRad, qCalMin=self.b5CalMin, qCalMax=self.b5CalMax))
-        bandDefnSeq.append(lsBand(bandName="NIR1", fileName=self.band6File, bandIndex=1, lMin=self.b6MinRad, lMax=self.b6MaxRad, qCalMin=self.b6CalMin, qCalMax=self.b6CalMax))
-        bandDefnSeq.append(lsBand(bandName="NIR2", fileName=self.band7File, bandIndex=1, lMin=self.b7MinRad, lMax=self.b7MaxRad, qCalMin=self.b7CalMin, qCalMax=self.b7CalMax))
-        rsgislib.imagecalibration.landsat2Radiance(outputImage, outFormat, bandDefnSeq)
         return outputImage
     
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat):
@@ -270,10 +267,11 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         outputImage = os.path.join(outputPath, outputName)
         solarIrradianceVals = list()
         IrrVal = collections.namedtuple('SolarIrradiance', ['irradiance'])
-        solarIrradianceVals.append(IrrVal(irradiance=1823.0))
-        solarIrradianceVals.append(IrrVal(irradiance=1559.0))
-        solarIrradianceVals.append(IrrVal(irradiance=1276.0))
-        solarIrradianceVals.append(IrrVal(irradiance=880.1))
+        solarIrradianceVals.append(IrrVal(irradiance=1997.8))
+        solarIrradianceVals.append(IrrVal(irradiance=1863.5))
+        solarIrradianceVals.append(IrrVal(irradiance=1560.4))
+        solarIrradianceVals.append(IrrVal(irradiance=1395.0))
+        solarIrradianceVals.append(IrrVal(irradiance=1124.4))
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
         
@@ -301,24 +299,29 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         s.aot550 = aotVal
         
         # Band 1
-        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_MSS_B1)
+        s.wavelength = Py6S.Wavelength(0.427, 0.4595, [0.000073, 0.001628, 0.024767, 0.254149, 0.908749, 0.977393, 0.986713, 0.993137, 0.982780, 0.905808, 0.226412, 0.036603, 0.002414, 0.000255])
         s.run()
         imgBandCoeffs.append(Band6S(band=1, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
         
         # Band 2
-        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_MSS_B2)
+        s.wavelength = Py6S.Wavelength(0.427, 0.4595, [0.000073, 0.001628, 0.024767, 0.254149, 0.908749, 0.977393, 0.986713, 0.993137, 0.982780, 0.905808, 0.226412, 0.036603, 0.002414, 0.000255])
         s.run()
         imgBandCoeffs.append(Band6S(band=2, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
         
         # Band 3
-        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_MSS_B3)
+        s.wavelength = Py6S.Wavelength(0.427, 0.4595, [0.000073, 0.001628, 0.024767, 0.254149, 0.908749, 0.977393, 0.986713, 0.993137, 0.982780, 0.905808, 0.226412, 0.036603, 0.002414, 0.000255])
         s.run()
         imgBandCoeffs.append(Band6S(band=3, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
         
         # Band 4
-        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_MSS_B4)
+        s.wavelength = Py6S.Wavelength(0.427, 0.4595, [0.000073, 0.001628, 0.024767, 0.254149, 0.908749, 0.977393, 0.986713, 0.993137, 0.982780, 0.905808, 0.226412, 0.036603, 0.002414, 0.000255])
         s.run()
         imgBandCoeffs.append(Band6S(band=4, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        
+        # Band 5
+        s.wavelength = Py6S.Wavelength(0.427, 0.4595, [0.000073, 0.001628, 0.024767, 0.254149, 0.908749, 0.977393, 0.986713, 0.993137, 0.982780, 0.905808, 0.226412, 0.036603, 0.002414, 0.000255])
+        s.run()
+        imgBandCoeffs.append(Band6S(band=5, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
         
         for band in imgBandCoeffs:
             print(band)
