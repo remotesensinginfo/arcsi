@@ -274,7 +274,7 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
         
-    def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal):
+    def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         print("Converting to Surface Reflectance")
         outputImage = os.path.join(outputPath, outputName)
         
@@ -294,7 +294,10 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
         s.altitudes = Py6S.Altitudes()
         s.altitudes.set_target_custom_altitude(surfaceAltitude)
         s.altitudes.set_sensor_satellite_level()
-        s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromReflectance(0.40)
+        if useBRDF:
+            s.atmos_corr = Py6S.AtmosCorr.AtmosCorrBRDFFromRadiance(200)
+        else:
+            s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromRadiance(200)
         s.aot550 = aotVal
         
         # Band 1

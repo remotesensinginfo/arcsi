@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 """
 Module that contains the ARCSIResampleSpectralResponseFuncs Class.
 """
@@ -38,10 +40,10 @@ Module that contains the ARCSIResampleSpectralResponseFuncs Class.
 
 # Import the numpy library
 import numpy
-# Import the ARCSI utilities class
-from arcsiutils import ARCSIUtils
 # Import the ARCSI exception class
-from arcsiexception import ARCSIException
+from arcsilib.arcsiexception import ARCSIException
+# Import the ARCSI utilities class
+from arcsilib.arcsiutils import ARCSIUtils
 # Import the python maths module. 
 import math
 # Import python system library
@@ -53,32 +55,7 @@ class ARCSIResampleSpectralResponseFuncs (object):
     """
     A class which resamples spectral response functions.
     """
-    
-    def readSpectralResponseFunc(self, inFile, seperator, ignoreLines, waveCol, respCol):
-        specResp = list()
-        try:
-            specFile = open(inFile, 'r')
-            lineCount = 0
-            for line in specFile:
-                if lineCount >= ignoreLines:
-                    line = line.strip()
-                    if line:
-                        lineVals = line.split(seperator)
-                        if (len(lineVals) <= waveCol) or (len(lineVals) <= respCol):
-                            raise ARCSIException("")
-                        waveVal = float(lineVals[waveCol].strip())
-                        respVal = float(lineVals[respCol].strip())
-                        specResp.append([waveVal,respVal])
-                lineCount += 1
-            specFile.close()
-        except ARCSIException as e:
-            raise e
-        except Exception as e:
-            raise e
-        return numpy.array(specResp)
-    
 
-    
     def resampleSpectralResponseFunction(self, outputFile, respFuncs, sampling, method):
         minWv = respFuncs[0][0]
         maxWv = respFuncs[len(respFuncs)-1][0]
@@ -126,7 +103,8 @@ class ARCSIResampleSpectralResponseFuncs (object):
             raise e
     
     def run(self, outputFile, inputFile, seperator, ignoreLines, wvCol, respCol, sampling, method):
-        respFunc = self.readSpectralResponseFunc(inputFile, seperator, ignoreLines, wvCol, respCol)
+        arcsiUtils = ARCSIUtils()
+        respFunc = arcsiUtils.readSpectralResponseFunc(inputFile, seperator, ignoreLines, wvCol, respCol)
         self.resampleSpectralResponseFunction(outputFile, respFunc, sampling, method)
 
 if __name__ == '__main__':

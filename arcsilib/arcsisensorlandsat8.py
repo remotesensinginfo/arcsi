@@ -285,7 +285,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         bandDefnSeq.append(lsBand(bandName="NIR", fileName=self.band5File, bandIndex=1, addVal=self.b5RadAdd, multiVal=self.b5RadMulti))
         bandDefnSeq.append(lsBand(bandName="SWIR1", fileName=self.band6File, bandIndex=1, addVal=self.b6RadAdd, multiVal=self.b6RadMulti))
         bandDefnSeq.append(lsBand(bandName="SWIR2", fileName=self.band7File, bandIndex=1, addVal=self.b7RadAdd, multiVal=self.b7RadMulti))
-        #rsgislib.imagecalibration.landsat2RadianceMultiAdd(outputImage, outFormat, bandDefnSeq)
+        rsgislib.imagecalibration.landsat2RadianceMultiAdd(outputImage, outFormat, bandDefnSeq)
         return outputImage
     
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat):
@@ -300,10 +300,10 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         solarIrradianceVals.append(IrrVal(irradiance=967.66))
         solarIrradianceVals.append(IrrVal(irradiance=245.73))
         solarIrradianceVals.append(IrrVal(irradiance=82.03))
-        #rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
+        rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
         
-    def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal):
+    def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         print("Converting to Surface Reflectance")
         outputImage = os.path.join(outputPath, outputName)
         
@@ -313,6 +313,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
         s.aero_profile = aeroProfile
+        #s.ground_reflectance = Py6S.GroundReflectance.HomogeneousHapke(0.101, -0.263, 0.589, 0.046)
         s.ground_reflectance = grdRefl
         s.geometry = Py6S.Geometry.Landsat_TM()
         s.geometry.month = self.acquisitionTime.month
@@ -323,7 +324,10 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         s.altitudes = Py6S.Altitudes()
         s.altitudes.set_target_custom_altitude(surfaceAltitude)
         s.altitudes.set_sensor_satellite_level()
-        s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromReflectance(0.40)
+        if useBRDF:
+            s.atmos_corr = Py6S.AtmosCorr.AtmosCorrBRDFFromRadiance(200)
+        else:
+            s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromRadiance(200)
         s.aot550 = aotVal
         
         # Band 1
