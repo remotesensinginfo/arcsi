@@ -282,6 +282,7 @@ class ARCSI (object):
                     raise ARCSIException("The specified atmospheric profile is unknown.")
                 
                 grdRefl = None
+                useBRDF = False
                 if grdReflOption == None:
                     raise ARCSIException("A ground reflectance has not been specified.")
                 elif grdReflOption == "GreenVegetation":
@@ -292,9 +293,12 @@ class ARCSI (object):
                     grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.Sand)
                 elif grdReflOption == "LakeWater":
                     grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.LakeWater)
+                elif grdReflOption == "BRDFHapke":
+                    grdRefl = Py6S.GroundReflectance.HomogeneousHapke(0.101, -0.263, 0.589, 0.046)
+                    useBRDF = True
                 else:
                     raise ARCSIException("The specified ground reflectance is unknown.")
-                
+                                
                 if (aotVal == None) and (visVal == None):
                     raise ARCSIException("Either the AOT or the visability need to specified.")
                 elif (aotVal == None):
@@ -302,7 +306,7 @@ class ARCSI (object):
                 
                 print("AOT Value: "+ str(aotVal))
                 
-                srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal)
+                srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
@@ -467,8 +471,8 @@ if __name__ == '__main__':
                         to 1 although all do not been to be specified).''')                        
     # Define the argument which specifies the ground reflectance.
     parser.add_argument("--grdrefl", type=str, default="GreenVegetation", choices=['GreenVegetation',  
-    'ClearWater', 'Sand', 'LakeWater'], help='''Specify the ground reflectance used for the 
-                                                6S model. (GreenVegetation, ClearWater, Sand, LakeWater).''')
+    'ClearWater', 'Sand', 'LakeWater', 'BRDFHapke'], help='''Specify the ground reflectance used for the 
+                                                6S model. (GreenVegetation, ClearWater, Sand, LakeWater, BRDFHapke).''')
     # Define the argument for specifying the surface elevation for the scene.
     parser.add_argument("--surfacealtitude", type=float, default="0",
                         help='''Specify the altiude (in km) of the surface being sensed.''')

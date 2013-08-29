@@ -83,6 +83,29 @@ class ARCSIUtils (object):
         tokens.append(token)
         return tokens
         
+    def readSpectralResponseFunc(self, inFile, seperator, ignoreLines, waveCol, respCol):
+        specResp = list()
+        try:
+            specFile = open(inFile, 'r')
+            lineCount = 0
+            for line in specFile:
+                if lineCount >= ignoreLines:
+                    line = line.strip()
+                    if line:
+                        lineVals = line.split(seperator)
+                        if (len(lineVals) <= waveCol) or (len(lineVals) <= respCol):
+                            raise ARCSIException("")
+                        waveVal = float(lineVals[waveCol].strip())
+                        respVal = float(lineVals[respCol].strip())
+                        specResp.append([waveVal,respVal])
+                lineCount += 1
+            specFile.close()
+        except ARCSIException as e:
+            raise e
+        except Exception as e:
+            raise e
+        return numpy.array(specResp)
+        
     
     
 

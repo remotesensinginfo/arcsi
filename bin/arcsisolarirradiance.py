@@ -1,9 +1,11 @@
+#!/usr/bin/env python
+
 """
-Module that contains the ARCSIIrradiance Class.
+Module that contains the ARCSISolarIrradiance Class.
 """
 
 ############################################################################
-#  arcsiirradiance.py
+#  arcsisolarirradiance.py
 #
 #  Copyright 2013 ARCSI.
 #
@@ -40,12 +42,10 @@ Module that contains the ARCSIIrradiance Class.
 
 # Import the numpy library
 import numpy
-# Import the ARCSI utilities class
-from arcsiutils import ARCSIUtils
 # Import the ARCSI exception class
-from arcsiexception import ARCSIException
-# Import the ARCSI spectral response functions class
-from arcsispecresponsefuncs import ARCSIResampleSpectralResponseFuncs
+from arcsilib.arcsiexception import ARCSIException
+# Import the ARCSI utilities class
+from arcsilib.arcsiutils import ARCSIUtils
 # Import the python maths module. 
 import math
 # Import python system library
@@ -53,7 +53,7 @@ import sys
 # Import the python Argument parser
 import argparse
 
-class ARCSIIrradiance (object):
+class ARCSISolarIrradiance (object):
     """
     A class which calculates the solar irradiance value for a given
     spectral response curve.
@@ -1820,8 +1820,8 @@ class ARCSIIrradiance (object):
     
     def run(self, inputFile, seperator, ignoreLines, wvCol, respCol, julianDay):
         solarSpec = self.getE490SolarSpectrum()
-        specResponseFuncs = ARCSIResampleSpectralResponseFuncs()
-        respFunc = specResponseFuncs.readSpectralResponseFunc(inputFile, seperator, ignoreLines, wvCol, respCol)
+        arcsiUtils = ARCSIUtils()
+        respFunc = arcsiUtils.readSpectralResponseFunc(inputFile, seperator, ignoreLines, wvCol, respCol)
         irradiance = self.calcSolarIrradiance(solarSpec, respFunc, julianDay)
         print ("Irradiance: " + str(round(irradiance,2)))
 
@@ -1874,7 +1874,7 @@ if __name__ == '__main__':
         print("An input file was not specified.")
         sys.exit()
     
-    arcsiObj = ARCSIIrradiance()
+    arcsiObj = ARCSISolarIrradiance()
     
     arcsiObj.run(args.input, args.sep, args.ignore, args.wvcol, args.rcol, args.julianday)
         
