@@ -64,6 +64,8 @@ from arcsilib.arcsisensorrapideye import ARCSIRapidEyeSensor
 import rsgislib.imageutils
 # Import the py6s module for running 6S from python.
 import Py6S
+# Import the osgeo gdal library
+import osgeo.gdal as gdal
 
 class ARCSI (object):
     """
@@ -170,7 +172,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
-            # Step 7: Use image to estimate AOD values 
+            # Step 7: Use image to estimate AOD values
             if prodsToCalc["DDVAOT"]:
                 aeroProfile = None
                 if aeroProfileOption == None:
@@ -225,17 +227,12 @@ class ARCSI (object):
                     grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.LakeWater)
                 else:
                     raise ARCSIException("The specified ground reflectance is unknown.")
-                
-                if (aotVal == None) and (visVal == None):
-                    raise ARCSIException("Either the AOT or the visability need to specified.")
-                elif (aotVal == None):
-                    aotVal = self.convertVisabilityToAOD(visVal)
             
                 outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
-                aodImage = sensorClass.estimateImageToAOD(toaImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, minAOT, maxAOT)
+                aodImage = sensorClass.estimateImageToAOD(radianceImage, toaImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, minAOT, maxAOT)
                 if calcStatsPy:
                     print("Calculating Statistics...")
-                    #rsgislib.imageutils.popImageStats(aodImage, True, 0.0, True)
+                    rsgislib.imageutils.popImageStats(aodImage, True, 0.0, True)
             # Step 8: Convert to Surface Reflectance using 6S Standard Models
             if prodsToCalc["SREFSTDMDL"]:
                 # Execute conversion to surface reflectance by applying 6S using a 'standard' modelled atmosphere.
@@ -298,7 +295,18 @@ class ARCSI (object):
                     useBRDF = True
                 else:
                     raise ARCSIException("The specified ground reflectance is unknown.")
-                                
+                
+                if prodsToCalc["DDVAOT"] and (not aodImage == ""):
+                    imgDS = gdal.Open(aodImage, gdal.GA_ReadOnly )
+                    imgBand = imgDS.GetRasterBand(1)
+                    (min,max,mean,stddev) = imgBand.ComputeStatistics(False)
+                    if stddev > 0.1:
+                        aotVal = mean - stddev
+                        print("WARNING: The standard deviation of AOT values is high - use an LUT and full version of ARCSI.")
+                    else:
+                        aotVal = mean           
+                    imgDS = None
+
                 if (aotVal == None) and (visVal == None):
                     raise ARCSIException("Either the AOT or the visability need to specified.")
                 elif (aotVal == None):
@@ -536,7 +544,7 @@ if __name__ == '__main__':
                 needAOD = True
             elif prod == 'SREFSGLPARAM':
                 needAOD = True
-        if needAOD and (args.aot == None) and (args.vis == None):
+        if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax):
             print("Error: Either the AOT or the Visability need to specified.")
             sys.exit()
             
