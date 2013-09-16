@@ -232,7 +232,7 @@ class ARCSI (object):
                 aodImage = sensorClass.estimateImageToAOD(radianceImage, toaImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, minAOT, maxAOT)
                 if calcStatsPy:
                     print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(aodImage, True, 0.0, True)
+                    #rsgislib.imageutils.popImageStats(aodImage, True, 0.0, True)
             # Step 8: Convert to Surface Reflectance using 6S Standard Models
             if prodsToCalc["SREFSTDMDL"]:
                 # Execute conversion to surface reflectance by applying 6S using a 'standard' modelled atmosphere.
