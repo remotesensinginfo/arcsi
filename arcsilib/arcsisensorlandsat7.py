@@ -57,6 +57,13 @@ import collections
 import Py6S
 # Import the python maths library
 import math
+# Import the RIOS RAT library
+from rios import rat
+# Import the GDAL python library
+import osgeo.gdal as gdal
+# Import the scipy optimisation library - used for finding AOD values form the imagery.
+from scipy.optimize import minimize
+import numpy
 
 class ARCSILandsat7Sensor (ARCSIAbstractSensor):
     """
@@ -358,8 +365,143 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         return outputImage
 
 
-    def estimateImageToAOD(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
-        print("Not implemented\n")
-        sys.exit()
+    def run6SToOptimiseAODValue(self, aotVal, radBlueVal, predBlueVal, aeroProfile, atmosProfile, grdRefl, surfaceAltitude):
+        """Used as part of the optimastion for identifying values of AOD"""
+        print "Testing AOD Val: ", aotVal
+        s = Py6S.SixS()
+        
+        s.atmos_profile = atmosProfile
+        s.aero_profile = aeroProfile
+        s.ground_reflectance = grdRefl
+        s.geometry = Py6S.Geometry.Landsat_TM()
+        s.geometry.month = self.acquisitionTime.month
+        s.geometry.day = self.acquisitionTime.day
+        s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
+        s.geometry.latitude = self.latCentre
+        s.geometry.longitude = self.lonCentre
+        s.altitudes = Py6S.Altitudes()
+        s.altitudes.set_target_custom_altitude(surfaceAltitude)
+        s.altitudes.set_sensor_satellite_level()
+        s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromRadiance(200)
+        s.aot550 = aotVal
+                
+        # Band 2
+        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_ETM_B2)
+        s.run()
+        aX = float(s.outputs.values['coef_xa'])
+        bX = float(s.outputs.values['coef_xb'])
+        cX = float(s.outputs.values['coef_xc'])
+        print "\taX: ", aX
+        print "\tbX: ", bX
+        print "\tcX: ", cX
+        tmpVal = (aX*radBlueVal)-bX;
+        reflBlueVal = tmpVal/(1.0+cX*tmpVal)
+        
+        
+        outDist = math.sqrt(math.pow((reflBlueVal - predBlueVal),2))
+        print "\tDist ", outDist
+        return outDist
+    
+    def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
+        try:
+            arcsiUtils = ARCSIUtils()
+            tmpBaseName = os.path.splitext(outputName)[0]
+            thresImage = os.path.join(tmpPath, tmpBaseName+"_thresd"+arcsiUtils.getFileExtension(outFormat))
+            thresImageClumps = os.path.join(tmpPath, tmpBaseName+"_thresdclumps"+arcsiUtils.getFileExtension(outFormat))
+            thresImageClumpsRMSmall = os.path.join(tmpPath, tmpBaseName+"_thresdclumpsgt10"+arcsiUtils.getFileExtension(outFormat))
+            thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName+"_thresdclumpsFinal"+arcsiUtils.getFileExtension(outFormat))
+            
+            outputAOTImage = os.path.join(outputPath, outputName)
+            
+            thresMathBands = list()
+            thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b1', fileName=inputTOAImage, bandIndex=1))
+            thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b2', fileName=inputTOAImage, bandIndex=2))
+            thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b3', fileName=inputTOAImage, bandIndex=3))
+            thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b4', fileName=inputTOAImage, bandIndex=4))
+            thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b5', fileName=inputTOAImage, bandIndex=5))
+            thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b7', fileName=inputTOAImage, bandIndex=6))
+            rsgislib.imagecalc.bandMath(thresImage, "((((b1+b2+b3+b4+b5+b7)/6)<100)&&((b7>15)&&(b7<50))&&(((b4-b3)/(b4+b3))>0.2))?1:0", outFormat, rsgislib.TYPE_8UINT, thresMathBands)
+            rsgislib.segmentation.clump(thresImage, thresImageClumps, outFormat, False, 0.0)
+            rsgislib.rastergis.populateStats(thresImageClumps, True, True)
+            rsgislib.segmentation.rmSmallClumps(thresImageClumps, thresImageClumpsRMSmall, 100, outFormat)
+            rsgislib.segmentation.relabelClumps(thresImageClumpsRMSmall, thresImageClumpsFinal, outFormat, False)
+            rsgislib.rastergis.populateStats(thresImageClumpsFinal, True, True)
+            stats2CalcTOA = list()
+            stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, minField="MinB1TOA", meanField="MeanB1TOA"))
+            stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=6, minField="MinB7TOA", meanField="MeanB7TOA"))
+            rsgislib.rastergis.populateRATWithStats(inputTOAImage, thresImageClumpsFinal, stats2CalcTOA)
+            stats2CalcRad = list()
+            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=1, minField="MinB1RAD", meanField="MeanB2RAD"))
+            rsgislib.rastergis.populateRATWithStats(inputRADImage, thresImageClumpsFinal, stats2CalcRad)
+
+            ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
+            Histogram = rat.readColumn(ratDS, "Histogram")
+            selected = Histogram * 2
+            selected[...] = 1
+            selected[0] = 0
+            rat.writeColumn(ratDS, "Selected", selected)
+            
+            rsgislib.rastergis.spatialLocation(thresImageClumpsFinal, "Eastings", "Northings")
+            rsgislib.rastergis.selectClumpsOnGrid(thresImageClumpsFinal, "Selected", "PredictAOTFor", "Eastings", "Northings", "MinB7TOA", "min", 10, 10)
+            
+            MinB1TOA = rat.readColumn(ratDS, "MinB1TOA")
+            MinB7TOA = rat.readColumn(ratDS, "MinB7TOA")
+            MinB1RAD = rat.readColumn(ratDS, "MinB1RAD")
+            PredictAOTFor = rat.readColumn(ratDS, "PredictAOTFor")
+            
+            PredB1Refl = (MinB7TOA/1000) * 0.33
+            
+            rat.writeColumn(ratDS, "PredB1Refl", PredB1Refl)
+            
+            numAOTValTests = int(math.ceil((aotValMax - aotValMin)/0.05))
+            
+            if not numAOTValTests >= 1:
+                raise ARCSIException("min and max AOT range are too close together, they need to be at least 0.05 apart.")
+            
+            cAOT = aotValMin
+            cDist = 0.0
+            minAOT = 0.0
+            minDist = 0.0
+            
+            aotVals = numpy.zeros_like(MinB7TOA, dtype=numpy.float)
+            
+            for i in range(len(PredB1Refl)):
+                if PredictAOTFor[i] == 1:
+                    print "Predicting AOD for Segment ", i
+                    for j in range(numAOTValTests):
+                        cAOT = aotValMin + (0.05 * j)
+                        cDist = self.run6SToOptimiseAODValue(cAOT, MinB1RAD[i], PredB1Refl[i], aeroProfile, atmosProfile, grdRefl, surfaceAltitude)
+                        if j == 0:
+                            minAOT = cAOT
+                            minDist = cDist
+                        elif cDist < minDist:
+                            minAOT = cAOT
+                            minDist = cDist
+                    predAOTArgs = list()
+                    predAOTArgs.append(MinB1RAD[i])
+                    predAOTArgs.append(PredB1Refl[i])
+                    predAOTArgs.append(aeroProfile)
+                    predAOTArgs.append(atmosProfile)
+                    predAOTArgs.append(grdRefl)
+                    predAOTArgs.append(surfaceAltitude)
+                    res = minimize(self.run6SToOptimiseAODValue, minAOT, method='nelder-mead', options={'maxiter': 20, 'xtol': 0.001, 'disp': True}, args=predAOTArgs)
+                    print "IDENTIFIED AOT: ", res.x[0]
+                    aotVals[i] = res.x[0]
+                else:
+                    aotVals[i] = 0
+            rat.writeColumn(ratDS, "AOT", aotVals)
+            
+            rsgislib.rastergis.interpolateClumpValues2Image(thresImageClumpsFinal, "PredictAOTFor", "Eastings", "Northings", "naturalnearestneighbour", "AOT", outputAOTImage, outFormat, rsgislib.TYPE_32FLOAT)
+        
+            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver.Delete(thresImage)
+            gdalDriver.Delete(thresImageClumps)
+            gdalDriver.Delete(thresImageClumpsRMSmall)
+            gdalDriver.Delete(thresImageClumpsFinal)        
+        
+            return outputAOTImage
+        except Exception as e:
+            raise e
+
 
 

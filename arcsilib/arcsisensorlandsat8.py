@@ -425,7 +425,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b3', fileName=inputTOAImage, bandIndex=3))
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b4', fileName=inputTOAImage, bandIndex=4))
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b5', fileName=inputTOAImage, bandIndex=5))
-            thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b6', fileName=inputTOAImage, bandIndex=5))
+            thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b6', fileName=inputTOAImage, bandIndex=6))
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b7', fileName=inputTOAImage, bandIndex=7))
             rsgislib.imagecalc.bandMath(thresImage, "((((b2+b3+b4+b5+b6+b7)/6)<100)&&((b7>15)&&(b7<50))&&(((b5-b4)/(b5+b4))>0.2))?1:0", outFormat, rsgislib.TYPE_8UINT, thresMathBands)
             rsgislib.segmentation.clump(thresImage, thresImageClumps, outFormat, False, 0.0)
