@@ -371,15 +371,15 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
         aX = float(s.outputs.values['coef_xa'])
         bX = float(s.outputs.values['coef_xb'])
         cX = float(s.outputs.values['coef_xc'])
-        print "\taX: ", aX
-        print "\tbX: ", bX
-        print "\tcX: ", cX
+        print(("\taX: ", aX))
+        print(("\tbX: ", bX))
+        print(("\tcX: ", cX))
         tmpVal = (aX*radBlueVal)-bX;
         reflBlueVal = tmpVal/(1.0+cX*tmpVal)
         
         
         outDist = math.sqrt(math.pow((reflBlueVal - predBlueVal),2))
-        print "\tDist ", outDist
+        print(("\tDist ", outDist))
         return outDist
     
     def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
@@ -447,7 +447,7 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             
             for i in range(len(PredB1Refl)):
                 if PredictAOTFor[i] == 1:
-                    print "Predicting AOD for Segment ", i
+                    print(("Predicting AOD for Segment ", i))
                     for j in range(numAOTValTests):
                         cAOT = aotValMin + (0.05 * j)
                         cDist = self.run6SToOptimiseAODValue(cAOT, MinB1RAD[i], PredB1Refl[i], aeroProfile, atmosProfile, grdRefl, surfaceAltitude)
@@ -465,7 +465,7 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
                     predAOTArgs.append(grdRefl)
                     predAOTArgs.append(surfaceAltitude)
                     res = minimize(self.run6SToOptimiseAODValue, minAOT, method='nelder-mead', options={'maxiter': 20, 'xtol': 0.001, 'disp': True}, args=predAOTArgs)
-                    print "IDENTIFIED AOT: ", res.x[0]
+                    print(("IDENTIFIED AOT: ", res.x[0]))
                     aotVals[i] = res.x[0]
                 else:
                     aotVals[i] = 0
