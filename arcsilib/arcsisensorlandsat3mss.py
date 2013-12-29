@@ -37,11 +37,11 @@ Module that contains the ARCSILandsat3MSSSensor class.
 ############################################################################
 
 # import abstract base class stuff
-from arcsisensor import ARCSIAbstractSensor
+from .arcsisensor import ARCSIAbstractSensor
 # Import the ARCSI exception class
-from arcsiexception import ARCSIException
+from .arcsiexception import ARCSIException
 # Import the ARCSI utilities class
-from arcsiutils import ARCSIUtils
+from .arcsiutils import ARCSIUtils
 # Import the datetime module
 import datetime
 # Import the GDAL/OGR spatial reference library

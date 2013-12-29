@@ -40,16 +40,16 @@ from abc import ABCMeta, abstractmethod
 # Import the datetime module
 import datetime
 # Import the ARCSI exception class
-from arcsiexception import ARCSIException
+from .arcsiexception import ARCSIException
 
-class ARCSIAbstractSensor (object):
+
+class ARCSIAbstractSensor (object, metaclass=ABCMeta):
     """
     An abstract class which represents a sensor and allows
     the various opperations required to be applied and standard
     variables (e.g., acqusiation date) stored and retrieved.
     """
-    __metaclass__ = ABCMeta
-    
+        
     def __init__(self):
         self.sensor = "NA"
         self.acquisitionTime = datetime.datetime.today()
@@ -234,6 +234,6 @@ class ARCSIAbstractSensor (object):
 
     @abstractmethod
     def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax): pass
-
+        
 
 
