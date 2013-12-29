@@ -37,11 +37,11 @@ Module that contains the ARCSIRapidEyeSensor class.
 ############################################################################
 
 # import abstract base class stuff
-from arcsisensor import ARCSIAbstractSensor
+from .arcsisensor import ARCSIAbstractSensor
 # Import the ARCSI exception class
-from arcsiexception import ARCSIException
+from .arcsiexception import ARCSIException
 # Import the ARCSI utilities class
-from arcsiutils import ARCSIUtils
+from .arcsiutils import ARCSIUtils
 # Import the datetime module
 import datetime
 # Import the GDAL/OGR spatial reference library
@@ -141,22 +141,28 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             #print "self.senorAzimuth: ", self.senorAzimuth
             timeStr = eoAcquParams.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}acquisitionDateTime').text.strip()
             timeStr = timeStr.replace('Z', '')
-            self.acquisitionTime = datetime.datetime.strptime(timeStr, "%Y-%m-%dT%H:%M:%S.%f")
-            #print "self.acquisitionTime: ", self.acquisitionTime
+            try:
+                self.acquisitionTime = datetime.datetime.strptime(timeStr, "%Y-%m-%dT%H:%M:%S.%f")
+            except Exception as e:
+                try:
+                    self.acquisitionTime = datetime.datetime.strptime(timeStr, "%Y-%m-%dT%H:%M:%S")
+                except Exception as e:
+                    raise e
+            print("self.acquisitionTime: ", self.acquisitionTime)
             
             metadata = root.find('{http://www.opengis.net/gml}metaDataProperty').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}EarthObservationMetaData')
             self.tileID = metadata.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}tileId').text.strip()
             self.pixelFormat = metadata.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}pixelFormat').text.strip()
-            #print "self.tileID = ", self.tileID
-            #print "self.pixelFormat = ", self.pixelFormat
+            #print("self.tileID = ", self.tileID)
+            #print("self.pixelFormat = ", self.pixelFormat)
             
             
             centrePt = root.find('{http://www.opengis.net/gml}target').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}Footprint').find('{http://www.opengis.net/gml}centerOf').find('{http://www.opengis.net/gml}Point').find('{http://www.opengis.net/gml}pos').text.strip()
             centrePtSplit = centrePt.split(' ')
             self.latCentre = float(centrePtSplit[0])
             self.lonCentre = float(centrePtSplit[1])
-            #print "self.latCentre = ", self.latCentre
-            #print "self.lonCentre = ", self.lonCentre
+            #print("self.latCentre = ", self.latCentre)
+            #print("self.lonCentre = ", self.lonCentre)
             
             imgBounds = root.find('{http://www.opengis.net/gml}target').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}Footprint').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}geographicLocation')
             tlPoint = imgBounds.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}topLeft')
@@ -172,14 +178,14 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             self.latBL = float(blPoint.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}latitude').text)
             self.lonBL = float(blPoint.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}longitude').text)
                         
-            #print "self.latTL = ", self.latTL
-            #print "self.lonTL = ", self.lonTL
-            #print "self.latTR = ", self.latTR
-            #print "self.lonTR = ", self.lonTR            
-            #print "self.latBR = ", self.latBR
-            #print "self.lonBR = ", self.lonBR
-            #print "self.latBL = ", self.latBL
-            #print "self.lonBL = ", self.lonBL
+            #print("self.latTL = ", self.latTL)
+            #print("self.lonTL = ", self.lonTL)
+            #print("self.latTR = ", self.latTR)
+            #print("self.lonTR = ", self.lonTR)           
+            #print("self.latBR = ", self.latBR)
+            #print("self.lonBR = ", self.lonBR)
+            #print("self.latBL = ", self.latBL)
+            #print("self.lonBL = ", self.lonBL)
             
             
             productInfo = root.find('{http://www.opengis.net/gml}resultOf').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}EarthObservationResult').find('{http://earth.esa.int/eop}product').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}ProductInformation')
@@ -191,10 +197,10 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             inProj.ImportFromEPSG(epsgCode)
             if self.inWKT == "":
                 self.inWKT = inProj.ExportToWkt()
-            #print "WKT: ", self.inWKT
+            #print("WKT: ", self.inWKT)
             
             self.numOfBands = int(productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}numBands').text.strip())
-            #print 'self.numOfBands = ', self.numOfBands
+            #print('self.numOfBands = ', self.numOfBands)
             if self.numOfBands != 5:
                 raise ARCSIException("The number of image band is not equal to 5 according to XML header.")
             
@@ -202,13 +208,13 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             if radioCorrAppliedStr == "true":
                 self.radioCorrApplied = True
             self.radioCorrVersion = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}radiometricCalibrationVersion').text.strip()
-            #print 'self.radioCorrApplied = ', self.radioCorrApplied
-            #print 'self.radioCorrVersion = ', self.radioCorrVersion
+            #print('self.radioCorrApplied = ', self.radioCorrApplied)
+            #print('self.radioCorrVersion = ', self.radioCorrVersion)
             
             atmosCorrAppliedStr = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}atmosphericCorrectionApplied').text.strip()
             if atmosCorrAppliedStr == "true":
                 self.atmosCorrApplied = True
-            #print 'self.atmosCorrApplied = ', self.atmosCorrApplied
+            #print('self.atmosCorrApplied = ', self.atmosCorrApplied)
             
             if self.atmosCorrApplied:
                 raise ARCSIException("An atmosheric correction has already been applied according to the metadata.")
@@ -216,14 +222,14 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             elevCorrAppliedStr = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}elevationCorrectionApplied').text.strip()
             if elevCorrAppliedStr == "true":
                 self.elevCorrApplied = True
-            #print 'self.elevCorrApplied = ', self.elevCorrApplied
+            #print('self.elevCorrApplied = ', self.elevCorrApplied)
             
             self.geoCorrLevel = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}geoCorrectionLevel').text.strip()
-            #print 'self.geoCorrLevel = ', self.geoCorrLevel
+            #print('self.geoCorrLevel = ', self.geoCorrLevel)
             
             filesDIR = os.path.dirname(inputHeader)
             self.fileName = os.path.join(filesDIR, productInfo.find('{http://earth.esa.int/eop}fileName').text.strip())
-            #print 'self.fileName = ', self.fileName
+            #print('self.fileName = ', self.fileName)
             
             # Haven't been defined yet!!
             self.xTL = 0.0
@@ -303,26 +309,31 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         s.wavelength = Py6S.Wavelength(0.435, 0.515, [0.001, 0.004, 0.321, 0.719, 0.74, 0.756, 0.77, 0.78, 0.784, 0.792, 0.796, 0.799, 0.806, 0.804, 0.807, 0.816, 0.82, 0.825, 0.84, 0.845, 0.862, 0.875, 0.886, 0.905, 0.928, 0.936, 0.969, 0.967, 1, 0.976, 0.437, 0.029, 0.001])
         s.run()
         imgBandCoeffs.append(Band6S(band=1, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        print(("Band 1: aX = ", s.outputs.values['coef_xa'], " bX = ", s.outputs.values['coef_xb'], " cX = ", s.outputs.values['coef_xc']))
         
         # Band 2
         s.wavelength = Py6S.Wavelength(0.510, 0.5975, [0.001, 0.002, 0.013, 0.054, 0.539, 0.868, 0.868, 0.877, 0.871, 0.874, 0.882, 0.882, 0.881, 0.886, 0.897, 0.899, 0.901, 0.91, 0.924, 0.928, 0.936, 0.946, 0.953, 0.96, 0.974, 0.976, 0.976, 0.989, 0.988, 0.984, 0.994, 0.97, 0.417, 0.039, 0.002, 0.001])
         s.run()
         imgBandCoeffs.append(Band6S(band=2, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        print(("Band 2: aX = ", s.outputs.values['coef_xa'], " bX = ", s.outputs.values['coef_xb'], " cX = ", s.outputs.values['coef_xc']))
         
         # Band 3
         s.wavelength = Py6S.Wavelength(0.620, 0.6925, [0.001, 0.002, 0.009, 0.038, 0.437, 0.856, 0.854, 0.876, 0.881, 0.885, 0.902, 0.909, 0.915, 0.923, 0.939, 0.947, 0.958, 0.963, 0.97, 0.976, 0.989, 0.991, 0.985, 0.994, 0.989, 0.989, 0.463, 0.062, 0.005, 0.001])
         s.run()
         imgBandCoeffs.append(Band6S(band=3, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        print(("Band 3: aX = ", s.outputs.values['coef_xa'], " bX = ", s.outputs.values['coef_xb'], " cX = ", s.outputs.values['coef_xc']))
         
         # Band 4
         s.wavelength = Py6S.Wavelength(0.6775, 0.7425, [0.001, 0.002, 0.004, 0.021, 0.074, 0.491, 0.914, 0.998, 0.999, 0.998, 0.993, 0.987, 0.986, 0.982, 0.976, 0.966, 0.964, 0.961, 0.949, 0.939, 0.936, 0.425, 0.123, 0.02, 0.007, 0.002, 0.001])
         s.run()
         imgBandCoeffs.append(Band6S(band=4, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        print(("Band 4: aX = ", s.outputs.values['coef_xa'], " bX = ", s.outputs.values['coef_xb'], " cX = ", s.outputs.values['coef_xc']))
         
         # Band 5
         s.wavelength = Py6S.Wavelength(0.740, 0.870, [0.001, 0.001, 0.003, 0.005, 0.012, 0.023, 0.068, 0.153, 0.497, 0.828, 1, 0.982, 0.967, 0.974, 0.983, 0.981, 0.97, 0.963, 0.958, 0.957, 0.958, 0.959, 0.956, 0.954, 0.948, 0.944, 0.937, 0.933, 0.928, 0.927, 0.926, 0.926, 0.923, 0.918, 0.906, 0.898, 0.889, 0.885, 0.882, 0.876, 0.857, 0.842, 0.84, 0.832, 0.582, 0.295, 0.08, 0.034, 0.011, 0.006, 0.002, 0.001, 0.001])
         s.run()
         imgBandCoeffs.append(Band6S(band=5, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        print(("Band 5: aX = ", s.outputs.values['coef_xa'], " bX = ", s.outputs.values['coef_xb'], " cX = ", s.outputs.values['coef_xc']))
         
         for band in imgBandCoeffs:
             print(band)

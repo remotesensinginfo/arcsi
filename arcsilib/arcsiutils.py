@@ -35,7 +35,7 @@ Module that contains the ARCSIUtils class.
 ############################################################################
 
 # Import the ARCSI exception class
-from arcsiexception import ARCSIException
+from .arcsiexception import ARCSIException
 
 class ARCSIUtils (object):
     """

@@ -40,6 +40,8 @@ Module that contains the ARSCI Main class.
 
 # Import the system library
 import sys
+# Import the OS python module
+import os
 # Import the python Argument parser
 import argparse
 # Import the time module
@@ -62,10 +64,14 @@ from arcsilib.arcsisensorlandsat8 import ARCSILandsat8Sensor
 from arcsilib.arcsisensorrapideye import ARCSIRapidEyeSensor
 # Import the image utilities module from rsgislib
 import rsgislib.imageutils
+# Import the image calculations module from rsgislib
+import rsgislib.imagecalc
 # Import the py6s module for running 6S from python.
 import Py6S
 # Import the osgeo gdal library
 import osgeo.gdal as gdal
+# Import python math library
+import math
 
 class ARCSI (object):
     """
@@ -101,11 +107,11 @@ class ARCSI (object):
     def convertVisabilityToAOD(self, vis):
         return (3.9449/vis)+0.08498
     
-    def run(self, inputHeader, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aotVal, visVal, tmpPath, minAOT, maxAOT):
+    def run(self, inputHeader, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, demFile):
         """
         A function contains the main flow of the software
         """
-        print("ASCSI 0.1a Copyright (C) 2013  Peter Bunting")
+        print("ARCSI 0.1a Copyright (C) 2013  Peter Bunting")
         print("This program comes with ABSOLUTELY NO WARRANTY.")
         print("This is free software, and you are welcome to redistribute it")
         print("under certain conditions; See website (http://www.rsgislib.org/ascsi).")
@@ -193,7 +199,7 @@ class ARCSI (object):
                     aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Stratospheric)
                 else:
                     raise ARCSIException("The specified aersol profile is unknown.")
-                
+
                 atmosProfile = None
                 if atmosProfileOption == None:
                     raise ARCSIException("An atmospheric profile has not been specified.")
@@ -213,6 +219,9 @@ class ARCSI (object):
                     atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.USStandard1962)
                 else:
                     raise ARCSIException("The specified atmospheric profile is unknown.")
+
+                if atmosOZoneWaterSpecified:
+                    atmosProfile.UserWaterAndOzone(atmosWaterVal, atmosOZoneVal) 
                 
                 grdRefl = None
                 if grdReflOption == None:
@@ -259,24 +268,27 @@ class ARCSI (object):
                     raise ARCSIException("The specified aersol profile is unknown.")
                 
                 atmosProfile = None
-                if atmosProfileOption == None:
-                    raise ARCSIException("An atmospheric profile has not been specified.")
-                elif atmosProfileOption == "NoGaseousAbsorption":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.NoGaseousAbsorption)
-                elif atmosProfileOption == "Tropical":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.Tropical)
-                elif atmosProfileOption == "MidlatitudeSummer":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeSummer)
-                elif atmosProfileOption == "MidlatitudeWinter":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeWinter)
-                elif atmosProfileOption == "SubarcticSummer":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticSummer)
-                elif atmosProfileOption == "SubarcticWinter":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticWinter)
-                elif atmosProfileOption == "USStandard1962":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.USStandard1962)
+                if atmosOZoneWaterSpecified:
+                    atmosProfile = Py6S.AtmosProfile.UserWaterAndOzone(atmosWaterVal, atmosOZoneVal) 
                 else:
-                    raise ARCSIException("The specified atmospheric profile is unknown.")
+                    if atmosProfileOption == None:
+                        raise ARCSIException("An atmospheric profile has not been specified.")
+                    elif atmosProfileOption == "NoGaseousAbsorption":
+                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.NoGaseousAbsorption)
+                    elif atmosProfileOption == "Tropical":
+                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.Tropical)
+                    elif atmosProfileOption == "MidlatitudeSummer":
+                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeSummer)
+                    elif atmosProfileOption == "MidlatitudeWinter":
+                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeWinter)
+                    elif atmosProfileOption == "SubarcticSummer":
+                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticSummer)
+                    elif atmosProfileOption == "SubarcticWinter":
+                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticWinter)
+                    elif atmosProfileOption == "USStandard1962":
+                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.USStandard1962)
+                    else:
+                        raise ARCSIException("The specified atmospheric profile is unknown.")
                 
                 grdRefl = None
                 useBRDF = False
@@ -314,7 +326,34 @@ class ARCSI (object):
                 
                 print("AOT Value: "+ str(aotVal))
                 
-                srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
+                if (demFile == None):
+                    srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
+                else:
+                    # Calc Min, Max Elevation for region intersecting with the image.
+                    statsElev = rsgislib.imagecalc.getImageStatsInEnv(demFile, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+                    minElev = statsElev[0]
+                    maxElev = statsElev[1]
+                    elevRange = (maxElev - minElev) / 100
+                    numElevSteps = math.ceil(elevRange)
+                    print("Elevation Ranges from ", minElev, " to ", maxElev, " an LUT with ", numElevSteps, " will be created\n")
+                    # Interpolate image to output refl image resolution and convert projection to the same as the output image.
+                    
+                    outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
+                    print("Output DEM: ", outDEMName)
+                    rsgislib.imageutils.createCopyImage(radianceImage, outDEMName, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)  
+                    
+                    inDEMDS = gdal.Open(demFile, gdal.GA_ReadOnly)
+                    outDEMDS = gdal.Open(outDEMName, gdal.GA_Update)
+                    
+                    gdal.ReprojectImage(inDEMDS, outDEMDS, None, None, gdal.GRA_CubicSpline)
+                    
+                    inDEMDS = None
+                    outDEMDS = None
+                    
+                    rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
+                    
+                    srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
+                    
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
@@ -486,21 +525,31 @@ if __name__ == '__main__':
                         help='''Specify the altiude (in km) of the surface being sensed.''')
     # Define the argument for specifying the AOT value for the scene
     parser.add_argument("--aot", type=float, 
-                        help='''Specifiy the AOT or visability value for the scene. If the AOT is specified the visability is ignored.''')
+                        help='''Specifiy the AOT or visability value for the scene. 
+                                If the AOT is specified the visability is ignored.''')
     # Define the argument for specifying the visability value for the scene
     parser.add_argument("--vis", type=float, 
-                        help='''Specifiy the AOT or visability value for the scene. If the AOT is specified the visability is ignored.''')
+                        help='''Specifiy the AOT or visability value for the scene. 
+                                If the AOT is specified the visability is ignored.''')
     # Define the argument for specifying the AOT value for the scene
     parser.add_argument("--minaot", type=float, default=0.05,
-                        help='''Specifiy the AOT or visability value for the scene. If the AOT is specified the visability is ignored.''')
+                        help='''Specifiy the AOT or visability value for the scene. 
+                                If the AOT is specified the visability is ignored.''')
                         # Define the argument for specifying the AOT value for the scene
     parser.add_argument("--maxaot", type=float, default=0.5,
-                        help='''Specifiy the AOT or visability value for the scene. If the AOT is specified the visability is ignored.''')
+                        help='''Specifiy the AOT or visability value for the scene. 
+                                If the AOT is specified the visability is ignored.''')
     # Define the argument for specifying that statistics and pyramids should be built for 
     # all output images.
     parser.add_argument("--stats", action='store_true', default=False, 
                         help='''Specifies that the image statistics and
                         pyramids should be build for all output images.''')
+    # Define the argument which specifies a DEM to be used the processing
+    parser.add_argument("-d", "--dem", type=str,
+                        help='''Specify a DEM which is to be used for building
+                        an LUT and applying 6S coefficients with respect to elevation.''')
+                        
+    
     # Call the parser to parse the arguments.
     args = parser.parse_args()
     
@@ -553,10 +602,26 @@ if __name__ == '__main__':
             sys.exit()
                 
         if needTmp and args.tmpath == None:
-                print("Error: If the DDVAOT product is set then a tempory path needs to be provided.")
-                sys.exit()
-            
-        arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot)
+            print("Error: If the DDVAOT product is set then a tempory path needs to be provided.")
+            sys.exit()
+
+        atmosOZoneWaterSpecified = False
+        if (not args.atmosozone == None) and (args.atmoswater == None):
+            print("Error: If the atmospheric ozone is defined then the atmospheric water needs to be specfied --atmoswater.")
+            sys.exit()
+        elif (not args.atmoswater == None) and (args.atmosozone == None):
+            print("Error: If the atmospheric water is defined then the atmospheric ozone needs to be specfied --atmosozone.")
+            sys.exit()
+        elif (not args.atmoswater == None) and (not args.atmosozone == None):
+            atmosOZoneWaterSpecified = True
+
+        aeroComponentsSpecified = False
+        if (not args.aerowater == None) or (not args.aerodust == None) or (not args.aerooceanic == None) or (not args.aerosoot == None):
+            aeroComponentsSpecified = True
+
+
+
+        arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem)
 
 
 
