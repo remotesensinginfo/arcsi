@@ -41,7 +41,10 @@ from abc import ABCMeta, abstractmethod
 import datetime
 # Import the ARCSI exception class
 from .arcsiexception import ARCSIException
-
+# Import the python collections library
+import collections
+# Import python math module
+import math
 
 class ARCSIAbstractSensor (object, metaclass=ABCMeta):
     """
@@ -231,6 +234,23 @@ class ARCSIAbstractSensor (object, metaclass=ABCMeta):
     
     @abstractmethod
     def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF): pass
+
+    @abstractmethod
+    def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal): pass
+    
+    def buildElevation6SCoeffLUT(self, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax):
+        elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
+        lut = list()
+        elevRange = (surfaceAltitudeMax - surfaceAltitudeMin) / 100
+        numElevSteps = math.ceil(elevRange)
+        elevVal = surfaceAltitudeMin
+        for i in range(numElevSteps):
+            lut.append(elevLUTFeat(Elev=elevVal, Coeffs=self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, (float(elevVal)/1000), aotVal, useBRDF)))
+            elevVal = elevVal + 100
+        return lut
+    
+    @abstractmethod
+    def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax): pass
 
     @abstractmethod
     def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax): pass

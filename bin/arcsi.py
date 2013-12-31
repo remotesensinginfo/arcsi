@@ -73,6 +73,7 @@ import osgeo.gdal as gdal
 # Import python math library
 import math
 
+
 class ARCSI (object):
     """
     The \'main\' class which executes the whole ARCSI package.
@@ -106,6 +107,27 @@ class ARCSI (object):
         
     def convertVisabilityToAOD(self, vis):
         return (3.9449/vis)+0.08498
+        
+    def findMinimumElev(self, elev):
+        elevVal = -500
+        outElev = 0
+        for i in range(50):
+            if (elev > elevVal) & (elev < (elevVal+100)):
+                outElev = elevVal
+                break
+            elevVal = elevVal + 100
+        return outElev
+    
+    def findMaximumElev(self, elev):
+        elevVal = 200
+        outElev = 0
+        for i in range(85):
+            if (elev > elevVal) & (elev < (elevVal+100)):
+                outElev = elevVal + 100
+                break
+            elevVal = elevVal + 100
+        return outElev
+            
     
     def run(self, inputHeader, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, demFile):
         """
@@ -245,8 +267,6 @@ class ARCSI (object):
             # Step 8: Convert to Surface Reflectance using 6S Standard Models
             if prodsToCalc["SREFSTDMDL"]:
                 # Execute conversion to surface reflectance by applying 6S using a 'standard' modelled atmosphere.
-                outName = outBaseName + "_rad_srefstdmdl" + arcsiUtils.getFileExtension(outFormat)
-
                 aeroProfile = None
                 if aeroProfileOption == None:
                     raise ARCSIException("An aersol profile has not been specified.")
@@ -327,17 +347,21 @@ class ARCSI (object):
                 print("AOT Value: "+ str(aotVal))
                 
                 if (demFile == None):
+                    outName = outBaseName + "_rad_srefstdmdl" + arcsiUtils.getFileExtension(outFormat)
                     srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
                 else:
+                    outName = outBaseName + "_rad_srefstdmdldem" + arcsiUtils.getFileExtension(outFormat)
                     # Calc Min, Max Elevation for region intersecting with the image.
                     statsElev = rsgislib.imagecalc.getImageStatsInEnv(demFile, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
-                    minElev = statsElev[0]
-                    maxElev = statsElev[1]
+                    
+                    minElev = self.findMinimumElev(statsElev[0])
+                    maxElev = self.findMaximumElev(statsElev[1])
+                    
                     elevRange = (maxElev - minElev) / 100
                     numElevSteps = math.ceil(elevRange)
-                    print("Elevation Ranges from ", minElev, " to ", maxElev, " an LUT with ", numElevSteps, " will be created\n")
+                    print("Elevation Ranges from ", minElev, " to ", maxElev, " an LUT with ", numElevSteps, " will be created.")
+
                     # Interpolate image to output refl image resolution and convert projection to the same as the output image.
-                    
                     outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
                     print("Output DEM: ", outDEMName)
                     rsgislib.imageutils.createCopyImage(radianceImage, outDEMName, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)  
@@ -349,10 +373,11 @@ class ARCSI (object):
                     
                     inDEMDS = None
                     outDEMDS = None
+                    if calcStatsPy:
+                        rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
                     
-                    rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
+                    srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev)
                     
-                    srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
                     
                 if calcStatsPy:
                     print("Calculating Statistics...")
