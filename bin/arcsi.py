@@ -119,9 +119,9 @@ class ARCSI (object):
         return outElev
     
     def findMaximumElev(self, elev):
-        elevVal = 200
+        elevVal = -500
         outElev = 0
-        for i in range(85):
+        for i in range(90):
             if (elev > elevVal) & (elev < (elevVal+100)):
                 outElev = elevVal + 100
                 break
@@ -359,12 +359,13 @@ class ARCSI (object):
                         aotVal = mean           
                     imgDS = None
 
-                if (aotVal == None) and (visVal == None):
+                if (aotVal == None) and (visVal == None) and (aotFile == None):
                     raise ARCSIException("Either the AOT or the visability need to specified.")
-                elif (aotVal == None):
+                elif (aotVal == None) and (aotFile == None):
                     aotVal = self.convertVisabilityToAOD(visVal)
                 
-                print("AOT Value: "+ str(aotVal))
+                if not (aotVal == None):
+                    print("AOT Value: "+ str(aotVal))
                 
                 if (demFile == None):
                     outName = outBaseName + "_rad_srefstdmdl" + arcsiUtils.getFileExtension(outFormat)
@@ -373,11 +374,14 @@ class ARCSI (object):
                     # Calc Min, Max Elevation for region intersecting with the image.
                     statsElev = rsgislib.imagecalc.getImageStatsInEnv(demFile, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
                     
+                    print("Minimum Elevation = ", statsElev[0])
+                    print("Maximum Elevation = ", statsElev[1])
+                    
                     minElev = self.findMinimumElev(statsElev[0])
                     maxElev = self.findMaximumElev(statsElev[1])
                     
                     elevRange = (maxElev - minElev) / 100
-                    numElevSteps = math.ceil(elevRange)
+                    numElevSteps = math.ceil(elevRange) + 1
                     print("Elevation Ranges from ", minElev, " to ", maxElev, " an LUT with ", numElevSteps, " will be created.")
 
                     # Interpolate image to output refl image resolution and convert projection to the same as the output image.
@@ -387,7 +391,8 @@ class ARCSI (object):
                     
                     inDEMDS = gdal.Open(demFile, gdal.GA_ReadOnly)
                     outDEMDS = gdal.Open(outDEMName, gdal.GA_Update)
-                    
+
+                    print("Subset and reproject DEM...")
                     gdal.ReprojectImage(inDEMDS, outDEMDS, None, None, gdal.GRA_CubicSpline)
                     
                     inDEMDS = None
@@ -405,7 +410,7 @@ class ARCSI (object):
                         maxAOT = self.findMaximumAOT(statsAOT[1])
                         
                         aotRange = (maxAOT - minAOT) / 0.05
-                        numAOTSteps = math.ceil(aotRange)
+                        numAOTSteps = math.ceil(aotRange) + 1
                         print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
                         outName = outBaseName + "_rad_srefstdmdldemaot" + arcsiUtils.getFileExtension(outFormat)
                         srefImage = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImage, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT)
@@ -413,10 +418,12 @@ class ARCSI (object):
                         outName = outBaseName + "_rad_srefstdmdldem" + arcsiUtils.getFileExtension(outFormat)
                         srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev)                    
 
+            print("Setting Band Names...")
+            sensorClass.setBandNames(srefImage)
+
             if calcStatsPy:
                 print("Calculating Statistics...")
-                #rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
-
+                rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
                 
         except ARCSIException as e:
             print("Error: " + str(e))

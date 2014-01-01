@@ -592,4 +592,16 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             return outputAOTImage
         except Exception as e:
             raise e
+            
+    def setBandNames(self, imageFile):
+        dataset = gdal.Open(imageFile, gdal.GA_Update)
+        dataset.GetRasterBand(1).SetDescription("Coastal")
+        dataset.GetRasterBand(2).SetDescription("Blue")
+        dataset.GetRasterBand(3).SetDescription("Green")
+        dataset.GetRasterBand(4).SetDescription("Red")
+        dataset.GetRasterBand(5).SetDescription("NIR")
+        dataset.GetRasterBand(6).SetDescription("SWIR1")
+        dataset.GetRasterBand(7).SetDescription("SWIR2")
+        dataset = None
+            
 

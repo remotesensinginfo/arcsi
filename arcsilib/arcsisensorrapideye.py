@@ -61,6 +61,10 @@ import Py6S
 import math
 # Import python XML Parser
 import xml.etree.ElementTree as ET
+# Import the numpy module
+import numpy
+# Import the GDAL python module
+import osgeo.gdal as gdal
 
 class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
     """
@@ -278,19 +282,21 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         solarIrradianceVals.append(IrrVal(irradiance=1124.4))
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
-        
-    def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
-        print("Converting to Surface Reflectance")
-        outputImage = os.path.join(outputPath, outputName)
-        
-        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
-        imgBandCoeffs = list()
+    
+    
+    def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
+        sixsCoeffs = numpy.zeros((5, 3), dtype=numpy.float32)    
         # Set up 6S model
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
         s.aero_profile = aeroProfile
+        #s.ground_reflectance = Py6S.GroundReflectance.HomogeneousHapke(0.101, -0.263, 0.589, 0.046)
         s.ground_reflectance = grdRefl
-        s.geometry = Py6S.Geometry.Landsat_TM()
+        s.geometry = Py6S.Geometry.User()
+        s.geometry.solar_z = self.solarZenith
+        s.geometry.solar_a = self.solarAzimuth
+        s.geometry.view_z = self.senorZenith
+        s.geometry.view_a = self.senorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
@@ -308,43 +314,135 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         # Band 1
         s.wavelength = Py6S.Wavelength(0.435, 0.515, [0.001, 0.004, 0.321, 0.719, 0.74, 0.756, 0.77, 0.78, 0.784, 0.792, 0.796, 0.799, 0.806, 0.804, 0.807, 0.816, 0.82, 0.825, 0.84, 0.845, 0.862, 0.875, 0.886, 0.905, 0.928, 0.936, 0.969, 0.967, 1, 0.976, 0.437, 0.029, 0.001])
         s.run()
-        imgBandCoeffs.append(Band6S(band=1, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
-        print(("Band 1: aX = ", s.outputs.values['coef_xa'], " bX = ", s.outputs.values['coef_xb'], " cX = ", s.outputs.values['coef_xc']))
+        sixsCoeffs[0,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[0,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[0,2] = float(s.outputs.values['coef_xc'])
         
         # Band 2
         s.wavelength = Py6S.Wavelength(0.510, 0.5975, [0.001, 0.002, 0.013, 0.054, 0.539, 0.868, 0.868, 0.877, 0.871, 0.874, 0.882, 0.882, 0.881, 0.886, 0.897, 0.899, 0.901, 0.91, 0.924, 0.928, 0.936, 0.946, 0.953, 0.96, 0.974, 0.976, 0.976, 0.989, 0.988, 0.984, 0.994, 0.97, 0.417, 0.039, 0.002, 0.001])
         s.run()
-        imgBandCoeffs.append(Band6S(band=2, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
-        print(("Band 2: aX = ", s.outputs.values['coef_xa'], " bX = ", s.outputs.values['coef_xb'], " cX = ", s.outputs.values['coef_xc']))
+        sixsCoeffs[1,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[1,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[1,2] = float(s.outputs.values['coef_xc'])
         
         # Band 3
         s.wavelength = Py6S.Wavelength(0.620, 0.6925, [0.001, 0.002, 0.009, 0.038, 0.437, 0.856, 0.854, 0.876, 0.881, 0.885, 0.902, 0.909, 0.915, 0.923, 0.939, 0.947, 0.958, 0.963, 0.97, 0.976, 0.989, 0.991, 0.985, 0.994, 0.989, 0.989, 0.463, 0.062, 0.005, 0.001])
         s.run()
-        imgBandCoeffs.append(Band6S(band=3, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
-        print(("Band 3: aX = ", s.outputs.values['coef_xa'], " bX = ", s.outputs.values['coef_xb'], " cX = ", s.outputs.values['coef_xc']))
+        sixsCoeffs[2,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[2,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[2,2] = float(s.outputs.values['coef_xc'])
         
         # Band 4
         s.wavelength = Py6S.Wavelength(0.6775, 0.7425, [0.001, 0.002, 0.004, 0.021, 0.074, 0.491, 0.914, 0.998, 0.999, 0.998, 0.993, 0.987, 0.986, 0.982, 0.976, 0.966, 0.964, 0.961, 0.949, 0.939, 0.936, 0.425, 0.123, 0.02, 0.007, 0.002, 0.001])
         s.run()
-        imgBandCoeffs.append(Band6S(band=4, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
-        print(("Band 4: aX = ", s.outputs.values['coef_xa'], " bX = ", s.outputs.values['coef_xb'], " cX = ", s.outputs.values['coef_xc']))
+        sixsCoeffs[3,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[3,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[3,2] = float(s.outputs.values['coef_xc'])
         
         # Band 5
         s.wavelength = Py6S.Wavelength(0.740, 0.870, [0.001, 0.001, 0.003, 0.005, 0.012, 0.023, 0.068, 0.153, 0.497, 0.828, 1, 0.982, 0.967, 0.974, 0.983, 0.981, 0.97, 0.963, 0.958, 0.957, 0.958, 0.959, 0.956, 0.954, 0.948, 0.944, 0.937, 0.933, 0.928, 0.927, 0.926, 0.926, 0.923, 0.918, 0.906, 0.898, 0.889, 0.885, 0.882, 0.876, 0.857, 0.842, 0.84, 0.832, 0.582, 0.295, 0.08, 0.034, 0.011, 0.006, 0.002, 0.001, 0.001])
         s.run()
-        imgBandCoeffs.append(Band6S(band=5, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
-        print(("Band 5: aX = ", s.outputs.values['coef_xa'], " bX = ", s.outputs.values['coef_xb'], " cX = ", s.outputs.values['coef_xc']))
+        sixsCoeffs[4,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[4,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[4,2] = float(s.outputs.values['coef_xc'])
+        
+        return sixsCoeffs
+    
+    def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
+        print("Converting to Surface Reflectance")
+        outputImage = os.path.join(outputPath, outputName)
+        
+        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
+        imgBandCoeffs = list()
+        
+        sixsCoeffs = self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
+        
+        imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
+        imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
+        imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
+        imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
+        imgBandCoeffs.append(Band6S(band=5, aX=float(sixsCoeffs[4,0]), bX=float(sixsCoeffs[4,1]), cX=float(sixsCoeffs[4,2])))
         
         for band in imgBandCoeffs:
             print(band)
-        
         rsgislib.imagecalibration.apply6SCoeffSingleParam(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, imgBandCoeffs)
-        
         return outputImage
-
+        
+    def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax):
+        print("Converting to Surface Reflectance")
+        outputImage = os.path.join(outputPath, outputName)        
+        
+        print("Build an LUT for elevation values.")    
+        elev6SCoeffsLUT = self.buildElevation6SCoeffLUT(aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax)
+        print("LUT has been built.")
+        
+        elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
+        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
+        
+        elevCoeffs = list()
+        for elevLUT in elev6SCoeffsLUT:
+            imgBandCoeffs = list()
+            sixsCoeffs = elevLUT.Coeffs
+            elevVal = elevLUT.Elev
+            imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
+            imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
+            imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
+            imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
+            imgBandCoeffs.append(Band6S(band=5, aX=float(sixsCoeffs[4,0]), bX=float(sixsCoeffs[4,1]), cX=float(sixsCoeffs[4,2])))
+            
+            elevCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=imgBandCoeffs))
+            
+        rsgislib.imagecalibration.apply6SCoeffElevLUTParam(inputRadImage, inputDEMFile, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, elevCoeffs)
+        return outputImage
+        
+    
+    def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax):
+        print("Converting to Surface Reflectance")
+        outputImage = os.path.join(outputPath, outputName) 
+    
+        print("Build an LUT for elevation and AOT values.")
+        elevAOT6SCoeffsLUT = self.buildElevationAOT6SCoeffLUT(aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax)
+                
+        elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
+        aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
+        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
+        
+        elevAOTCoeffs = list()
+        for elevLUT in elevAOT6SCoeffsLUT:
+            elevVal = elevLUT.Elev
+            aotLUT = elevLUT.Coeffs
+            aot6SCoeffsOut = list()
+            for aotFeat in aotLUT: 
+                sixsCoeffs = aotFeat.Coeffs
+                aotVal = aotFeat.AOT
+                imgBandCoeffs = list()
+                imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
+                imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
+                imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
+                imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
+                imgBandCoeffs.append(Band6S(band=5, aX=float(sixsCoeffs[4,0]), bX=float(sixsCoeffs[4,1]), cX=float(sixsCoeffs[4,2])))
+                aot6SCoeffsOut.append(aotLUTFeat(AOT=float(aotVal), Coeffs=imgBandCoeffs))
+            elevAOTCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=aot6SCoeffsOut))
+                        
+        rsgislib.imagecalibration.apply6SCoeffElevAOTLUTParam(inputRadImage, inputDEMFile, inputAOTImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, elevAOTCoeffs)
+            
+        return outputImage
 
     def estimateImageToAOD(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
         print("Not implemented\n")
         sys.exit()
 
-
+    def setBandNames(self, imageFile):
+        dataset = gdal.Open(imageFile, gdal.GA_Update)
+        if not dataset is None:
+            dataset.GetRasterBand(1).SetDescription("Blue")
+            dataset.GetRasterBand(2).SetDescription("Green")
+            dataset.GetRasterBand(3).SetDescription("Red")
+            dataset.GetRasterBand(4).SetDescription("RedEdge")
+            dataset.GetRasterBand(5).SetDescription("NIR")
+            dataset = None
+        else:
+            print("Could not open image to set band names: ", imageFile)
+            
+            
+            
