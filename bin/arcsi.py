@@ -127,9 +127,30 @@ class ARCSI (object):
                 break
             elevVal = elevVal + 100
         return outElev
+        
+        
+    def findMinimumAOT(self, aot):
+        aotVal = 0
+        outAOT = 0
+        for i in range(20):
+            if (aot > aotVal) & (aot < (aotVal+0.05)):
+                outAOT = aotVal
+                break
+            aotVal = aotVal + 0.05
+        return aotVal
+    
+    def findMaximumAOT(self, aot):
+        aotVal = 0
+        outAOT = 0
+        for i in range(20):
+            if (aot > aotVal) & (aot < (aotVal+0.05)):
+                outAOT = aotVal+ 0.05
+                break
+            aotVal = aotVal + 0.05
+        return aotVal
             
     
-    def run(self, inputHeader, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, demFile):
+    def run(self, inputHeader, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, demFile, aotFile):
         """
         A function contains the main flow of the software
         """
@@ -160,7 +181,6 @@ class ARCSI (object):
             prodsToCalc["TOA"] = False
             prodsToCalc["DDVAOT"] = False
             prodsToCalc["SREFSTDMDL"] = False
-            prodsToCalc["SREFSGLPARAM"] = False
             
             for prod in productsStr:
                 if prod == 'RAD':
@@ -175,9 +195,6 @@ class ARCSI (object):
                 elif prod == 'SREFSTDMDL':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["SREFSTDMDL"] = True
-                elif prod == 'SREFSGLPARAM':
-                    prodsToCalc["RAD"] = True
-                    prodsToCalc["SREFSGLPARAM"] = True
                 
             
             radianceImage=""
@@ -192,6 +209,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
+                    print("")
             # Step 6: Convert to TOA
             if prodsToCalc["TOA"]:
                 # Execute conversion to top of atmosphere reflectance
@@ -200,6 +218,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
+                    print("")
             # Step 7: Use image to estimate AOD values
             if prodsToCalc["DDVAOT"]:
                 aeroProfile = None
@@ -264,6 +283,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     #rsgislib.imageutils.popImageStats(aodImage, True, 0.0, True)
+                    print("")
             # Step 8: Convert to Surface Reflectance using 6S Standard Models
             if prodsToCalc["SREFSTDMDL"]:
                 # Execute conversion to surface reflectance by applying 6S using a 'standard' modelled atmosphere.
@@ -350,7 +370,6 @@ class ARCSI (object):
                     outName = outBaseName + "_rad_srefstdmdl" + arcsiUtils.getFileExtension(outFormat)
                     srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
                 else:
-                    outName = outBaseName + "_rad_srefstdmdldem" + arcsiUtils.getFileExtension(outFormat)
                     # Calc Min, Max Elevation for region intersecting with the image.
                     statsElev = rsgislib.imagecalc.getImageStatsInEnv(demFile, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
                     
@@ -374,21 +393,30 @@ class ARCSI (object):
                     inDEMDS = None
                     outDEMDS = None
                     if calcStatsPy:
+                        print("Calculating Statistics...")
                         rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
-                    
-                    srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev)
-                    
-                    
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
-            if prodsToCalc["SREFSGLPARAM"]:
-                # Execute conversion to surface reflectance by applying 6S using a 'standard' modelled atmosphere.
-                outName = outBaseName + "_rad_srefsglparam" + arcsiUtils.getFileExtension(outFormat)
-                
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+                        print("")
+                        
+                    if (not aotFile == None):
+                        print("Build an AOT LUT...")
+                        statsAOT = rsgislib.imagecalc.getImageStatsInEnv(aotFile, 1, -9999, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+                        
+                        minAOT = self.findMinimumAOT(statsAOT[0])
+                        maxAOT = self.findMaximumAOT(statsAOT[1])
+                        
+                        aotRange = (maxAOT - minAOT) / 0.05
+                        numAOTSteps = math.ceil(aotRange)
+                        print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
+                        outName = outBaseName + "_rad_srefstdmdldemaot" + arcsiUtils.getFileExtension(outFormat)
+                        srefImage = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImage, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT)
+                    else:
+                        outName = outBaseName + "_rad_srefstdmdldem" + arcsiUtils.getFileExtension(outFormat)
+                        srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev)                    
+
+            if calcStatsPy:
+                print("Calculating Statistics...")
+                #rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+
                 
         except ARCSIException as e:
             print("Error: " + str(e))
@@ -495,9 +523,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (--ddvaod).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'TOA', 'DDVAOT', 'SREFSTDMDL', 'SREFSGLPARAM'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'TOA', 'DDVAOT', 'SREFSTDMDL'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, TOA, DDVAOT, SREFSTDMDL, SREFSGLPARAM)''')
+                        calculated, as a comma separated list. (RAD, TOA, DDVAOT, SREFSTDMDL)''')
     # Define the argument for requesting a list of products.
     parser.add_argument("--prodlist", action='store_true', default=False, 
                         help='''List the products which are supported and 
@@ -564,6 +592,11 @@ if __name__ == '__main__':
     parser.add_argument("--maxaot", type=float, default=0.5,
                         help='''Specifiy the AOT or visability value for the scene. 
                                 If the AOT is specified the visability is ignored.''')
+    # Define the argument for specifying the AOT image file for the scene
+    parser.add_argument("--aotfile", type=str, 
+                        help='''Specifiy an image file with AOT values for the
+                                correction. An LUT for AOT and elevation will be generated.
+                                Therefore, --dem needs to be provided alongside --aotfile.''')
     # Define the argument for specifying that statistics and pyramids should be built for 
     # all output images.
     parser.add_argument("--stats", action='store_true', default=False, 
@@ -616,10 +649,9 @@ if __name__ == '__main__':
                 needTmp = True
             elif prod == 'SREFSTDMDL':
                 needAOD = True
-            elif prod == 'SREFSGLPARAM':
-                needAOD = True
-        if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax):
-            print("Error: Either the AOT or the Visability need to specified.")
+
+        if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax) and (not args.aotfile):
+            print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.")
             sys.exit()
             
         if needAODMinMax and (args.minaot == None) and (args.maxaot == None):
@@ -646,7 +678,7 @@ if __name__ == '__main__':
 
 
 
-        arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem)
+        arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem, args.aotfile)
 
 
 
