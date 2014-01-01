@@ -251,6 +251,32 @@ class ARCSIAbstractSensor (object, metaclass=ABCMeta):
     
     @abstractmethod
     def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax): pass
+    
+    def buildElevationAOT6SCoeffLUT(self, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax):
+        elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
+        aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
+        lut = list()
+        elevRange = (surfaceAltitudeMax - surfaceAltitudeMin) / 100
+        numElevSteps = math.ceil(elevRange)
+        elevVal = surfaceAltitudeMin
+        
+        aotRange = (aotMax - aotMin) / 0.05
+        numAOTSteps = math.ceil(aotRange)
+        aotVal = aotMin
+        
+        for i in range(numElevSteps):
+            print("Building LUT Elevation ", elevVal)
+            aotVal = aotMin
+            aotCoeffLUT = list()
+            for j in range(numAOTSteps):
+                aotCoeffLUT.append(aotLUTFeat(AOT=aotVal,  Coeffs=self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, (float(elevVal)/1000), aotVal, useBRDF)))
+                aotVal = aotVal + 0.05
+            lut.append(elevLUTFeat(Elev=elevVal, Coeffs=aotCoeffLUT))
+            elevVal = elevVal + 100
+        return lut
+
+    @abstractmethod
+    def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax): pass
 
     @abstractmethod
     def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax): pass

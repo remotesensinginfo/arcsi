@@ -429,11 +429,44 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.apply6SCoeffElevLUTParam(inputRadImage, inputDEMFile, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, elevCoeffs)
         return outputImage
         
+    
+    def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax):
+        print("Converting to Surface Reflectance")
+        outputImage = os.path.join(outputPath, outputName) 
+    
+        print("Build an LUT for elevation and AOT values.")
+        elevAOT6SCoeffsLUT = self.buildElevationAOT6SCoeffLUT(aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax)
+                
+        elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
+        aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
+        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
         
+        elevAOTCoeffs = list()
+        for elevLUT in elevAOT6SCoeffsLUT:
+            elevVal = elevLUT.Elev
+            aotLUT = elevLUT.Coeffs
+            aot6SCoeffsOut = list()
+            for aotFeat in aotLUT: 
+                sixsCoeffs = aotFeat.Coeffs
+                aotVal = aotFeat.AOT
+                imgBandCoeffs = list()
+                imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
+                imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
+                imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
+                imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
+                imgBandCoeffs.append(Band6S(band=5, aX=float(sixsCoeffs[4,0]), bX=float(sixsCoeffs[4,1]), cX=float(sixsCoeffs[4,2])))
+                imgBandCoeffs.append(Band6S(band=6, aX=float(sixsCoeffs[5,0]), bX=float(sixsCoeffs[5,1]), cX=float(sixsCoeffs[5,2])))
+                imgBandCoeffs.append(Band6S(band=7, aX=float(sixsCoeffs[6,0]), bX=float(sixsCoeffs[6,1]), cX=float(sixsCoeffs[6,2])))
+                aot6SCoeffsOut.append(aotLUTFeat(AOT=float(aotVal), Coeffs=imgBandCoeffs))
+            elevAOTCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=aot6SCoeffsOut))
+                        
+        rsgislib.imagecalibration.apply6SCoeffElevAOTLUTParam(inputRadImage, inputDEMFile, inputAOTImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, elevAOTCoeffs)
+            
+        return outputImage
         
     def run6SToOptimiseAODValue(self, aotVal, radBlueVal, predBlueVal, aeroProfile, atmosProfile, grdRefl, surfaceAltitude):
         """Used as part of the optimastion for identifying values of AOD"""
-        print(("Testing AOD Val: ", aotVal))
+        print("Testing AOD Val: ", aotVal,)
         s = Py6S.SixS()
         
         s.atmos_profile = atmosProfile
@@ -457,15 +490,11 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         aX = float(s.outputs.values['coef_xa'])
         bX = float(s.outputs.values['coef_xb'])
         cX = float(s.outputs.values['coef_xc'])
-        print(("\taX: ", aX))
-        print(("\tbX: ", bX))
-        print(("\tcX: ", cX))
+        
         tmpVal = (aX*radBlueVal)-bX;
-        reflBlueVal = tmpVal/(1.0+cX*tmpVal)
-        
-        
+        reflBlueVal = tmpVal/(1.0+cX*tmpVal)        
         outDist = math.sqrt(math.pow((reflBlueVal - predBlueVal),2))
-        print(("\tDist ", outDist))
+        print("\taX: ", aX, " bX: ", bX, " cX: ", cX, "     Dist = ", outDist)
         return outDist
     
     def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
@@ -533,7 +562,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             
             for i in range(len(PredB2Refl)):
                 if PredictAOTFor[i] == 1:
-                    print(("Predicting AOD for Segment ", i))
+                    print("Predicting AOD for Segment ", i)
                     for j in range(numAOTValTests):
                         cAOT = aotValMin + (0.05 * j)
                         cDist = self.run6SToOptimiseAODValue(cAOT, MinB2RAD[i], PredB2Refl[i], aeroProfile, atmosProfile, grdRefl, surfaceAltitude)
@@ -543,16 +572,11 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
                         elif cDist < minDist:
                             minAOT = cAOT
                             minDist = cDist
-                    predAOTArgs = list()
-                    predAOTArgs.append(MinB2RAD[i])
-                    predAOTArgs.append(PredB2Refl[i])
-                    predAOTArgs.append(aeroProfile)
-                    predAOTArgs.append(atmosProfile)
-                    predAOTArgs.append(grdRefl)
-                    predAOTArgs.append(surfaceAltitude)
-                    res = minimize(self.run6SToOptimiseAODValue, minAOT, method='nelder-mead', options={'maxiter': 20, 'xtol': 0.001, 'disp': True}, args=predAOTArgs)
-                    print(("IDENTIFIED AOT: ", res.x[0]))
-                    aotVals[i] = res.x[0]
+                    #predAOTArgs = (MinB2RAD[i], PredB2Refl[i], aeroProfile, atmosProfile, grdRefl, surfaceAltitude)
+                    #res = minimize(self.run6SToOptimiseAODValue, minAOT, method='nelder-mead', options={'maxiter': 20, 'xtol': 0.001, 'disp': True}, args=predAOTArgs)
+                    #aotVals[i] = res.x[0]
+                    aotVals[i] = minAOT
+                    print("IDENTIFIED AOT: ", aotVals[i])
                 else:
                     aotVals[i] = 0
             rat.writeColumn(ratDS, "AOT", aotVals)
