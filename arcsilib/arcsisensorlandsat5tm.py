@@ -63,7 +63,9 @@ from rios import rat
 import osgeo.gdal as gdal
 # Import the scipy optimisation library - used for finding AOD values form the imagery.
 from scipy.optimize import minimize
+# Import the numpy module
 import numpy
+
 
 class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
     """
@@ -280,17 +282,14 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
         solarIrradianceVals.append(IrrVal(irradiance=80.67))
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
-        
-    def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
-        print("Converting to Surface Reflectance")
-        outputImage = os.path.join(outputPath, outputName)
-        
-        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
-        imgBandCoeffs = list()
+    
+    def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
+        sixsCoeffs = numpy.zeros((6, 3), dtype=numpy.float32)    
         # Set up 6S model
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
         s.aero_profile = aeroProfile
+        #s.ground_reflectance = Py6S.GroundReflectance.HomogeneousHapke(0.101, -0.263, 0.589, 0.046)
         s.ground_reflectance = grdRefl
         s.geometry = Py6S.Geometry.Landsat_TM()
         s.geometry.month = self.acquisitionTime.month
@@ -310,40 +309,129 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
         # Band 1
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_TM_B1)
         s.run()
-        imgBandCoeffs.append(Band6S(band=1, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        sixsCoeffs[0,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[0,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[0,2] = float(s.outputs.values['coef_xc'])
         
         # Band 2
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_TM_B2)
         s.run()
-        imgBandCoeffs.append(Band6S(band=2, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        sixsCoeffs[1,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[1,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[1,2] = float(s.outputs.values['coef_xc'])
         
         # Band 3
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_TM_B3)
         s.run()
-        imgBandCoeffs.append(Band6S(band=3, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        sixsCoeffs[2,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[2,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[2,2] = float(s.outputs.values['coef_xc'])
         
         # Band 4
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_TM_B4)
         s.run()
-        imgBandCoeffs.append(Band6S(band=4, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        sixsCoeffs[3,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[3,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[3,2] = float(s.outputs.values['coef_xc'])
         
         # Band 5
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_TM_B5)
         s.run()
-        imgBandCoeffs.append(Band6S(band=5, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        sixsCoeffs[4,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[4,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[4,2] = float(s.outputs.values['coef_xc'])
         
-        # Band 7
+        # Band 6
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_TM_B7)
         s.run()
-        imgBandCoeffs.append(Band6S(band=6, aX=s.outputs.values['coef_xa'], bX=s.outputs.values['coef_xb'], cX=s.outputs.values['coef_xc']))
+        sixsCoeffs[5,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[5,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[5,2] = float(s.outputs.values['coef_xc'])
+        
+        return sixsCoeffs
+    
+    def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
+        print("Converting to Surface Reflectance")
+        outputImage = os.path.join(outputPath, outputName)
+        
+        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
+        imgBandCoeffs = list()
+        
+        sixsCoeffs = self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
+        
+        imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
+        imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
+        imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
+        imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
+        imgBandCoeffs.append(Band6S(band=5, aX=float(sixsCoeffs[4,0]), bX=float(sixsCoeffs[4,1]), cX=float(sixsCoeffs[4,2])))
+        imgBandCoeffs.append(Band6S(band=6, aX=float(sixsCoeffs[5,0]), bX=float(sixsCoeffs[5,1]), cX=float(sixsCoeffs[5,2])))
         
         for band in imgBandCoeffs:
             print(band)
-        
         rsgislib.imagecalibration.apply6SCoeffSingleParam(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, imgBandCoeffs)
-        
         return outputImage
-
+        
+    def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax):
+        print("Converting to Surface Reflectance")
+        outputImage = os.path.join(outputPath, outputName)        
+        
+        print("Build an LUT for elevation values.")    
+        elev6SCoeffsLUT = self.buildElevation6SCoeffLUT(aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax)
+        print("LUT has been built.")
+        
+        elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
+        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
+        
+        elevCoeffs = list()
+        for elevLUT in elev6SCoeffsLUT:
+            imgBandCoeffs = list()
+            sixsCoeffs = elevLUT.Coeffs
+            elevVal = elevLUT.Elev
+            imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
+            imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
+            imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
+            imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
+            imgBandCoeffs.append(Band6S(band=5, aX=float(sixsCoeffs[4,0]), bX=float(sixsCoeffs[4,1]), cX=float(sixsCoeffs[4,2])))
+            imgBandCoeffs.append(Band6S(band=6, aX=float(sixsCoeffs[5,0]), bX=float(sixsCoeffs[5,1]), cX=float(sixsCoeffs[5,2])))
+            
+            elevCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=imgBandCoeffs))
+            
+        rsgislib.imagecalibration.apply6SCoeffElevLUTParam(inputRadImage, inputDEMFile, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, elevCoeffs)
+        return outputImage
+        
+    
+    def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax):
+        print("Converting to Surface Reflectance")
+        outputImage = os.path.join(outputPath, outputName) 
+    
+        print("Build an LUT for elevation and AOT values.")
+        elevAOT6SCoeffsLUT = self.buildElevationAOT6SCoeffLUT(aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax)
+                
+        elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
+        aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
+        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
+        
+        elevAOTCoeffs = list()
+        for elevLUT in elevAOT6SCoeffsLUT:
+            elevVal = elevLUT.Elev
+            aotLUT = elevLUT.Coeffs
+            aot6SCoeffsOut = list()
+            for aotFeat in aotLUT: 
+                sixsCoeffs = aotFeat.Coeffs
+                aotVal = aotFeat.AOT
+                imgBandCoeffs = list()
+                imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
+                imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
+                imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
+                imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
+                imgBandCoeffs.append(Band6S(band=5, aX=float(sixsCoeffs[4,0]), bX=float(sixsCoeffs[4,1]), cX=float(sixsCoeffs[4,2])))
+                imgBandCoeffs.append(Band6S(band=6, aX=float(sixsCoeffs[5,0]), bX=float(sixsCoeffs[5,1]), cX=float(sixsCoeffs[5,2])))
+                aot6SCoeffsOut.append(aotLUTFeat(AOT=float(aotVal), Coeffs=imgBandCoeffs))
+            elevAOTCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=aot6SCoeffsOut))
+                        
+        rsgislib.imagecalibration.apply6SCoeffElevAOTLUTParam(inputRadImage, inputDEMFile, inputAOTImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, elevAOTCoeffs)
+            
+        return outputImage
 
     def run6SToOptimiseAODValue(self, aotVal, radBlueVal, predBlueVal, aeroProfile, atmosProfile, grdRefl, surfaceAltitude):
         """Used as part of the optimastion for identifying values of AOD"""
@@ -483,4 +571,13 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
         except Exception as e:
             raise e
 
+    def setBandNames(self, imageFile):
+        dataset = gdal.Open(imageFile, gdal.GA_Update)
+        dataset.GetRasterBand(1).SetDescription("Blue")
+        dataset.GetRasterBand(2).SetDescription("Green")
+        dataset.GetRasterBand(3).SetDescription("Red")
+        dataset.GetRasterBand(4).SetDescription("NIR")
+        dataset.GetRasterBand(5).SetDescription("SWIR1")
+        dataset.GetRasterBand(6).SetDescription("SWIR2")
+        dataset = None
 

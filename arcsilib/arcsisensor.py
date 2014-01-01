@@ -242,9 +242,10 @@ class ARCSIAbstractSensor (object, metaclass=ABCMeta):
         elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
         lut = list()
         elevRange = (surfaceAltitudeMax - surfaceAltitudeMin) / 100
-        numElevSteps = math.ceil(elevRange)
+        numElevSteps = math.ceil(elevRange) + 1
         elevVal = surfaceAltitudeMin
         for i in range(numElevSteps):
+            print("Building LUT Elevation ", elevVal)
             lut.append(elevLUTFeat(Elev=elevVal, Coeffs=self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, (float(elevVal)/1000), aotVal, useBRDF)))
             elevVal = elevVal + 100
         return lut
@@ -257,11 +258,11 @@ class ARCSIAbstractSensor (object, metaclass=ABCMeta):
         aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
         lut = list()
         elevRange = (surfaceAltitudeMax - surfaceAltitudeMin) / 100
-        numElevSteps = math.ceil(elevRange)
+        numElevSteps = math.ceil(elevRange) + 1
         elevVal = surfaceAltitudeMin
         
         aotRange = (aotMax - aotMin) / 0.05
-        numAOTSteps = math.ceil(aotRange)
+        numAOTSteps = math.ceil(aotRange) + 1
         aotVal = aotMin
         
         for i in range(numElevSteps):
@@ -280,6 +281,8 @@ class ARCSIAbstractSensor (object, metaclass=ABCMeta):
 
     @abstractmethod
     def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax): pass
-        
+    
+    @abstractmethod
+    def setBandNames(self, imageFile): pass
 
 
