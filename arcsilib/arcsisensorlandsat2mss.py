@@ -373,7 +373,10 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.apply6SCoeffElevAOTLUTParam(inputRadImage, inputDEMFile, inputAOTImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, elevAOTCoeffs)
             
         return outputImage
-
+    
+    def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
+        print("Not implemented\n")
+        sys.exit()
 
     def estimateImageToAOD(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
         print("Not implemented\n")

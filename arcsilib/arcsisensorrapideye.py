@@ -152,7 +152,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     self.acquisitionTime = datetime.datetime.strptime(timeStr, "%Y-%m-%dT%H:%M:%S")
                 except Exception as e:
                     raise e
-            print("self.acquisitionTime: ", self.acquisitionTime)
+            #print("self.acquisitionTime: ", self.acquisitionTime)
             
             metadata = root.find('{http://www.opengis.net/gml}metaDataProperty').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}EarthObservationMetaData')
             self.tileID = metadata.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}tileId').text.strip()
@@ -427,7 +427,38 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.apply6SCoeffElevAOTLUTParam(inputRadImage, inputDEMFile, inputAOTImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, elevAOTCoeffs)
             
         return outputImage
-
+    
+    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
+        try:
+            print("Opening: ", inputTOAImage)
+            toaDataset = gdal.Open(inputTOAImage, gdal.GA_ReadOnly)
+            if toaDataset == None:
+                raise Exception('Could not open the image dataset \'' + inputTOAImage + '\'')
+            
+            numBands = toaDataset.RasterCount
+            toaDataset = None 
+            
+            print("Number of bands = ", numBands)
+            
+            darkPxlPercentile = 0.01
+            minObjSize = 5
+            
+            offsetsImage = self.findPerBandDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile)
+                       
+            # TOA Image - Offset Image (if data and < 1 then set min value as 1)... 
+            outputImage = os.path.join(outputPath, outputName)
+            rsgislib.imagecalibration.applySubtractOffsets(inputTOAImage, offsetsImage, outputImage, outFormat, rsgislib.TYPE_16UINT, True, True, 0.0)
+            
+            return outputImage
+            
+        except Exception as e:
+            raise e
+        
+    
+    def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
+        print("Not implemented\n")
+        sys.exit()
+    
     def estimateImageToAOD(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
         print("Not implemented\n")
         sys.exit()
