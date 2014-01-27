@@ -181,6 +181,7 @@ class ARCSI (object):
             prodsToCalc["TOA"] = False
             prodsToCalc["DDVAOT"] = False
             prodsToCalc["SREFSTDMDL"] = False
+            prodsToCalc["DOSUB"] = False
             
             for prod in productsStr:
                 if prod == 'RAD':
@@ -195,7 +196,10 @@ class ARCSI (object):
                 elif prod == 'SREFSTDMDL':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["SREFSTDMDL"] = True
-                
+                elif prod == 'DOSUB':
+                    prodsToCalc["RAD"] = True
+                    prodsToCalc["TOA"] = True
+                    prodsToCalc["DOSUB"] = True
             
             radianceImage=""
             toaImage = ""
@@ -417,7 +421,13 @@ class ARCSI (object):
                     else:
                         outName = outBaseName + "_rad_srefstdmdldem" + arcsiUtils.getFileExtension(outFormat)
                         srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev)                    
-
+            # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
+            if prodsToCalc["DOSUB"]:
+                print("Convert to reflectance using dark object subtraction.")
+                outName = outBaseName + "_rad_toa_dosub" + arcsiUtils.getFileExtension(outFormat)          
+                srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath)
+            
+            
             print("Setting Band Names...")
             sensorClass.setBandNames(srefImage)
 
@@ -455,16 +465,16 @@ class ARCSI (object):
         print("\t-------------------------------------------------------")
         print("\tSenor         | Shorthand   | Functions")
         print("\t-------------------------------------------------------")
-        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, SREFSTDMDL")
-        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, SREFSTDMDL")
-        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, SREFSTDMDL")
-        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, SREFSTDMDL")
-        print("\tLandsat 4 TM  | \'ls5tm\'     | RAD, TOA, DDVAOT, SREFSTDMDL")
-        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, SREFSTDMDL")
-        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DDVAOT, SREFSTDMDL")
-        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DDVAOT, SREFSTDMDL")
-        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DDVAOT, SREFSTDMDL")
-        print("\tRapideye      | \'rapideye\'  | RAD, TOA, SREFSTDMDL")
+        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, SREFSTDMDL, DOSUB")
+        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, SREFSTDMDL, DOSUB")
+        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, SREFSTDMDL, DOSUB")
+        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, SREFSTDMDL, DOSUB")
+        print("\tLandsat 4 TM  | \'ls5tm\'     | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB")
+        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, SREFSTDMDL, DOSUB")
+        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB")
+        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB")
+        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB")
+        print("\tRapideye      | \'rapideye\'  | RAD, TOA, SREFSTDMDL, DOSUB")
         #print("\tSPOT 5        | \'spot5\'     | RAD, TOA")
         #print("\tASTER         | \'aster\'     | RAD, TOA")
         #print("\tIRS P6        | \'irsp6\'     | RAD, TOA")
@@ -530,9 +540,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (--ddvaod).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'TOA', 'DDVAOT', 'SREFSTDMDL'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'TOA', 'DDVAOT', 'SREFSTDMDL', 'DOSUB'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, TOA, DDVAOT, SREFSTDMDL)''')
+                        calculated, as a comma separated list. (RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB)''')
     # Define the argument for requesting a list of products.
     parser.add_argument("--prodlist", action='store_true', default=False, 
                         help='''List the products which are supported and 
@@ -656,6 +666,8 @@ if __name__ == '__main__':
                 needTmp = True
             elif prod == 'SREFSTDMDL':
                 needAOD = True
+            elif prod == 'DOSUB':
+                needTmp = True
 
         if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax) and (not args.aotfile):
             print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.")
@@ -666,7 +678,7 @@ if __name__ == '__main__':
             sys.exit()
                 
         if needTmp and args.tmpath == None:
-            print("Error: If the DDVAOT product is set then a tempory path needs to be provided.")
+            print("Error: If the DDVAOT or DOSUB product is set then a tempory path needs to be provided.")
             sys.exit()
 
         atmosOZoneWaterSpecified = False
@@ -683,6 +695,9 @@ if __name__ == '__main__':
         if (not args.aerowater == None) or (not args.aerodust == None) or (not args.aerooceanic == None) or (not args.aerosoot == None):
             aeroComponentsSpecified = True
 
+
+        #print("Environment Variables: ", os.environ)
+        
 
 
         arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem, args.aotfile)

@@ -465,30 +465,46 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
         outDist = math.sqrt(math.pow((reflBlueVal - predBlueVal),2))
         print("\taX: ", aX, " bX: ", bX, " cX: ", cX, "     Dist = ", outDist)
         return outDist
-    
-    def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
+
+
+    def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
         try:
+            print("Finding dark targets.")
             arcsiUtils = ARCSIUtils()
             tmpBaseName = os.path.splitext(outputName)[0]
             thresImage = os.path.join(tmpPath, tmpBaseName+"_thresd"+arcsiUtils.getFileExtension(outFormat))
             thresImageClumps = os.path.join(tmpPath, tmpBaseName+"_thresdclumps"+arcsiUtils.getFileExtension(outFormat))
             thresImageClumpsRMSmall = os.path.join(tmpPath, tmpBaseName+"_thresdclumpsgt10"+arcsiUtils.getFileExtension(outFormat))
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName+"_thresdclumpsFinal"+arcsiUtils.getFileExtension(outFormat))
-            
-            outputAOTImage = os.path.join(outputPath, outputName)
-            
+                       
             thresMathBands = list()
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b3', fileName=inputTOAImage, bandIndex=3))
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b4', fileName=inputTOAImage, bandIndex=4))
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b6', fileName=inputTOAImage, bandIndex=6))
-            #rsgislib.imagecalc.bandMath(thresImage, "((((b2+b3+b4+b5+b6+b7)/6)<100)&&((b7>15)&&(b7<50))&&(((b5-b4)/(b5+b4))>0.2))?1:0", outFormat, rsgislib.TYPE_8UINT, thresMathBands)
             rsgislib.imagecalc.bandMath(thresImage, "(b6<30)&&(b6!=0)&&(((b4-b3)/(b4+b3))>0.1)?1:0", outFormat, rsgislib.TYPE_8UINT, thresMathBands)
-            #rsgislib.imagecalc.bandMath(thresImage, "(b6<30)&&(b6!=0)?1:0", outFormat, rsgislib.TYPE_8UINT, thresMathBands)
             rsgislib.segmentation.clump(thresImage, thresImageClumps, outFormat, False, 0.0)
             rsgislib.rastergis.populateStats(thresImageClumps, True, True)
             rsgislib.segmentation.rmSmallClumps(thresImageClumps, thresImageClumpsRMSmall, 100, outFormat)
             rsgislib.segmentation.relabelClumps(thresImageClumpsRMSmall, thresImageClumpsFinal, outFormat, False)
             rsgislib.rastergis.populateStats(thresImageClumpsFinal, True, True)
+            
+            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver.Delete(thresImage)
+            gdalDriver.Delete(thresImageClumps)
+            gdalDriver.Delete(thresImageClumpsRMSmall)
+        
+            return thresImageClumpsFinal
+        except Exception as e:
+            raise e
+
+    def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
+        try:
+            arcsiUtils = ARCSIUtils()
+            
+            outputAOTImage = os.path.join(outputPath, outputName)
+            
+            thresImageClumpsFinal = self.findDDVTargets(inputTOAImage, outputPath, outputName, outFormat, tmpPath)
+            
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, minField="MinB1TOA", meanField="MeanB1TOA"))
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=6, minField="MinB7TOA", meanField="MeanB7TOA"))
@@ -552,9 +568,6 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             rsgislib.rastergis.interpolateClumpValues2Image(thresImageClumpsFinal, "PredictAOTFor", "Eastings", "Northings", "idwall", "AOT", outputAOTImage, outFormat, rsgislib.TYPE_32FLOAT)
         
             gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(thresImage)
-            gdalDriver.Delete(thresImageClumps)
-            gdalDriver.Delete(thresImageClumpsRMSmall)
             gdalDriver.Delete(thresImageClumpsFinal)        
         
             return outputAOTImage

@@ -45,6 +45,26 @@ from .arcsiexception import ARCSIException
 import collections
 # Import python math module
 import math
+# Import the rsgislib module
+import rsgislib
+# Import the rsgislib imagecalc module
+import rsgislib.imagecalc
+# Import the RSGISLib segmentation Module
+import rsgislib.segmentation
+# Import the RSGISLib Raster GIS Module
+import rsgislib.rastergis
+# Import the RSGISLib Image Utils Module
+import rsgislib.imageutils
+#Import the OSGEO GDAL module
+import osgeo.gdal as gdal
+# Import the ARCSI utilities class
+from .arcsiutils import ARCSIUtils
+# Import OS path module for manipulating the file system 
+import os.path
+# Import the numpy module
+import numpy
+# Import the RIOS RAT library
+from rios import rat
 
 class ARCSIAbstractSensor (object, metaclass=ABCMeta):
     """
@@ -278,6 +298,90 @@ class ARCSIAbstractSensor (object, metaclass=ABCMeta):
 
     @abstractmethod
     def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax): pass
+    
+    def findPerBandDarkTargetsOffsets(self, inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile):
+        try:
+            arcsiUtils = ARCSIUtils()
+            tmpBaseName = os.path.splitext(outputName)[0]
+            binWidth = 1
+            
+            bandDarkTargetOffsetImages = list()
+            imgExtension = arcsiUtils.getFileExtension(outFormat)
+            tmpDarkPxls = os.path.join(tmpPath, tmpBaseName + "_darkpxls" + imgExtension)
+            tmpDarkPxlsClumps = os.path.join(tmpPath, tmpBaseName + "_darkclumps" + imgExtension)
+            tmpDarkPxlsClumpsRMSmall = os.path.join(tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension)
+            tmpDarkObjs = os.path.join(tmpPath, tmpBaseName+"_darkobjs"+imgExtension)
+            
+            for band in range(numBands):
+                print("Band: ", band+1)
+                bandHist = rsgislib.imagecalc.getHistogram(inputTOAImage, band+1, binWidth, False, 1, 10000)
+                #print(bandHist)
+                sumPxls = numpy.sum(bandHist[0])
+                #print("Total Num Pixels: ", sumPxls)
+                numPxlThreshold = sumPxls * 0.001 # 1th percentile
+                #print("Number of pixels = ", numPxlThreshold)
+                
+                pxlThreshold = 0
+                pxlCount = 0
+                for bin in bandHist[0]:
+                    pxlCount = pxlCount + bin
+                    if pxlCount < numPxlThreshold:
+                        pxlThreshold = pxlThreshold + binWidth
+                    else:
+                        break
+                print("Image Band Threshold (For Dark Pixels) = ", pxlThreshold)
+                
+                dataType = rsgislib.TYPE_8UINT
+                expression = str('b1<') + str(pxlThreshold) + str('?1:0')
+                bandDefns = []
+                bandDefns.append(rsgislib.imagecalc.BandDefn('b1', inputTOAImage, band+1))
+                rsgislib.imagecalc.bandMath(tmpDarkPxls, expression, outFormat, dataType, bandDefns)
+                rsgislib.segmentation.clump(tmpDarkPxls, tmpDarkPxlsClumps, outFormat, False, 0.0)
+                rsgislib.rastergis.populateStats(tmpDarkPxlsClumps, True, False)
+                rsgislib.segmentation.rmSmallClumps(tmpDarkPxlsClumps, tmpDarkPxlsClumpsRMSmall, minObjSize, outFormat)
+                rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmall, tmpDarkObjs, outFormat, False)
+                rsgislib.rastergis.populateStats(tmpDarkObjs, True, False)
+                stats2CalcTOA = list()
+                stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band+1), minField="MinTOARefl", meanField="MeanTOARefl"))
+                rsgislib.rastergis.populateRATWithStats(inputTOAImage, tmpDarkObjs, stats2CalcTOA)
+                
+                ratDS = gdal.Open(tmpDarkObjs, gdal.GA_Update)
+                Histogram = rat.readColumn(ratDS, "Histogram")
+                selected = Histogram * 2
+                selected[...] = 1
+                selected[0] = 0
+                rat.writeColumn(ratDS, "Selected", selected)
+                ratDS = None
+                
+                rsgislib.rastergis.spatialLocation(tmpDarkObjs, "Eastings", "Northings")
+                rsgislib.rastergis.selectClumpsOnGrid(tmpDarkObjs, "Selected", "SelectedGrid", "Eastings", "Northings", "MeanTOARefl", "min", 10, 10)
+                
+                offsetImage = os.path.join(tmpPath, tmpBaseName+"_darktargetoffs_b"+str(band+1)+imgExtension)
+                bandDarkTargetOffsetImages.append(offsetImage)
+                rsgislib.rastergis.interpolateClumpValues2Image(tmpDarkObjs, "SelectedGrid", "Eastings", "Northings", "idwall", "MinTOARefl",  offsetImage, outFormat, rsgislib.TYPE_32FLOAT)
+            
+            outputImage = os.path.join(outputPath, tmpBaseName + "_dosuboffs" + imgExtension)
+            print(outputImage)
+            rsgislib.imageutils.stackImageBands(bandDarkTargetOffsetImages, None, outputImage, None, 0, outFormat, rsgislib.TYPE_32FLOAT)
+            
+            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver.Delete(tmpDarkPxls)
+            gdalDriver.Delete(tmpDarkPxlsClumps)
+            gdalDriver.Delete(tmpDarkPxlsClumpsRMSmall)
+            gdalDriver.Delete(tmpDarkObjs)
+            for image in bandDarkTargetOffsetImages:
+                gdalDriver.Delete(image)
+            
+            return outputImage
+            
+        except Exception as e:
+            raise e
+        
+    @abstractmethod
+    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath): pass
+
+    @abstractmethod
+    def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath): pass
 
     @abstractmethod
     def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax): pass

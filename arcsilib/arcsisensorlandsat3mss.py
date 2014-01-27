@@ -374,7 +374,10 @@ class ARCSILandsat3MSSSensor (ARCSIAbstractSensor):
             
         return outputImage
 
-
+    def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
+        print("Not implemented\n")
+        sys.exit()
+    
     def estimateImageToAOD(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
         print("Not implemented\n")
         sys.exit()
