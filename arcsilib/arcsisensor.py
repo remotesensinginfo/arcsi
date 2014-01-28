@@ -66,12 +66,13 @@ import numpy
 # Import the RIOS RAT library
 from rios import rat
 
-class ARCSIAbstractSensor (object, metaclass=ABCMeta):
+class ARCSIAbstractSensor (object):
     """
     An abstract class which represents a sensor and allows
     the various opperations required to be applied and standard
     variables (e.g., acqusiation date) stored and retrieved.
     """
+    __metaclass__ = ABCMeta
         
     def __init__(self):
         self.sensor = "NA"
