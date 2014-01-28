@@ -762,6 +762,10 @@ if __name__ == '__main__':
             else:
                 args.tmpath = envVar
 
+        if args.dem == None:
+            envVar = arcsiUtils.getEnvironmentVariable("ARCSI_DEM_PATH")
+            if not envVar == None:
+                args.dem = envVar
         
         if args.aeroimg == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_AEROIMG_PATH")
