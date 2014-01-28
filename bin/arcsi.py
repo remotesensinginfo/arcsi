@@ -150,7 +150,7 @@ class ARCSI (object):
         return aotVal
             
     
-    def run(self, inputHeader, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, demFile, aotFile):
+    def run(self, inputHeader, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, demFile, aotFile):
         """
         A function contains the main flow of the software
         """
@@ -158,7 +158,7 @@ class ARCSI (object):
         print("This program comes with ABSOLUTELY NO WARRANTY.")
         print("This is free software, and you are welcome to redistribute it")
         print("under certain conditions; See website (http://www.rsgislib.org/ascsi).")
-        print("Bugs are to be reported to pfb@aber.ac.uk\n")
+        print("Bugs are to be reported to rsgislib-support@googlegroups.com\n")
         
         startTime = time.time()
         arcsiUtils = ARCSIUtils()
@@ -167,14 +167,52 @@ class ARCSI (object):
             wktStr = None
             if inWKTFile != None:
                 wktStr = arcsiUtils.readTextFile(inWKTFile)
+            
             # Step 1: Get the Sensor specific class from factory
             sensorClass = self.sensorClassFactory(sensorStr)
+            
             # Step 2: Read header parameters
             sensorClass.extractHeaderParameters(inputHeader, wktStr)
+            
+            # Step 3: If aerosol and atmosphere images are specified then sample them to find
+            #         the aerosol and atmosphere generic model to use for conversion to SREF
+            if not aeroProfileOptionImg == None:
+                # DO SOMETHING!! PANIC! No, don't panic :s
+                aeroProfileMode = rsgislib.imagecalc.getImageBandModeInEnv(aeroProfileOptionImg, 1, 0, None, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+                if aeroProfileMode == 1:
+                	aeroProfileOption = "Maritime"
+                elif aeroProfileMode == 2:
+                	aeroProfileOption = "Continental"
+                else:
+                	raise Exception("The aerosol profile from the input image was not recognised.")
+            if not atmosProfileOptionImg == None:
+                # DO SOMETHING!! PANIC! No, don't panic :s
+                atmosProfileMode = rsgislib.imagecalc.getImageBandModeInEnv(atmosProfileOptionImg, 1, 0, None, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+                summerWinter = arcsiUtils.isSummerOrWinter(sensorClass.latCentre, sensorClass.lonCentre, sensorClass.acquisitionTime )
+                if atmosProfileMode == 1:
+                	atmosProfileOption = "Tropical"
+                elif atmosProfileMode == 2:
+                	if summerWinter == 1:
+                		atmosProfileOption = "MidlatitudeSummer"
+                	elif summerWinter == 2:
+                		atmosProfileOption = "MidlatitudeWinter"
+                	else:
+                		raise Exception("Not recognised as being summer or winter.")
+                elif atmosProfileMode == 3:
+                	if summerWinter == 1:
+                		atmosProfileOption = "SubarcticSummer"
+                	elif summerWinter == 2:
+                		atmosProfileOption = "SubarcticWinter"
+                	else:
+                		raise Exception("Not recognised as being summer or winter.")
+                else:
+                	raise Exception("The atmosphere profile from the input image was not recognised.")
+                	
             # Step 3: Get Output Image Base Name.
             if outBaseName == None:
                 outBaseName = sensorClass.generateOutputBaseName()
             print("Image Base Name: " + outBaseName)
+            
             # Step 4: Find the products which are to be generated.
             prodsToCalc = dict()
             prodsToCalc["RAD"] = False
@@ -205,6 +243,7 @@ class ARCSI (object):
             toaImage = ""
             srefImage = ""
             aodImage = ""
+            
             # Step 5: Convert to Radiance
             if prodsToCalc["RAD"]:
                 # Execute conversion to radiance
@@ -214,6 +253,7 @@ class ARCSI (object):
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
                     print("")
+            
             # Step 6: Convert to TOA
             if prodsToCalc["TOA"]:
                 # Execute conversion to top of atmosphere reflectance
@@ -223,6 +263,7 @@ class ARCSI (object):
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
                     print("")
+            
             # Step 7: Use image to estimate AOD values
             if prodsToCalc["DDVAOT"]:
                 aeroProfile = None
@@ -288,6 +329,7 @@ class ARCSI (object):
                     #print("Calculating Statistics...")
                     #rsgislib.imageutils.popImageStats(aodImage, True, 0.0, True)
                     #print("")
+            
             # Step 8: Convert to Surface Reflectance using 6S Standard Models
             if prodsToCalc["SREFSTDMDL"]:
                 # Execute conversion to surface reflectance by applying 6S using a 'standard' modelled atmosphere.
@@ -421,6 +463,7 @@ class ARCSI (object):
                     else:
                         outName = outBaseName + "_rad_srefstdmdldem" + arcsiUtils.getFileExtension(outFormat)
                         srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev)                    
+            
             # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
             if prodsToCalc["DOSUB"]:
                 print("Convert to reflectance using dark object subtraction.")
@@ -537,7 +580,7 @@ if __name__ == '__main__':
                         
     # Define the argument for specifying the file path of the output images.
     parser.add_argument("-t", "--tmpath", type=str,
-                        help='''Specify a tempory path for files to be written to temporarly during processing if required (--ddvaod).''')
+                        help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT and DOSUB).''')
     
     # Define the argument which specifies the products which are to be generated.
     parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'TOA', 'DDVAOT', 'SREFSTDMDL', 'DOSUB'],
@@ -557,7 +600,11 @@ if __name__ == '__main__':
     'MidlatitudeSummer', 'MidlatitudeWinter', 'SubarcticSummer', 'SubarcticWinter', 'USStandard1962'],
                         help='''Specify the 6S defined atmospheric profile to use. 
                         (NoGaseousAbsorption, Tropical, MidlatitudeSummer, MidlatitudeWinter, 
-                        SubarcticSummer, SubarcticWinter, USStandard1962)''')                        
+                        SubarcticSummer, SubarcticWinter, USStandard1962)''')  
+    # Define the argument for specifying the file path for the image specifying the generic aerosol model.
+    parser.add_argument("--aeroimg", type=str, help='''Specify the aerosol model image file path.''') 
+    # Define the argument for specifying the file path for the image specifying the generic atmosphere model.
+    parser.add_argument("--atmosimg", type=str, help='''Specify the atmosphere model image file path.''')                                              
     # Define the argument which specifies the amount of OZone in atmosphere
     parser.add_argument("--atmosozone", type=float, 
                         help='''Specify the total amount of ozone in a vertical path 
@@ -700,7 +747,7 @@ if __name__ == '__main__':
         
 
 
-        arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem, args.aotfile)
+        arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem, args.aotfile)
 
 
 

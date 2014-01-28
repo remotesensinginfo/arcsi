@@ -332,7 +332,7 @@ class ARCSIAbstractSensor (object, metaclass=ABCMeta):
                 print("Image Band Threshold (For Dark Pixels) = ", pxlThreshold)
                 
                 dataType = rsgislib.TYPE_8UINT
-                expression = str('b1<') + str(pxlThreshold) + str('?1:0')
+                expression = str('(b1!=0)&&(b1<') + str(pxlThreshold) + str(')?1:0')
                 bandDefns = []
                 bandDefns.append(rsgislib.imagecalc.BandDefn('b1', inputTOAImage, band+1))
                 rsgislib.imagecalc.bandMath(tmpDarkPxls, expression, outFormat, dataType, bandDefns)
