@@ -108,5 +108,6 @@ class ARCSIUtils (object):
         
     
     
-
+	def isSummerOrWinter(self, lat, long, date):
+		print("Hello World!")
 
