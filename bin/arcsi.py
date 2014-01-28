@@ -178,16 +178,20 @@ class ARCSI (object):
             #         the aerosol and atmosphere generic model to use for conversion to SREF
             if not aeroProfileOptionImg == None:
                 # DO SOMETHING!! PANIC! No, don't panic :s
-                aeroProfileMode = rsgislib.imagecalc.getImageBandModeInEnv(aeroProfileOptionImg, 1, 0, None, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+                print("Get aero profile from image...")
+                aeroProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(aeroProfileOptionImg, 1, 1, None, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)[0])
+                
                 if aeroProfileMode == 1:
                 	aeroProfileOption = "Maritime"
                 elif aeroProfileMode == 2:
                 	aeroProfileOption = "Continental"
                 else:
                 	raise Exception("The aerosol profile from the input image was not recognised.")
+                print("Aerosol Profile = ", aeroProfileOption)
             if not atmosProfileOptionImg == None:
                 # DO SOMETHING!! PANIC! No, don't panic :s
-                atmosProfileMode = rsgislib.imagecalc.getImageBandModeInEnv(atmosProfileOptionImg, 1, 0, None, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+                print("Get atmos profile from image...")
+                atmosProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(atmosProfileOptionImg, 1, 1, None, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)[0])
                 summerWinter = arcsiUtils.isSummerOrWinter(sensorClass.latCentre, sensorClass.lonCentre, sensorClass.acquisitionTime )
                 if atmosProfileMode == 1:
                 	atmosProfileOption = "Tropical"
@@ -207,7 +211,8 @@ class ARCSI (object):
                 		raise Exception("Not recognised as being summer or winter.")
                 else:
                 	raise Exception("The atmosphere profile from the input image was not recognised.")
-                	
+                print("Atmosphere Profile = ", atmosProfileOption)
+                
             # Step 3: Get Output Image Base Name.
             if outBaseName == None:
                 outBaseName = sensorClass.generateOutputBaseName()

@@ -109,8 +109,18 @@ class ARCSIUtils (object):
     
     
     def isSummerOrWinter(self, lat, long, date):
-        print("Hello World!")
-        print("LAT: ", lat)
-        print("Long: ", long)
-        print("Date: ", date)
+        summerWinter = 0
+        if lat < 0:
+            # Southern Hemisphere
+            if (date.month > 4) & (date.month < 11):
+                summerWinter = 2 # Winter
+            else:
+                summerWinter = 3 # Summer
+        else: 
+            # Northern Hemisphere
+            if (date.month > 3) & (date.month < 10):
+                summerWinter = 1 # summer
+            else:
+                summerWinter = 2 # Winter
+        return summerWinter
 
