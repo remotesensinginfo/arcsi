@@ -544,9 +544,12 @@ if __name__ == '__main__':
                                             set of scripts for taking \'RAW\'
                                             digital numbers and converting them
                                             into radiance, top of atmosphere
-                                            reflectance or surface reflectance,
-                                            including options for BRDF
-                                            correction.''')
+                                            reflectance, surface reflectance using
+                                            modelled atmosphere via 6S or undertaking
+                                            a dark object subtraction. New sensors
+                                            are easy to add so get in touch if we
+                                            don't currently support the sensor you 
+                                            require.''')
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.1a')
     # Define the argument for specifying the input images header file.
