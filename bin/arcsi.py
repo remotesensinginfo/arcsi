@@ -182,11 +182,11 @@ class ARCSI (object):
                 aeroProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(aeroProfileOptionImg, 1, 1, None, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)[0])
                 
                 if aeroProfileMode == 1:
-                	aeroProfileOption = "Maritime"
+                    aeroProfileOption = "Maritime"
                 elif aeroProfileMode == 2:
-                	aeroProfileOption = "Continental"
+                    aeroProfileOption = "Continental"
                 else:
-                	raise Exception("The aerosol profile from the input image was not recognised.")
+                    raise Exception("The aerosol profile from the input image was not recognised.")
                 print("Aerosol Profile = ", aeroProfileOption)
             if not atmosProfileOptionImg == None:
                 # DO SOMETHING!! PANIC! No, don't panic :s
@@ -194,23 +194,23 @@ class ARCSI (object):
                 atmosProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(atmosProfileOptionImg, 1, 1, None, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)[0])
                 summerWinter = arcsiUtils.isSummerOrWinter(sensorClass.latCentre, sensorClass.lonCentre, sensorClass.acquisitionTime )
                 if atmosProfileMode == 1:
-                	atmosProfileOption = "Tropical"
+                    atmosProfileOption = "Tropical"
                 elif atmosProfileMode == 2:
-                	if summerWinter == 1:
-                		atmosProfileOption = "MidlatitudeSummer"
-                	elif summerWinter == 2:
-                		atmosProfileOption = "MidlatitudeWinter"
-                	else:
-                		raise Exception("Not recognised as being summer or winter.")
+                    if summerWinter == 1:
+                        atmosProfileOption = "MidlatitudeSummer"
+                    elif summerWinter == 2:
+                        atmosProfileOption = "MidlatitudeWinter"
+                    else:
+                        raise Exception("Not recognised as being summer or winter.")
                 elif atmosProfileMode == 3:
-                	if summerWinter == 1:
-                		atmosProfileOption = "SubarcticSummer"
-                	elif summerWinter == 2:
-                		atmosProfileOption = "SubarcticWinter"
-                	else:
-                		raise Exception("Not recognised as being summer or winter.")
+                    if summerWinter == 1:
+                        atmosProfileOption = "SubarcticSummer"
+                    elif summerWinter == 2:
+                        atmosProfileOption = "SubarcticWinter"
+                    else:
+                        raise Exception("Not recognised as being summer or winter.")
                 else:
-                	raise Exception("The atmosphere profile from the input image was not recognised.")
+                    raise Exception("The atmosphere profile from the input image was not recognised.")
                 print("Atmosphere Profile = ", atmosProfileOption)
                 
             # Step 3: Get Output Image Base Name.
@@ -575,7 +575,7 @@ if __name__ == '__main__':
     parser.add_argument("--inwkt", type=str, 
                         help='''Specify the WKT projection of the input image''')
     # Define the argument for specifying the image file format.
-    parser.add_argument("-f", "--format", type=str, default="KEA",
+    parser.add_argument("-f", "--format", type=str, 
                         help='''Specify the image output format (GDAL name).''')
     # Define the argument for specifying the output image base file name if it is
     # not to be automatically generated.
@@ -684,6 +684,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     arcsiObj = ARCSI()
+    arcsiUtils = ARCSIUtils()
     
     if args.sensorlist:
         arcsiObj.listSensors()
@@ -701,17 +702,27 @@ if __name__ == '__main__':
             sys.exit()
     
         # Check that the output image format has been specified.
+        
         if args.format == None:
             # Print an error message if not and exit.
-            print("Error: No output image format provided.")
-            sys.exit()
+            envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUT_FORMAT")
+            if envVar == None:
+                print("Error: No output image format provided.")
+                sys.exit()
+            else:
+                args.format = envVar
+            
         
         # Check that the output image format has been specified.
         if args.outpath == None:
             # Print an error message if not and exit.
-            print("Error: No output file path has been provided.")
-            sys.exit()
-        
+            envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUTPUT_PATH")
+            if envVar == None:
+                print("Error: No output file path has been provided.")
+                sys.exit()
+            else:
+                args.outpath = envVar
+                    
         needAOD = False
         needAODMinMax = False
         needTmp = False
@@ -729,12 +740,38 @@ if __name__ == '__main__':
             sys.exit()
             
         if needAODMinMax and (args.minaot == None) and (args.maxaot == None):
-            print("Error: The min and max AOT values for the search should be specified.")
-            sys.exit()
+        	envVarMinAOT = arcsiUtils.getEnvironmentVariable("ARCSI_MIN_AOT")
+            if envVarMinAOT == None:
+                print("Error: The min and max AOT values for the search should be specified.")
+                sys.exit()
+            else:
+                args.minaot = float(envVarMinAOT)
+                
+            envVarMaxAOT = arcsiUtils.getEnvironmentVariable("ARCSI_MAX_AOT")
+            if envVarMaxAOT == None:
+                print("Error: The min and max AOT values for the search should be specified.")
+                sys.exit()
+            else:
+                args.maxaot = float(envVarMaxAOT)
                 
         if needTmp and args.tmpath == None:
-            print("Error: If the DDVAOT or DOSUB product is set then a tempory path needs to be provided.")
-            sys.exit()
+        	envVar = arcsiUtils.getEnvironmentVariable("ARCSI_TMP_PATH")
+            if envVar == None:
+                print("Error: If the DDVAOT or DOSUB product is set then a tempory path needs to be provided.")
+                sys.exit()
+            else:
+                args.tmpath = envVar
+
+		
+		if args.aeroimg == None:
+			envVar = arcsiUtils.getEnvironmentVariable("ARCSI_AEROIMG_PATH")
+            if not envVar == None:
+                args.aeroimg = envVar
+                
+        if args.atmosimg == None:
+			envVar = arcsiUtils.getEnvironmentVariable("ARCSI_ATMOSIMG_PATH")
+            if not envVar == None:
+                args.atmosimg = envVar
 
         atmosOZoneWaterSpecified = False
         if (not args.atmosozone == None) and (args.atmoswater == None):
@@ -751,7 +788,7 @@ if __name__ == '__main__':
             aeroComponentsSpecified = True
 
 
-        #print("Environment Variables: ", os.environ)
+        
         
 
 
