@@ -740,7 +740,7 @@ if __name__ == '__main__':
             sys.exit()
             
         if needAODMinMax and (args.minaot == None) and (args.maxaot == None):
-        	envVarMinAOT = arcsiUtils.getEnvironmentVariable("ARCSI_MIN_AOT")
+            envVarMinAOT = arcsiUtils.getEnvironmentVariable("ARCSI_MIN_AOT")
             if envVarMinAOT == None:
                 print("Error: The min and max AOT values for the search should be specified.")
                 sys.exit()
@@ -755,21 +755,21 @@ if __name__ == '__main__':
                 args.maxaot = float(envVarMaxAOT)
                 
         if needTmp and args.tmpath == None:
-        	envVar = arcsiUtils.getEnvironmentVariable("ARCSI_TMP_PATH")
+            envVar = arcsiUtils.getEnvironmentVariable("ARCSI_TMP_PATH")
             if envVar == None:
                 print("Error: If the DDVAOT or DOSUB product is set then a tempory path needs to be provided.")
                 sys.exit()
             else:
                 args.tmpath = envVar
 
-		
-		if args.aeroimg == None:
-			envVar = arcsiUtils.getEnvironmentVariable("ARCSI_AEROIMG_PATH")
+        
+        if args.aeroimg == None:
+            envVar = arcsiUtils.getEnvironmentVariable("ARCSI_AEROIMG_PATH")
             if not envVar == None:
                 args.aeroimg = envVar
                 
         if args.atmosimg == None:
-			envVar = arcsiUtils.getEnvironmentVariable("ARCSI_ATMOSIMG_PATH")
+            envVar = arcsiUtils.getEnvironmentVariable("ARCSI_ATMOSIMG_PATH")
             if not envVar == None:
                 args.atmosimg = envVar
 
