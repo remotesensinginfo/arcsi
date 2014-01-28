@@ -36,6 +36,8 @@ Module that contains the ARCSIUtils class.
 
 # Import the ARCSI exception class
 from .arcsiexception import ARCSIException
+# Import the OS python module
+import os
 
 class ARCSIUtils (object):
     """
@@ -123,4 +125,14 @@ class ARCSIUtils (object):
             else:
                 summerWinter = 2 # Winter
         return summerWinter
+        
+    def getEnvironmentVariable(self, var):
+    	outVar = None
+    	try:
+    		outVar = os.environ[var]
+    		print(outVar)
+    	except Exception:
+    		outVar = None
+    	return outVar
+    	
 
