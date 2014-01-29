@@ -263,7 +263,7 @@ class ARCSIAbstractSensor (object):
         elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
         lut = list()
         elevRange = (surfaceAltitudeMax - surfaceAltitudeMin) / 100
-        numElevSteps = math.ceil(elevRange) + 1
+        numElevSteps = int(math.ceil(elevRange) + 1)
         elevVal = surfaceAltitudeMin
         for i in range(numElevSteps):
             print("Building LUT Elevation ", elevVal)
@@ -279,11 +279,11 @@ class ARCSIAbstractSensor (object):
         aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
         lut = list()
         elevRange = (surfaceAltitudeMax - surfaceAltitudeMin) / 100
-        numElevSteps = math.ceil(elevRange) + 1
+        numElevSteps = int(math.ceil(elevRange) + 1)
         elevVal = surfaceAltitudeMin
         
         aotRange = (aotMax - aotMin) / 0.05
-        numAOTSteps = math.ceil(aotRange) + 1
+        numAOTSteps = int(math.ceil(aotRange) + 1)
         aotVal = aotMin
         
         for i in range(numElevSteps):
