@@ -249,6 +249,8 @@ class ARCSI (object):
                 # Execute conversion to radiance
                 outName = outBaseName + "_rad" + arcsiUtils.getFileExtension(outFormat)
                 radianceImage = sensorClass.convertImageToRadiance(outFilePath, outName, outFormat)
+                print("Setting Band Names...")
+                sensorClass.setBandNames(radianceImage)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
@@ -261,7 +263,6 @@ class ARCSI (object):
                 toaImage = sensorClass.convertImageToTOARefl(radianceImage, outFilePath, outName, outFormat)
                 print("Setting Band Names...")
                 sensorClass.setBandNames(toaImage)
-                
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
@@ -328,10 +329,10 @@ class ARCSI (object):
             
                 outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
                 aodImage = sensorClass.estimateImageToAOD(radianceImage, toaImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, minAOT, maxAOT)
-                #if calcStatsPy:
-                    #print("Calculating Statistics...")
-                    #rsgislib.imageutils.popImageStats(aodImage, True, 0.0, True)
-                    #print("")
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.imageutils.popImageStats(aodImage, True, 0.0, True)
+                    print("")
             
             # Step 8: Convert to Surface Reflectance using 6S Standard Models
             if prodsToCalc["SREFSTDMDL"]:
@@ -466,7 +467,15 @@ class ARCSI (object):
                     else:
                         outName = outBaseName + "_rad_srefstdmdldem" + arcsiUtils.getFileExtension(outFormat)
                         srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev)                    
-            
+                
+                print("Setting Band Names...")
+                sensorClass.setBandNames(srefImage)
+
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+                    print("")
+                    
             # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
             if prodsToCalc["DOSUB"]:
                 print("Convert to reflectance using dark object subtraction.")
@@ -479,6 +488,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+                    print("")
                 
         except ARCSIException as e:
             print("Error: " + str(e))
