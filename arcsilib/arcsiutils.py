@@ -130,7 +130,7 @@ class ARCSIUtils (object):
     	outVar = None
     	try:
     		outVar = os.environ[var]
-    		print(outVar)
+    		#print(outVar)
     	except Exception:
     		outVar = None
     	return outVar

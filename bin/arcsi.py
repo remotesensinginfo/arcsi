@@ -154,11 +154,6 @@ class ARCSI (object):
         """
         A function contains the main flow of the software
         """
-        print("ARCSI 0.1a Copyright (C) 2013  Peter Bunting")
-        print("This program comes with ABSOLUTELY NO WARRANTY.")
-        print("This is free software, and you are welcome to redistribute it")
-        print("under certain conditions; See website (http://www.rsgislib.org/ascsi).")
-        print("Bugs are to be reported to rsgislib-support@googlegroups.com\n")
         
         startTime = time.time()
         arcsiUtils = ARCSIUtils()
@@ -540,6 +535,13 @@ if __name__ == '__main__':
     """
     The command line user interface to ARCSI
     """
+    
+    print("ARCSI 0.1a Copyright (C) 2013  Peter Bunting")
+    print("This program comes with ABSOLUTELY NO WARRANTY.")
+    print("This is free software, and you are welcome to redistribute it")
+    print("under certain conditions; See website (http://www.rsgislib.org/ascsi).")
+    print("Bugs are to be reported to rsgislib-support@googlegroups.com\n")
+    
     parser = argparse.ArgumentParser(prog='arcsi',
                                     description='''Software for the Atmospheric
                                                 and Radiometric Correction of
@@ -710,6 +712,7 @@ if __name__ == '__main__':
                 print("Error: No output image format provided.")
                 sys.exit()
             else:
+                print("Taking output format from environment variable.")
                 args.format = envVar
             
         
@@ -721,6 +724,7 @@ if __name__ == '__main__':
                 print("Error: No output file path has been provided.")
                 sys.exit()
             else:
+                print("Taking output file path from environment variable.")
                 args.outpath = envVar
                     
         needAOD = False
@@ -745,6 +749,7 @@ if __name__ == '__main__':
                 print("Error: The min and max AOT values for the search should be specified.")
                 sys.exit()
             else:
+                print("Taking min AOT from environment variable.")
                 args.minaot = float(envVarMinAOT)
                 
             envVarMaxAOT = arcsiUtils.getEnvironmentVariable("ARCSI_MAX_AOT")
@@ -752,6 +757,7 @@ if __name__ == '__main__':
                 print("Error: The min and max AOT values for the search should be specified.")
                 sys.exit()
             else:
+                print("Taking max AOT from environment variable.")
                 args.maxaot = float(envVarMaxAOT)
                 
         if needTmp and args.tmpath == None:
@@ -760,22 +766,26 @@ if __name__ == '__main__':
                 print("Error: If the DDVAOT or DOSUB product is set then a tempory path needs to be provided.")
                 sys.exit()
             else:
+                print("Taking temp path from environment variable.")
                 args.tmpath = envVar
 
         if args.dem == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_DEM_PATH")
             if not envVar == None:
                 args.dem = envVar
+                print("Taking DEM path from environment variable.")
         
         if args.aeroimg == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_AEROIMG_PATH")
             if not envVar == None:
                 args.aeroimg = envVar
+                print("Taking aerosol profile image path from environment variable.")
                 
         if args.atmosimg == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_ATMOSIMG_PATH")
             if not envVar == None:
                 args.atmosimg = envVar
+                print("Taking atmosphere profile image path from environment variable.")
 
         atmosOZoneWaterSpecified = False
         if (not args.atmosozone == None) and (args.atmoswater == None):
