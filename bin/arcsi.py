@@ -565,8 +565,7 @@ if __name__ == '__main__':
     # Define the argument for specifying the sensor.
     parser.add_argument("-s", "--sensor", choices=['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm',
                                                    'ls5mss', 'ls5tm', 'ls7', 
-                                                   'ls8', 'spot5', 'aster', 'irsp6',
-                                                   'rapideye'],  
+                                                   'ls8', 'rapideye'],  
                         help='''Specify the sensor being processed.''')
     # Define the argument for requesting a list of the supported sensors.
     parser.add_argument("--sensorlist", action='store_true', default=False, 

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 """
-Module that contains the ARSCI Extract Data from archives.
+Module that contains the ARSCI command to extract data from archives.
 """
 
 ############################################################################
