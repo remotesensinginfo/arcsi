@@ -259,6 +259,9 @@ class ARCSI (object):
                 # Execute conversion to top of atmosphere reflectance
                 outName = outBaseName + "_rad_toa" + arcsiUtils.getFileExtension(outFormat)
                 toaImage = sensorClass.convertImageToTOARefl(radianceImage, outFilePath, outName, outFormat)
+                print("Setting Band Names...")
+					sensorClass.setBandNames(toaImage)
+				
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
@@ -470,13 +473,12 @@ class ARCSI (object):
                 outName = outBaseName + "_rad_toa_dosub" + arcsiUtils.getFileExtension(outFormat)          
                 srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath)
             
-            
-            print("Setting Band Names...")
-            sensorClass.setBandNames(srefImage)
+				print("Setting Band Names...")
+				sensorClass.setBandNames(srefImage)
 
-            if calcStatsPy:
-                print("Calculating Statistics...")
-                rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+				if calcStatsPy:
+					print("Calculating Statistics...")
+					rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
                 
         except ARCSIException as e:
             print("Error: " + str(e))
