@@ -243,7 +243,10 @@ class ARCSILandsat3MSSSensor (ARCSIAbstractSensor):
         solarIrradianceVals.append(IrrVal(irradiance=887.9))
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
-        
+    
+    def generateCloudMask(self, inputImage, outputPath, outputName, outFormat, tmpPath):
+    	print("Not Implemented")
+    
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((4, 3), dtype=numpy.float32)    
         # Set up 6S model

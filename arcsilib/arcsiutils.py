@@ -38,6 +38,8 @@ Module that contains the ARCSIUtils class.
 from .arcsiexception import ARCSIException
 # Import the OS python module
 import os
+#Import the OSGEO GDAL module
+import osgeo.gdal as gdal
 
 class ARCSIUtils (object):
     """
@@ -127,12 +129,19 @@ class ARCSIUtils (object):
         return summerWinter
         
     def getEnvironmentVariable(self, var):
-    	outVar = None
-    	try:
-    		outVar = os.environ[var]
-    		#print(outVar)
-    	except Exception:
-    		outVar = None
-    	return outVar
-    	
+        outVar = None
+        try:
+            outVar = os.environ[var]
+            #print(outVar)
+        except Exception:
+            outVar = None
+        return outVar
+
+    def setImgThematic(self, imageFile):
+        ds = gdal.Open(imageFile, gdal.GA_Update)
+        for bandnum in range(ds.RasterCount):
+            band = ds.GetRasterBand(bandnum + 1)
+            band.SetMetadataItem('LAYER_TYPE', 'thematic')
+        ds = None
+        
 
