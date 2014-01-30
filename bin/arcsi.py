@@ -66,6 +66,10 @@ from arcsilib.arcsisensorrapideye import ARCSIRapidEyeSensor
 import rsgislib.imageutils
 # Import the image calculations module from rsgislib
 import rsgislib.imagecalc
+# Import the raster GIS module from rsgislib
+import rsgislib.rastergis
+# Import the base rsgislib module
+import rsgislib
 # Import the py6s module for running 6S from python.
 import Py6S
 # Import the osgeo gdal library
@@ -168,6 +172,7 @@ class ARCSI (object):
             
             # Step 2: Read header parameters
             sensorClass.extractHeaderParameters(inputHeader, wktStr)
+            print("")
             
             # Step 3: If aerosol and atmosphere images are specified then sample them to find
             #         the aerosol and atmosphere generic model to use for conversion to SREF
@@ -217,6 +222,7 @@ class ARCSI (object):
             prodsToCalc = dict()
             prodsToCalc["RAD"] = False
             prodsToCalc["TOA"] = False
+            prodsToCalc["CLOUDS"] = False
             prodsToCalc["DDVAOT"] = False
             prodsToCalc["SREFSTDMDL"] = False
             prodsToCalc["DOSUB"] = False
@@ -227,6 +233,10 @@ class ARCSI (object):
                 elif prod == 'TOA':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
+                elif prod == 'CLOUDS':
+                    prodsToCalc["RAD"] = True
+                    prodsToCalc["TOA"] = True
+                    prodsToCalc["CLOUDS"] = True
                 elif prod == 'DDVAOT':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
@@ -243,6 +253,7 @@ class ARCSI (object):
             toaImage = ""
             srefImage = ""
             aodImage = ""
+            cloudsImage = ""
             
             # Step 5: Convert to Radiance
             if prodsToCalc["RAD"]:
@@ -254,7 +265,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
-                    print("")
+                print("")
             
             # Step 6: Convert to TOA
             if prodsToCalc["TOA"]:
@@ -266,7 +277,34 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
-                    print("")
+                print("")
+            
+            # Step 7: Generate Cloud Masks
+            if prodsToCalc["CLOUDS"]:
+                # Execute conversion to top of atmosphere reflectance
+                outName = outBaseName + "_clouds" + arcsiUtils.getFileExtension(outFormat)
+                cloudsImage = sensorClass.generateCloudMask(toaImage, outFilePath, outName, outFormat, tmpPath)
+                print("Setting Band Names...")
+                sensorClass.setBandNames(toaImage)
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.rastergis.populateStats(cloudsImage, True, True)
+                print("Applying cloud masks to images...")
+                outputRADImage = os.path.join(outFilePath, outBaseName + "_rad_mclds" + arcsiUtils.getFileExtension(outFormat))
+                rsgislib.imageutils.maskImage(radianceImage, cloudsImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 255)
+                radianceImage = outputRADImage
+                sensorClass.setBandNames(radianceImage)
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
+                outputTOAImage = os.path.join(outFilePath, outBaseName + "_rad_toa_mclds" + arcsiUtils.getFileExtension(outFormat))
+                rsgislib.imageutils.maskImage(toaImage, cloudsImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, 255)
+                toaImage = outputTOAImage
+                sensorClass.setBandNames(toaImage)
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
+                print("")
             
             # Step 7: Use image to estimate AOD values
             if prodsToCalc["DDVAOT"]:
@@ -332,7 +370,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aodImage, True, 0.0, True)
-                    print("")
+                print("")
             
             # Step 8: Convert to Surface Reflectance using 6S Standard Models
             if prodsToCalc["SREFSTDMDL"]:
@@ -450,7 +488,6 @@ class ARCSI (object):
                     if calcStatsPy:
                         print("Calculating Statistics...")
                         rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
-                        print("")
                         
                     if (not aotFile == None):
                         print("Build an AOT LUT...")
@@ -474,7 +511,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
-                    print("")
+                print("")
                     
             # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
             if prodsToCalc["DOSUB"]:
@@ -601,12 +638,12 @@ if __name__ == '__main__':
                         
     # Define the argument for specifying the file path of the output images.
     parser.add_argument("-t", "--tmpath", type=str,
-                        help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT and DOSUB).''')
+                        help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOSUB and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'TOA', 'DDVAOT', 'SREFSTDMDL', 'DOSUB'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'TOA', 'CLOUDS', 'DDVAOT', 'SREFSTDMDL', 'DOSUB'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB)''')
+                        calculated, as a comma separated list. (RAD, TOA, CLOUDS, DDVAOT, SREFSTDMDL, DOSUB)''')
     # Define the argument for requesting a list of products.
     parser.add_argument("--prodlist", action='store_true', default=False, 
                         help='''List the products which are supported and 
@@ -749,6 +786,8 @@ if __name__ == '__main__':
                 needAOD = True
             elif prod == 'DOSUB':
                 needTmp = True
+            elif prod == 'CLOUDS':
+                needTmp = True
 
         if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax) and (not args.aotfile):
             print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.")
@@ -774,7 +813,7 @@ if __name__ == '__main__':
         if needTmp and args.tmpath == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_TMP_PATH")
             if envVar == None:
-                print("Error: If the DDVAOT or DOSUB product is set then a tempory path needs to be provided.")
+                print("Error: If the DDVAOT or DOSUB or CLOUDS product is set then a tempory path needs to be provided.")
                 sys.exit()
             else:
                 print("Taking temp path from environment variable.")

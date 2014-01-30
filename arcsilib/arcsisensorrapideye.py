@@ -65,6 +65,8 @@ import xml.etree.ElementTree as ET
 import numpy
 # Import the GDAL python module
 import osgeo.gdal as gdal
+# Import the python subprocess module - used to call commands line tools.
+import subprocess
 
 class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
     """
@@ -212,22 +214,22 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             if radioCorrAppliedStr == "true":
                 self.radioCorrApplied = True
             else:
-            	self.radioCorrApplied = False
+                self.radioCorrApplied = False
             
             if self.radioCorrApplied:
-            	try:
-            		self.radioCorrVersion = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}radiometricCalibrationVersion').text.strip()
-            	except Exception:
-            		self.radioCorrVersion = 'Unknown'
+                try:
+                    self.radioCorrVersion = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}radiometricCalibrationVersion').text.strip()
+                except Exception:
+                    self.radioCorrVersion = 'Unknown'
             else:
-            	self.radioCorrVersion = 'Not Applied'
+                self.radioCorrVersion = 'Not Applied'
             print('self.radioCorrVersion = ', self.radioCorrVersion)
             
             atmosCorrAppliedStr = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}atmosphericCorrectionApplied').text.strip()
             if atmosCorrAppliedStr == "true":
                 self.atmosCorrApplied = True
             else:
-            	self.atmosCorrApplied = False
+                self.atmosCorrApplied = False
             print('self.atmosCorrApplied = ', self.atmosCorrApplied)
             
             if self.atmosCorrApplied:
@@ -237,7 +239,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             if elevCorrAppliedStr == "true":
                 self.elevCorrApplied = True
             else:
-            	self.elevCorrApplied = False
+                self.elevCorrApplied = False
             print('self.elevCorrApplied = ', self.elevCorrApplied)
             
             self.geoCorrLevel = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}geoCorrectionLevel').text.strip()
@@ -295,7 +297,35 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
     
-    
+    def generateCloudMask(self, inputImage, outputPath, outputName, outFormat, tmpPath):
+        print("Generating Cloud Mask")
+        try:
+            arcsiUtils = ARCSIUtils()
+            tmpBaseName = os.path.splitext(outputName)[0]
+            imgExtension = arcsiUtils.getFileExtension(outFormat)        
+            stretchedImg = os.path.join(tmpPath, tmpBaseName + "_stchd" + imgExtension)
+            outputCloudsImage = os.path.join(outputPath, outputName)
+            outputCloudsImage = outputCloudsImage.replace(imgExtension, "tif")
+        
+            rsgislib.imageutils.stretchImage(inputImage, stretchedImg, False, "", True, False, outFormat, rsgislib.TYPE_8UINT, rsgislib.imageutils.STRETCH_LINEARSTDDEV, 2)
+            
+            cloudsCmd = "recloud"
+            cloudsOpts = "-i " + inputImage + " -s " + stretchedImg + " -o " + outputCloudsImage
+            print(cloudsCmd + " " + cloudsOpts)
+            
+            os.system(cloudsCmd + " " + cloudsOpts)
+            #subprocess.call([cloudsCmd, cloudsOpts]) # TODO: WHY DID THIS NOT WORK!?!?!?
+            
+            arcsiUtils.setImgThematic(outputCloudsImage)
+            
+            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver.Delete(stretchedImg)
+            
+            return outputCloudsImage
+        except Exception as e:
+            raise e    
+        
+        
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((5, 3), dtype=numpy.float32)    
         # Set up 6S model

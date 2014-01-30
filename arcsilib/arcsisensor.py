@@ -254,6 +254,9 @@ class ARCSIAbstractSensor (object):
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat): pass
     
     @abstractmethod
+    def generateCloudMask(self, inputImage, outputPath, outputName, outFormat, tmpPath): pass
+    
+    @abstractmethod
     def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF): pass
 
     @abstractmethod
