@@ -120,6 +120,7 @@ if __name__ == '__main__':
                         
     parser.add_argument("-e", "--header", type=str, required=True, 
                         help='''The extension / unquie file ending for the input header files.''')
+    
     parser.add_argument("--nofolders", action='store_true', default=False, 
                         help='''Specifies whether that the the commands should only look for files
                                 within the specified input directory and not go down the directory tree.''')
@@ -130,9 +131,9 @@ if __name__ == '__main__':
                         help='''Specify the sensor code (see arcsi.py) for the input files, 
                                 which all need to be from the same sensor.''')
     
-    parser.add_argument("-p", "--prods", type=str, required=True, nargs='+', choices=['RAD', 'TOA', 'DDVAOT', 'SREFSTDMDL', 'DOSUB'],
+    parser.add_argument("-p", "--prods", type=str, required=True, nargs='+', choices=['RAD', 'TOA', 'CLOUDS', 'DDVAOT', 'SREFSTDMDL', 'DOSUB'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB)''')
+                        calculated, as a comma separated list. (RAD, TOA, CLOUDS, DDVAOT, SREFSTDMDL, DOSUB)''')
     
     parser.add_argument("--outdir", type=str, 
                         help='''Specifiy the output directory for the products from ARCSI.''')
