@@ -92,6 +92,9 @@ class ARCSIExtractData (object):
             
     
     def run(self, inputDIR, outputDIR, noFolders):
+        inputDIR = os.path.abspath(inputDIR)
+        outputDIR = os.path.abspath(outputDIR)
+        
         # First, do the tar.gz files.
         inputFileListTarGz = glob.glob(os.path.join(inputDIR, "*.tar.gz"))
         #print(inputFileListTarGz)
