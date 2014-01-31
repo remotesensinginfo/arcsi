@@ -51,6 +51,15 @@ import argparse
 class ARCSIBuildCommands (object):
         
     def buildCmds(self, inputDIR, outputFile, headerEnding, noFolders, sensor, prods, outdir, format, tmpath, aeropro, atmospro, aeroimg, atmosimg, surfacealtitude, aot, vis, minaot, maxaot, stats, dem):
+        inputDIR = os.path.abspath(inputDIR)
+        outputFile = os.path.abspath(outputFile)
+        if not aeroimg == None:
+            aeroimg = os.path.abspath(aeroimg)
+        if not atmosimg == None:
+            atmosimg = os.path.abspath(atmosimg)
+        if not dem == None:
+            dem = os.path.abspath(dem)
+            
         headersFilesList = list()
         if noFolders:
             headersFilesList = glob.glob(os.path.join(inputDIR, "*" + headerEnding))
