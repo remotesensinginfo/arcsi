@@ -305,7 +305,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             imgExtension = arcsiUtils.getFileExtension(outFormat)        
             stretchedImg = os.path.join(tmpPath, tmpBaseName + "_stchd" + imgExtension)
             outputCloudsImage = os.path.join(outputPath, outputName)
-            outputCloudsImage = outputCloudsImage.replace(imgExtension, "tif")
+            outputCloudsImage = outputCloudsImage.replace(imgExtension, ".tif")
         
             rsgislib.imageutils.stretchImage(inputImage, stretchedImg, False, "", True, False, outFormat, rsgislib.TYPE_8UINT, rsgislib.imageutils.STRETCH_LINEARSTDDEV, 2)
             
