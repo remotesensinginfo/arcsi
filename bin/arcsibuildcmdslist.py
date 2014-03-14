@@ -61,11 +61,14 @@ class ARCSIBuildCommands (object):
             dem = os.path.abspath(dem)
             
         headersFilesList = list()
+        searchPath = ""
         if noFolders:
-            headersFilesList = glob.glob(os.path.join(inputDIR, "*" + headerEnding))
+            searchPath = os.path.join(inputDIR, "*" + headerEnding)
         else:
-            headersFilesList = glob.glob(os.path.join(inputDIR, "*", "*" + headerEnding))
-        
+            searchPath = os.path.join(inputDIR, "*", "*" + headerEnding)
+        print("Search Path: ", searchPath)
+        headersFilesList = glob.glob(searchPath)
+                
         prodsStr = ""
         first = True
         for prod in prods:
@@ -77,6 +80,7 @@ class ARCSIBuildCommands (object):
         
         outFile = open(outputFile, 'w+')
         for hFile in headersFilesList:
+            print("Processing :", hFile)
             cmd = "arcsi.py -s " + sensor + " -p " + prodsStr + " -i " + hFile
             if not outdir == None:
                 cmd = cmd + " --outpath " + outdir

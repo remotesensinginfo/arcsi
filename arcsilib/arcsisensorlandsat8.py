@@ -134,6 +134,11 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         self.b7MaxRad = 0.0
         self.b8RadAdd = 0.0
         self.b8MaxRad = 0.0
+        
+        self.k1ConstB10 = 0.0
+        self.k1ConstB11 = 0.0
+        self.k2ConstB10 = 0.0
+        self.k2ConstB11 = 0.0
     
     def extractHeaderParameters(self, inputHeader, wktStr):
         """
@@ -262,6 +267,11 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             self.b10RadAdd = float(headerParams["RADIANCE_ADD_BAND_10"])
             self.b11RadAdd = float(headerParams["RADIANCE_ADD_BAND_11"])
             
+            self.k1ConstB10 = float(headerParams["K1_CONSTANT_BAND_10"])
+            self.k1ConstB11 = float(headerParams["K1_CONSTANT_BAND_11"])
+            self.k2ConstB10 = float(headerParams["K2_CONSTANT_BAND_10"])
+            self.k2ConstB11 = float(headerParams["K2_CONSTANT_BAND_11"])
+            
         except Exception as e:
             raise e
         
@@ -273,11 +283,16 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         outname = self.defaultGenBaseOutFileName()
         outname = outname + str("_") + rowpath
         return outname
-        
-    def convertImageToRadiance(self, outputPath, outputName, outFormat):
+    
+    def hasThermal(self):
+        return True
+      
+    def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
-        outputImage = os.path.join(outputPath, outputName)
+        outputReflImage = os.path.join(outputPath, outputReflName)
+        outputThermalImage = None
         bandDefnSeq = list()
+        
         lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'addVal', 'multiVal'])
         bandDefnSeq.append(lsBand(bandName="Coastal", fileName=self.band1File, bandIndex=1, addVal=self.b1RadAdd, multiVal=self.b1RadMulti))
         bandDefnSeq.append(lsBand(bandName="Blue", fileName=self.band2File, bandIndex=1, addVal=self.b2RadAdd, multiVal=self.b2RadMulti))
@@ -286,9 +301,29 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         bandDefnSeq.append(lsBand(bandName="NIR", fileName=self.band5File, bandIndex=1, addVal=self.b5RadAdd, multiVal=self.b5RadMulti))
         bandDefnSeq.append(lsBand(bandName="SWIR1", fileName=self.band6File, bandIndex=1, addVal=self.b6RadAdd, multiVal=self.b6RadMulti))
         bandDefnSeq.append(lsBand(bandName="SWIR2", fileName=self.band7File, bandIndex=1, addVal=self.b7RadAdd, multiVal=self.b7RadMulti))
-        rsgislib.imagecalibration.landsat2RadianceMultiAdd(outputImage, outFormat, bandDefnSeq)
-        return outputImage
+        rsgislib.imagecalibration.landsat2RadianceMultiAdd(outputReflImage, outFormat, bandDefnSeq)
+        
+        if not outputThermalName == None:
+            outputThermalImage = os.path.join(outputPath, outputThermalName)
+            bandDefnSeq = list()
+            lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'addVal', 'multiVal'])
+            bandDefnSeq.append(lsBand(bandName="ThermalB10", fileName=self.band10File, bandIndex=1, addVal=self.b10RadAdd, multiVal=self.b10RadMulti))
+            bandDefnSeq.append(lsBand(bandName="ThermalB11", fileName=self.band11File, bandIndex=1, addVal=self.b11RadAdd, multiVal=self.b11RadMulti))
+            rsgislib.imagecalibration.landsat2RadianceMultiAdd(outputThermalImage, outFormat, bandDefnSeq)
+        
+        return outputReflImage, outputThermalImage
     
+    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
+        print("Converting to Thermal Brightness")
+        outputThermalImage = os.path.join(outputPath, outputName)
+        bandDefnSeq = list()
+        
+        lsBand = collections.namedtuple('LSBand', ['bandName', 'bandIndex', 'k1', 'k2'])
+        bandDefnSeq.append(lsBand(bandName="ThermalB10", bandIndex=1, k1=self.k1ConstB10, k2=self.k2ConstB10))
+        bandDefnSeq.append(lsBand(bandName="ThermalB11", bandIndex=2, k1=self.k1ConstB11, k2=self.k2ConstB11))
+        rsgislib.imagecalibration.landsatThermalRad2Brightness(inputRadImage, outputThermalImage, outFormat, rsgislib.TYPE_32UINT, 1000, bandDefnSeq)
+        return outputThermalImage
+        
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat):
         print("Converting to TOA")
         outputImage = os.path.join(outputPath, outputName)

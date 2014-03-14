@@ -65,6 +65,8 @@ import osgeo.gdal as gdal
 from scipy.optimize import minimize
 # Import the numpy module
 import numpy
+# Import the glob module
+import glob
 
 class ARCSILandsat7Sensor (ARCSIAbstractSensor):
     """
@@ -273,11 +275,60 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         outname = self.defaultGenBaseOutFileName()
         outname = outname + str("_") + rowpath
         return outname
+    
+    def hasThermal(self):
+        return True
+    
+    def maskInputImages(self):
+        return True
         
-    def convertImageToRadiance(self, outputPath, outputName, outFormat):
+    def applyImageDataMask(self, inputHeader, inputImage, outputPath, outputMaskName, outputImgName, outFormat):
+        print("Masking Input Image File")
+        outputImage = os.path.join(outputPath, outputImgName)
+        outputMaskImage = os.path.join(outputPath, outputMaskName)
+        #print(outputImage)
+        dataDIR = os.path.split(inputHeader)[0]
+        #print(dataDIR)
+        maskDIR = os.path.join(dataDIR, "gap_mask")
+        #print(maskDIR)
+        if os.path.exists(maskDIR) and os.path.isdir(maskDIR):
+            maskList = glob.glob(os.path.join(maskDIR, "*.TIF.gz"))
+            if len(maskList) > 0:
+               for file in maskList:
+                    os.system("gzip -d " + file)
+
+            maskList = glob.glob(os.path.join(maskDIR, "*.TIF"))
+            if not len(maskList) > 0:
+                raise Exception("Could not find mask files.")
+            
+            #print(maskList)
+            stackImageMasks = []
+            bandImgIDs = ['GM_B1', 'GM_B2', 'GM_B3', 'GM_B4', 'GM_B5', 'GM_B7']
+            for bandID in bandImgIDs:
+                for imgMask in maskList:
+                    if imgMask.count(bandID) > 0:
+                        stackImageMasks.append(rsgislib.imagecalc.BandDefn(bandID, imgMask, 1))
+                        #stackImageMasks.append(imgMask)
+                        break
+            
+            #print(stackImageMasks)
+            #rsgislib.imageutils.stackImageBands(stackImageMasks, bandImgIDs, outputMaskImage, None, 0, outFormat, rsgislib.TYPE_8UINT)
+            rsgislib.imagecalc.bandMath(outputMaskImage, "GM_B1*GM_B2*GM_B3*GM_B4*GM_B5*GM_B7", outFormat, rsgislib.TYPE_8UINT, stackImageMasks)
+            rsgislib.imageutils.maskImage(inputImage, outputMaskImage, outputImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 0)
+        else:
+            print("\tThere is no mask to mask this scene...")
+            outputImage = inputImage
+            outputMaskImage = None
+            
+        
+        return outputImage, outputMaskImage
+    
+    def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
-        outputImage = os.path.join(outputPath, outputName)
+        outputReflImage = os.path.join(outputPath, outputReflName)
+        outputThermalImage = None
         bandDefnSeq = list()
+        
         lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'lMin', 'lMax', 'qCalMin', 'qCalMax'])
         bandDefnSeq.append(lsBand(bandName="Blue", fileName=self.band1File, bandIndex=1, lMin=self.b1MinRad, lMax=self.b1MaxRad, qCalMin=self.b1CalMin, qCalMax=self.b1CalMax))
         bandDefnSeq.append(lsBand(bandName="Green", fileName=self.band2File, bandIndex=1, lMin=self.b2MinRad, lMax=self.b2MaxRad, qCalMin=self.b2CalMin, qCalMax=self.b2CalMax))
@@ -285,8 +336,47 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         bandDefnSeq.append(lsBand(bandName="NIR", fileName=self.band4File, bandIndex=1, lMin=self.b4MinRad, lMax=self.b4MaxRad, qCalMin=self.b4CalMin, qCalMax=self.b4CalMax))
         bandDefnSeq.append(lsBand(bandName="SWIR1", fileName=self.band5File, bandIndex=1, lMin=self.b5MinRad, lMax=self.b5MaxRad, qCalMin=self.b5CalMin, qCalMax=self.b5CalMax))
         bandDefnSeq.append(lsBand(bandName="SWIR2", fileName=self.band7File, bandIndex=1, lMin=self.b7MinRad, lMax=self.b7MaxRad, qCalMin=self.b7CalMin, qCalMax=self.b7CalMax))
-        rsgislib.imagecalibration.landsat2Radiance(outputImage, outFormat, bandDefnSeq)
+        rsgislib.imagecalibration.landsat2Radiance(outputReflImage, outFormat, bandDefnSeq)
+        
+        if not outputThermalName == None:
+            outputThermalImage = os.path.join(outputPath, outputThermalName)
+            bandDefnSeq = list()
+            lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'lMin', 'lMax', 'qCalMin', 'qCalMax'])
+            bandDefnSeq.append(lsBand(bandName="ThermalB6a", fileName=self.band6aFile, bandIndex=1, lMin=self.b6aMinRad, lMax=self.b6aMaxRad, qCalMin=self.b6aCalMin, qCalMax=self.b6aCalMax))
+            bandDefnSeq.append(lsBand(bandName="ThermalB6b", fileName=self.band6bFile, bandIndex=1, lMin=self.b6bMinRad, lMax=self.b6bMaxRad, qCalMin=self.b6bCalMin, qCalMax=self.b6bCalMax))
+            rsgislib.imagecalibration.landsat2Radiance(outputThermalImage, outFormat, bandDefnSeq)
+        
+        return outputReflImage, outputThermalImage
+    
+    def generateImageSaturationMask(self, outputPath, outputName, outFormat):
+        print("Generate Saturation Image")
+        outputImage = os.path.join(outputPath, outputName)
+        
+        lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'satVal'])
+        bandDefnSeq = list()
+        bandDefnSeq.append(lsBand(bandName="Blue", fileName=self.band1File, bandIndex=1, satVal=self.b1CalMax))
+        bandDefnSeq.append(lsBand(bandName="Green", fileName=self.band2File, bandIndex=1, satVal=self.b2CalMax))
+        bandDefnSeq.append(lsBand(bandName="Red", fileName=self.band3File, bandIndex=1, satVal=self.b3CalMax))
+        bandDefnSeq.append(lsBand(bandName="NIR", fileName=self.band4File, bandIndex=1, satVal=self.b4CalMax))
+        bandDefnSeq.append(lsBand(bandName="SWIR1", fileName=self.band5File, bandIndex=1, satVal=self.b5CalMax))
+        bandDefnSeq.append(lsBand(bandName="SWIR2", fileName=self.band7File, bandIndex=1, satVal=self.b7CalMax))
+        bandDefnSeq.append(lsBand(bandName="ThermalB6a", fileName=self.band6aFile, bandIndex=1, satVal=self.b6aCalMax))
+        bandDefnSeq.append(lsBand(bandName="ThermalB6b", fileName=self.band6bFile, bandIndex=1, satVal=self.b6bCalMax))
+        
+        rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
+        
         return outputImage
+    
+    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
+        print("Converting to Thermal Brightness")
+        outputThermalImage = os.path.join(outputPath, outputName)
+        bandDefnSeq = list()
+        
+        lsBand = collections.namedtuple('LSBand', ['bandName', 'bandIndex', 'k1', 'k2'])
+        bandDefnSeq.append(lsBand(bandName="ThermalB6a", bandIndex=1, k1=666.09, k2=1282.71))
+        bandDefnSeq.append(lsBand(bandName="ThermalB6b", bandIndex=2, k1=666.09, k2=1282.71))
+        rsgislib.imagecalibration.landsatThermalRad2Brightness(inputRadImage, outputThermalImage, outFormat, rsgislib.TYPE_32UINT, 1000, bandDefnSeq)
+        return outputThermalImage
     
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat):
         print("Converting to TOA")
@@ -303,7 +393,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         return outputImage
     
     def generateCloudMask(self, inputImage, outputPath, outputName, outFormat, tmpPath):
-    	print("Not Implemented")
+        print("Not Implemented")
     
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((6, 3), dtype=numpy.float32)   

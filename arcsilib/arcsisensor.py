@@ -247,8 +247,23 @@ class ARCSIAbstractSensor (object):
         """
         return self.defaultGenBaseOutFileName()
     
+    def maskInputImages(self):
+        return False
+        
+    def hasThermal(self):
+        return False
+    
     @abstractmethod
-    def convertImageToRadiance(self, outputPath, outputName, outFormat): pass
+    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat): pass
+    
+    @abstractmethod
+    def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat): pass
+    
+    @abstractmethod
+    def generateImageSaturationMask(self, outputPath, outputName, outFormat): pass
+    
+    @abstractmethod
+    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat): pass
     
     @abstractmethod
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat): pass
@@ -286,7 +301,7 @@ class ARCSIAbstractSensor (object):
         elevVal = surfaceAltitudeMin
         
         aotRange = (aotMax - aotMin) / 0.05
-        numAOTSteps = int(math.ceil(aotRange) + 1)
+        numAOTSteps = int(math.ceil(aotRange) + 1) + 1
         aotVal = aotMin
         
         for i in range(numElevSteps):
