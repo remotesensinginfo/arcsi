@@ -220,9 +220,9 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
         outname = outname + str("_") + rowpath
         return outname
         
-    def convertImageToRadiance(self, outputPath, outputName, outFormat):
+    def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
-        outputImage = os.path.join(outputPath, outputName)
+        outputImage = os.path.join(outputPath, outputReflName)
         bandDefnSeq = list()
         lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'lMin', 'lMax', 'qCalMin', 'qCalMax'])
         bandDefnSeq.append(lsBand(bandName="Green", fileName=self.band4File, bandIndex=1, lMin=self.b4MinRad, lMax=self.b4MaxRad, qCalMin=self.b4CalMin, qCalMax=self.b4CalMax))
@@ -230,7 +230,10 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
         bandDefnSeq.append(lsBand(bandName="NIR1", fileName=self.band6File, bandIndex=1, lMin=self.b6MinRad, lMax=self.b6MaxRad, qCalMin=self.b6CalMin, qCalMax=self.b6CalMax))
         bandDefnSeq.append(lsBand(bandName="NIR2", fileName=self.band7File, bandIndex=1, lMin=self.b7MinRad, lMax=self.b7MaxRad, qCalMin=self.b7CalMin, qCalMax=self.b7CalMax))
         rsgislib.imagecalibration.landsat2Radiance(outputImage, outFormat, bandDefnSeq)
-        return outputImage
+        return outputImage, None
+    
+    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
+        raise ARCSIException("There are no thermal bands...")
     
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat):
         print("Converting to TOA")

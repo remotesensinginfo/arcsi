@@ -177,7 +177,6 @@ class ARCSI (object):
             # Step 3: If aerosol and atmosphere images are specified then sample them to find
             #         the aerosol and atmosphere generic model to use for conversion to SREF
             if not aeroProfileOptionImg == None:
-                # DO SOMETHING!! PANIC! No, don't panic :s
                 print("Get aero profile from image...")
                 aeroProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(aeroProfileOptionImg, 1, 1, None, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)[0])
                 
@@ -189,7 +188,6 @@ class ARCSI (object):
                     raise Exception("The aerosol profile from the input image was not recognised.")
                 print("Aerosol Profile = ", aeroProfileOption)
             if not atmosProfileOptionImg == None:
-                # DO SOMETHING!! PANIC! No, don't panic :s
                 print("Get atmos profile from image...")
                 atmosProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(atmosProfileOptionImg, 1, 1, None, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)[0])
                 summerWinter = arcsiUtils.isSummerOrWinter(sensorClass.latCentre, sensorClass.lonCentre, sensorClass.acquisitionTime )
@@ -226,10 +224,14 @@ class ARCSI (object):
             prodsToCalc["DDVAOT"] = False
             prodsToCalc["SREFSTDMDL"] = False
             prodsToCalc["DOSUB"] = False
+            prodsToCalc["THERMAL"] = False
+            prodsToCalc["SATURATE"] = False
             
             for prod in productsStr:
                 if prod == 'RAD':
                     prodsToCalc["RAD"] = True
+                elif prod == 'SATURATE':
+                	prodsToCalc["SATURATE"] = True
                 elif prod == 'TOA':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
@@ -237,6 +239,9 @@ class ARCSI (object):
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
                     prodsToCalc["CLOUDS"] = True
+                    prodsToCalc["SATURATE"] = True
+                    if sensorClass.hasThermal():
+                        prodsToCalc["THERMAL"] = True
                 elif prod == 'DDVAOT':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
@@ -248,8 +253,17 @@ class ARCSI (object):
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
                     prodsToCalc["DOSUB"] = True
+                elif prod == 'THERMAL':
+                    if sensorClass.hasThermal():
+                        prodsToCalc["THERMAL"] = True
+                    else:
+                        raise ARCSIException("The sensor does not have thermal bands. Check you inputs.")
             
             radianceImage=""
+            saturateImage=""
+            thermalRadImage=""
+            thermalBrightImage=""
+            maskImage=""
             toaImage = ""
             srefImage = ""
             aodImage = ""
@@ -259,12 +273,49 @@ class ARCSI (object):
             if prodsToCalc["RAD"]:
                 # Execute conversion to radiance
                 outName = outBaseName + "_rad" + arcsiUtils.getFileExtension(outFormat)
-                radianceImage = sensorClass.convertImageToRadiance(outFilePath, outName, outFormat)
+                outThermName = None
+                if prodsToCalc["THERMAL"]:
+                    outThermName = outBaseName + "_therm_rad" + arcsiUtils.getFileExtension(outFormat)
+                radianceImage, thermalRadImage = sensorClass.convertImageToRadiance(outFilePath, outName, outThermName, outFormat)
                 print("Setting Band Names...")
                 sensorClass.setBandNames(radianceImage)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
+                    if not thermalRadImage == None:
+                        rsgislib.imageutils.popImageStats(thermalRadImage, True, 0.0, True)
+                print("")
+            
+            if prodsToCalc["SATURATE"]:
+            	# Execute generation of the saturation image
+            	outName = outBaseName + "_sat" + arcsiUtils.getFileExtension(outFormat)
+            	saturateImage = sensorClass.generateImageSaturationMask(outFilePath, outName, outFormat)
+            	if calcStatsPy:
+            		print("Calculating Statistics...")
+            		rsgislib.imageutils.popImageStats(saturateImage, True, -1.0, True)
+            	print("")
+            	
+            if sensorClass.maskInputImages():
+                # If the image comes with a mask then apply that before moving on.
+                outImgName = outBaseName + "_rad_msk" + arcsiUtils.getFileExtension(outFormat)
+                outMaskName = outBaseName + "_mask" + arcsiUtils.getFileExtension(outFormat)
+                radianceImage, maskImage = sensorClass.applyImageDataMask(inputHeader, radianceImage, outFilePath, outMaskName, outImgName, outFormat)
+                if not maskImage == None:
+                    print("Setting Band Names...")
+                    sensorClass.setBandNames(radianceImage)
+                    if calcStatsPy:
+                        print("Calculating Statistics...")
+                        rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
+                        rsgislib.imageutils.popImageStats(maskImage, True, 0.0, True)
+                    print("")
+            
+            if prodsToCalc["THERMAL"]:
+                # Execute calibrate thermal to brightness
+                outName = outBaseName + "_thermal" + arcsiUtils.getFileExtension(outFormat)
+                thermalBrightImage = sensorClass.convertThermalToBrightness(thermalRadImage, outFilePath, outName, outFormat)
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.imageutils.popImageStats(thermalBrightImage, True, 0.0, True)
                 print("")
             
             # Step 6: Convert to TOA
@@ -561,11 +612,11 @@ class ARCSI (object):
         print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, SREFSTDMDL, DOSUB")
         print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, SREFSTDMDL, DOSUB")
         print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, SREFSTDMDL, DOSUB")
-        print("\tLandsat 4 TM  | \'ls5tm\'     | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB")
+        print("\tLandsat 4 TM  | \'ls5tm\'     | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
         print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, SREFSTDMDL, DOSUB")
-        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB")
-        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB")
-        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB")
+        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
+        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
+        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
         print("\tRapideye      | \'rapideye\'  | RAD, TOA, SREFSTDMDL, DOSUB")
         #print("\tSPOT 5        | \'spot5\'     | RAD, TOA")
         #print("\tASTER         | \'aster\'     | RAD, TOA")
@@ -588,7 +639,7 @@ if __name__ == '__main__':
     print("ARCSI 0.1a Copyright (C) 2013  Peter Bunting")
     print("This program comes with ABSOLUTELY NO WARRANTY.")
     print("This is free software, and you are welcome to redistribute it")
-    print("under certain conditions; See website (http://www.rsgislib.org/ascsi).")
+    print("under certain conditions; See website (http://www.rsgislib.org/arcsi).")
     print("Bugs are to be reported to rsgislib-support@googlegroups.com\n")
     
     parser = argparse.ArgumentParser(prog='arcsi',
@@ -641,9 +692,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOSUB and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'TOA', 'CLOUDS', 'DDVAOT', 'SREFSTDMDL', 'DOSUB'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'SREFSTDMDL', 'DOSUB', 'THERMAL'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, TOA, CLOUDS, DDVAOT, SREFSTDMDL, DOSUB)''')
+                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, SREFSTDMDL, DOSUB, THERMAL)''')
     # Define the argument for requesting a list of products.
     parser.add_argument("--prodlist", action='store_true', default=False, 
                         help='''List the products which are supported and 
@@ -724,7 +775,6 @@ if __name__ == '__main__':
     parser.add_argument("--stats", action='store_true', default=False, 
                         help='''Specifies that the image statistics and
                         pyramids should be build for all output images.''')
-    # Define the argument which specifies a DEM to be used the processing
     parser.add_argument("-d", "--dem", type=str,
                         help='''Specify a DEM which is to be used for building
                         an LUT and applying 6S coefficients with respect to elevation.''')
@@ -850,11 +900,6 @@ if __name__ == '__main__':
         aeroComponentsSpecified = False
         if (not args.aerowater == None) or (not args.aerodust == None) or (not args.aerooceanic == None) or (not args.aerosoot == None):
             aeroComponentsSpecified = True
-
-
-        
-        
-
 
         arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem, args.aotfile)
 

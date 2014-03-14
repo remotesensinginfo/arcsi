@@ -273,16 +273,19 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         outname = outname + str("_") + reTileID
         return outname
         
-    def convertImageToRadiance(self, outputPath, outputName, outFormat):
+    def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
-        outputImage = os.path.join(outputPath, outputName)
+        outputImage = os.path.join(outputPath, outputReflName)
         if self.radioCorrApplied:
             # Rescale the data to be between 0 and 1.
             rsgislib.imagecalc.imageMath(self.fileName, outputImage, "b1/100", outFormat, rsgislib.TYPE_32FLOAT)
         else:
             raise ARCSIException("Radiometric correction has not been applied - this is not implemented within ARCSI yet. Check your data version.")
         
-        return outputImage
+        return outputImage, None
+    
+    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
+        raise ARCSIException("There are no thermal bands...")
     
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat):
         print("Converting to TOA")
