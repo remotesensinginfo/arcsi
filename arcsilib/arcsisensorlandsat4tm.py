@@ -305,8 +305,23 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
     
-    def generateCloudMask(self, inputImage, outputPath, outputName, outFormat, tmpPath):
-    	print("Not Implemented")
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath):
+        print("Generate Cloud Mask")
+        try:
+            arcsiUtils = ARCSIUtils()
+            outputImage = os.path.join(outputPath, outputName)
+            tmpBaseName = os.path.splitext(outputName)[0]
+            imgExtension = arcsiUtils.getFileExtension(outFormat)        
+            outputTmp1File = os.path.join(tmpPath, tmpBaseName + "_clouds_tmp1" + imgExtension)
+            outputTmp2File = os.path.join(tmpPath, tmpBaseName + "_clouds_tmp2" + imgExtension)
+            rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, outputImage, outputTmp1File, outputTmp2File, outFormat, 1000.0)
+        
+            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver.Delete(outputTmp1File)
+            gdalDriver.Delete(outputTmp2File)        
+            return outputImage    
+        except Exception as e:
+            raise e
     
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((6, 3), dtype=numpy.float32)    
