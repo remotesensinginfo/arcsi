@@ -334,7 +334,7 @@ class ARCSI (object):
             if prodsToCalc["CLOUDS"]:
                 # Execute conversion to top of atmosphere reflectance
                 outName = outBaseName + "_clouds" + arcsiUtils.getFileExtension(outFormat)
-                cloudsImage = sensorClass.generateCloudMask(toaImage, outFilePath, outName, outFormat, tmpPath)
+                cloudsImage = sensorClass.generateCloudMask(toaImage, saturateImage, thermalBrightImage, outFilePath, outName, outFormat, tmpPath)
                 print("Setting Band Names...")
                 sensorClass.setBandNames(toaImage)
                 if calcStatsPy:
@@ -342,14 +342,14 @@ class ARCSI (object):
                     rsgislib.rastergis.populateStats(cloudsImage, True, True)
                 print("Applying cloud masks to images...")
                 outputRADImage = os.path.join(outFilePath, outBaseName + "_rad_mclds" + arcsiUtils.getFileExtension(outFormat))
-                rsgislib.imageutils.maskImage(radianceImage, cloudsImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 255)
+                rsgislib.imageutils.maskImage(radianceImage, cloudsImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 2)
                 radianceImage = outputRADImage
                 sensorClass.setBandNames(radianceImage)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
                 outputTOAImage = os.path.join(outFilePath, outBaseName + "_rad_toa_mclds" + arcsiUtils.getFileExtension(outFormat))
-                rsgislib.imageutils.maskImage(toaImage, cloudsImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, 255)
+                rsgislib.imageutils.maskImage(toaImage, cloudsImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, 2)
                 toaImage = outputTOAImage
                 sensorClass.setBandNames(toaImage)
                 if calcStatsPy:

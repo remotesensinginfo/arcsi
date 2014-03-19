@@ -300,7 +300,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
     
-    def generateCloudMask(self, inputImage, outputPath, outputName, outFormat, tmpPath):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath):
         print("Generating Cloud Mask")
         try:
             arcsiUtils = ARCSIUtils()
@@ -310,10 +310,10 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             outputCloudsImage = os.path.join(outputPath, outputName)
             outputCloudsImage = outputCloudsImage.replace(imgExtension, ".tif")
         
-            rsgislib.imageutils.stretchImage(inputImage, stretchedImg, False, "", True, False, outFormat, rsgislib.TYPE_8UINT, rsgislib.imageutils.STRETCH_LINEARSTDDEV, 2)
+            rsgislib.imageutils.stretchImage(inputReflImage, stretchedImg, False, "", True, False, outFormat, rsgislib.TYPE_8UINT, rsgislib.imageutils.STRETCH_LINEARSTDDEV, 2)
             
             cloudsCmd = "recloud"
-            cloudsOpts = "-i " + inputImage + " -s " + stretchedImg + " -o " + outputCloudsImage
+            cloudsOpts = "-i " + inputReflImage + " -s " + stretchedImg + " -o " + outputCloudsImage
             print(cloudsCmd + " " + cloudsOpts)
             
             os.system(cloudsCmd + " " + cloudsOpts)
