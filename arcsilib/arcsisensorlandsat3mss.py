@@ -219,7 +219,10 @@ class ARCSILandsat3MSSSensor (ARCSIAbstractSensor):
         outname = self.defaultGenBaseOutFileName()
         outname = outname + str("_") + rowpath
         return outname
-        
+    
+    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
+    	raise ARCSIException("Landsat 3 does not provide any image masks, do not use the MASK option.")
+    
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
         outputImage = os.path.join(outputPath, outputReflName)
@@ -247,8 +250,23 @@ class ARCSILandsat3MSSSensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
     
+    def generateImageSaturationMask(self, outputPath, outputName, outFormat):
+        print("Generate Saturation Image")
+        outputImage = os.path.join(outputPath, outputName)
+        
+        lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'satVal'])
+        bandDefnSeq = list()
+        bandDefnSeq.append(lsBand(bandName="Green", fileName=self.band4File, bandIndex=1, satVal=self.b4CalMax))
+        bandDefnSeq.append(lsBand(bandName="Red", fileName=self.band5File, bandIndex=1, satVal=self.b5CalMax))
+        bandDefnSeq.append(lsBand(bandName="NIR1", fileName=self.band6File, bandIndex=1, satVal=self.b6CalMax))
+        bandDefnSeq.append(lsBand(bandName="NIR2", fileName=self.band7File, bandIndex=1, satVal=self.b7CalMax))
+        
+        rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
+        
+        return outputImage
+    
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath):
-    	print("Not Implemented")
+    	raise ARCSIException("Cloud Masking Not Implemented for LS3 MSS.")
     
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((4, 3), dtype=numpy.float32)    

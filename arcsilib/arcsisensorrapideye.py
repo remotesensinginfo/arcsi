@@ -272,6 +272,9 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         outname = self.defaultGenBaseOutFileName()
         outname = outname + str("_") + reTileID
         return outname
+    
+    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
+    	raise ARCSIException("RapidEye does not provide any image masks, do not use the MASK option.")
         
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -283,6 +286,22 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             raise ARCSIException("Radiometric correction has not been applied - this is not implemented within ARCSI yet. Check your data version.")
         
         return outputImage, None
+    
+    def generateImageSaturationMask(self, outputPath, outputName, outFormat):
+        print("Generate Saturation Image")
+        outputImage = os.path.join(outputPath, outputName)
+        
+        lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'satVal'])
+        bandDefnSeq = list()
+        bandDefnSeq.append(lsBand(bandName="Blue", fileName=self.fileName, bandIndex=1, satVal=65535))
+        bandDefnSeq.append(lsBand(bandName="Green", fileName=self.fileName, bandIndex=2, satVal=65535))
+        bandDefnSeq.append(lsBand(bandName="Red", fileName=self.fileName, bandIndex=3, satVal=65535))
+        bandDefnSeq.append(lsBand(bandName="RedEdge", fileName=self.fileName, bandIndex=4, satVal=65535))
+        bandDefnSeq.append(lsBand(bandName="NIR", fileName=self.fileName, bandIndex=5, satVal=65535))
+        
+        rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
+        
+        return outputImage
     
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
         raise ARCSIException("There are no thermal bands...")

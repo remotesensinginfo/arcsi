@@ -258,6 +258,9 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
     def hasThermal(self):
         return True
     
+    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
+    	raise ARCSIException("Landsat 5 TM does not provide any image masks, do not use the MASK option.")
+    
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
         outputReflImage = os.path.join(outputPath, outputReflName)
@@ -281,6 +284,24 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             rsgislib.imagecalibration.landsat2Radiance(outputThermalImage, outFormat, bandDefnSeq)
         
         return outputReflImage, outputThermalImage
+    
+    def generateImageSaturationMask(self, outputPath, outputName, outFormat):
+        print("Generate Saturation Image")
+        outputImage = os.path.join(outputPath, outputName)
+        
+        lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'satVal'])
+        bandDefnSeq = list()
+        bandDefnSeq.append(lsBand(bandName="Blue", fileName=self.band1File, bandIndex=1, satVal=self.b1CalMax))
+        bandDefnSeq.append(lsBand(bandName="Green", fileName=self.band2File, bandIndex=1, satVal=self.b2CalMax))
+        bandDefnSeq.append(lsBand(bandName="Red", fileName=self.band3File, bandIndex=1, satVal=self.b3CalMax))
+        bandDefnSeq.append(lsBand(bandName="NIR", fileName=self.band4File, bandIndex=1, satVal=self.b4CalMax))
+        bandDefnSeq.append(lsBand(bandName="SWIR1", fileName=self.band5File, bandIndex=1, satVal=self.b5CalMax))
+        bandDefnSeq.append(lsBand(bandName="SWIR2", fileName=self.band7File, bandIndex=1, satVal=self.b7CalMax))
+        bandDefnSeq.append(lsBand(bandName="ThermalB6", fileName=self.band6File, bandIndex=1, satVal=self.b6CalMax))
+        
+        rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
+        
+        return outputImage
     
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
         print("Converting to Thermal Brightness")
