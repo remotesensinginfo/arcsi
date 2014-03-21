@@ -135,6 +135,29 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         self.b8RadAdd = 0.0
         self.b8MaxRad = 0.0
         
+        self.b1CalMin = 0.0
+        self.b1CalMax = 0.0
+        self.b2CalMin = 0.0
+        self.b2CalMax = 0.0
+        self.b3CalMin = 0.0
+        self.b3CalMax = 0.0
+        self.b4CalMin = 0.0
+        self.b4CalMax = 0.0
+        self.b5CalMin = 0.0
+        self.b5CalMax = 0.0
+        self.b6CalMin = 0.0
+        self.b6CalMax = 0.0
+        self.b7CalMin = 0.0
+        self.b7CalMax = 0.0
+        self.b8CalMin = 0.0
+        self.b8CalMax = 0.0
+        self.b9CalMin = 0.0
+        self.b9CalMax = 0.0
+        self.b10CalMin = 0.0
+        self.b10CalMax = 0.0
+        self.b11CalMin = 0.0
+        self.b11CalMax =  0.0
+        
         self.k1ConstB10 = 0.0
         self.k1ConstB11 = 0.0
         self.k2ConstB10 = 0.0
@@ -272,6 +295,29 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             self.k2ConstB10 = float(headerParams["K2_CONSTANT_BAND_10"])
             self.k2ConstB11 = float(headerParams["K2_CONSTANT_BAND_11"])
             
+            self.b1CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_1"])
+            self.b1CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_1"])
+            self.b2CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_2"])
+            self.b2CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_2"])
+            self.b3CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_3"])
+            self.b3CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_3"])
+            self.b4CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_4"])
+            self.b4CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_4"])
+            self.b5CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_5"])
+            self.b5CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_5"])
+            self.b6CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_6"])
+            self.b6CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_6"])
+            self.b7CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_7"])
+            self.b7CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_7"])
+            self.b8CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_8"])
+            self.b8CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_8"])
+            self.b9CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_9"])
+            self.b9CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_9"])
+            self.b10CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_10"])
+            self.b10CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_10"])
+            self.b11CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_11"])
+            self.b11CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_11"])            
+            
         except Exception as e:
             raise e
         
@@ -286,7 +332,10 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
     
     def hasThermal(self):
         return True
-      
+    
+    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
+        raise ARCSIException("Landsat 8 does not provide any image masks, do not use the MASK option.")
+    
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
         outputReflImage = os.path.join(outputPath, outputReflName)
@@ -312,6 +361,26 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             rsgislib.imagecalibration.landsat2RadianceMultiAdd(outputThermalImage, outFormat, bandDefnSeq)
         
         return outputReflImage, outputThermalImage
+    
+    def generateImageSaturationMask(self, outputPath, outputName, outFormat):
+        print("Generate Saturation Image")
+        outputImage = os.path.join(outputPath, outputName)
+        
+        lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'satVal'])
+        bandDefnSeq = list()
+        bandDefnSeq.append(lsBand(bandName="Coastal", fileName=self.band1File, bandIndex=1, satVal=self.b1CalMax))
+        bandDefnSeq.append(lsBand(bandName="Blue", fileName=self.band2File, bandIndex=1, satVal=self.b2CalMax))
+        bandDefnSeq.append(lsBand(bandName="Green", fileName=self.band3File, bandIndex=1, satVal=self.b3CalMax))
+        bandDefnSeq.append(lsBand(bandName="Red", fileName=self.band4File, bandIndex=1, satVal=self.b4CalMax))
+        bandDefnSeq.append(lsBand(bandName="NIR", fileName=self.band5File, bandIndex=1, satVal=self.b5CalMax))
+        bandDefnSeq.append(lsBand(bandName="SWIR1", fileName=self.band6File, bandIndex=1, satVal=self.b6CalMax))
+        bandDefnSeq.append(lsBand(bandName="SWIR2", fileName=self.band7File, bandIndex=1, satVal=self.b7CalMax))
+        bandDefnSeq.append(lsBand(bandName="ThermalB10", fileName=self.band10File, bandIndex=1, satVal=self.b10CalMax))
+        bandDefnSeq.append(lsBand(bandName="ThermalB11", fileName=self.band11File, bandIndex=1, satVal=self.b11CalMax))
+        
+        rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
+        
+        return outputImage
     
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
         print("Converting to Thermal Brightness")
@@ -340,7 +409,22 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         return outputImage
     
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath):
-    	print("Not Implemented")
+        print("Generate Cloud Mask")
+        try:
+            arcsiUtils = ARCSIUtils()
+            outputImage = os.path.join(outputPath, outputName)
+            tmpBaseName = os.path.splitext(outputName)[0]
+            imgExtension = arcsiUtils.getFileExtension(outFormat)        
+            outputTmp1File = os.path.join(tmpPath, tmpBaseName + "_clouds_tmp1" + imgExtension)
+            outputTmp2File = os.path.join(tmpPath, tmpBaseName + "_clouds_tmp2" + imgExtension)
+            rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, outputImage, outputTmp1File, outputTmp2File, outFormat, 1000.0)
+        
+            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver.Delete(outputTmp1File)
+            gdalDriver.Delete(outputTmp2File)        
+            return outputImage    
+        except Exception as e:
+            raise e
     
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((7, 3), dtype=numpy.float32)    

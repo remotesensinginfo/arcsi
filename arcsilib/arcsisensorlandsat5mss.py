@@ -219,6 +219,9 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         outname = self.defaultGenBaseOutFileName()
         outname = outname + str("_") + rowpath
         return outname
+     
+    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
+        raise ARCSIException("Landsat 5 MSS does not provide any image masks, do not use the MASK option.")
         
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -231,6 +234,21 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         bandDefnSeq.append(lsBand(bandName="NIR2", fileName=self.band4File, bandIndex=1, lMin=self.b4MinRad, lMax=self.b4MaxRad, qCalMin=self.b4CalMin, qCalMax=self.b4CalMax))
         rsgislib.imagecalibration.landsat2Radiance(outputImage, outFormat, bandDefnSeq)
         return outputImage, None
+    
+    def generateImageSaturationMask(self, outputPath, outputName, outFormat):
+        print("Generate Saturation Image")
+        outputImage = os.path.join(outputPath, outputName)
+        
+        lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'satVal'])
+        bandDefnSeq = list()
+        bandDefnSeq.append(lsBand(bandName="Green", fileName=self.band1File, bandIndex=1, satVal=self.b1CalMax))
+        bandDefnSeq.append(lsBand(bandName="Red", fileName=self.band2File, bandIndex=1, satVal=self.b2CalMax))
+        bandDefnSeq.append(lsBand(bandName="NIR1", fileName=self.band3File, bandIndex=1, satVal=self.b3CalMax))
+        bandDefnSeq.append(lsBand(bandName="NIR2", fileName=self.band4File, bandIndex=1, satVal=self.b4CalMax))
+        
+        rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
+        
+        return outputImage
     
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
         raise ARCSIException("There are no thermal bands...")
@@ -248,7 +266,7 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         return outputImage
     
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath):
-    	print("Not Implemented")
+    	raise ARCSIException("Cloud Masking Not Implemented for LS5 MSS.")
         
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((4, 3), dtype=numpy.float32)    
