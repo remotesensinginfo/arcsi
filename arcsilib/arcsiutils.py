@@ -116,12 +116,14 @@ class ARCSIUtils (object):
         summerWinter = 0
         if lat < 0:
             # Southern Hemisphere
+            print("Southern Hemisphere")
             if (date.month > 4) & (date.month < 11):
                 summerWinter = 2 # Winter
             else:
                 summerWinter = 3 # Summer
         else: 
             # Northern Hemisphere
+            print("Northern Hemisphere")
             if (date.month > 3) & (date.month < 10):
                 summerWinter = 1 # summer
             else:
