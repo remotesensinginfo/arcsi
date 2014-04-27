@@ -67,6 +67,8 @@ import numpy
 import osgeo.gdal as gdal
 # Import the python subprocess module - used to call commands line tools.
 import subprocess
+# Import the RIOS RAT module
+from rios import rat
 
 class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
     """
@@ -274,7 +276,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         return outname
     
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
-    	raise ARCSIException("RapidEye does not provide any image masks, do not use the MASK option.")
+        raise ARCSIException("RapidEye does not provide any image masks, do not use the MASK option.")
         
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -346,7 +348,6 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             return outputCloudsImage
         except Exception as e:
             raise e    
-        
         
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((5, 3), dtype=numpy.float32)    
@@ -459,7 +460,6 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.apply6SCoeffElevLUTParam(inputRadImage, inputDEMFile, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, elevCoeffs)
         return outputImage
         
-    
     def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax):
         print("Converting to Surface Reflectance")
         outputImage = os.path.join(outputPath, outputName) 
@@ -492,6 +492,45 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             
         return outputImage
     
+    def run6SToOptimiseAODValue(self, aotVal, radBlueVal, predBlueVal, aeroProfile, atmosProfile, grdRefl, surfaceAltitude):
+        """Used as part of the optimastion for identifying values of AOD"""
+        print("Testing AOD Val: ", aotVal,)
+        sixsCoeffs = numpy.zeros((5, 3), dtype=numpy.float32)    
+        # Set up 6S model
+        s = Py6S.SixS()
+        s.atmos_profile = atmosProfile
+        s.aero_profile = aeroProfile
+        #s.ground_reflectance = Py6S.GroundReflectance.HomogeneousHapke(0.101, -0.263, 0.589, 0.046)
+        s.ground_reflectance = grdRefl
+        s.geometry = Py6S.Geometry.User()
+        s.geometry.solar_z = self.solarZenith
+        s.geometry.solar_a = self.solarAzimuth
+        s.geometry.view_z = self.senorZenith
+        s.geometry.view_a = self.senorAzimuth
+        s.geometry.month = self.acquisitionTime.month
+        s.geometry.day = self.acquisitionTime.day
+        s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
+        s.geometry.latitude = self.latCentre
+        s.geometry.longitude = self.lonCentre
+        s.altitudes = Py6S.Altitudes()
+        s.altitudes.set_target_custom_altitude(surfaceAltitude)
+        s.altitudes.set_sensor_satellite_level()
+        s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromRadiance(200)
+        s.aot550 = aotVal
+                
+        # Band 1 (Blue!)
+        s.wavelength = Py6S.Wavelength(0.435, 0.515, [0.001, 0.004, 0.321, 0.719, 0.74, 0.756, 0.77, 0.78, 0.784, 0.792, 0.796, 0.799, 0.806, 0.804, 0.807, 0.816, 0.82, 0.825, 0.84, 0.845, 0.862, 0.875, 0.886, 0.905, 0.928, 0.936, 0.969, 0.967, 1, 0.976, 0.437, 0.029, 0.001])
+        s.run()
+        aX = float(s.outputs.values['coef_xa'])
+        bX = float(s.outputs.values['coef_xb'])
+        cX = float(s.outputs.values['coef_xc'])
+        
+        tmpVal = (aX*radBlueVal)-bX;
+        reflBlueVal = tmpVal/(1.0+cX*tmpVal)        
+        outDist = math.sqrt(math.pow((reflBlueVal - predBlueVal),2))
+        print("\taX: ", aX, " bX: ", bX, " cX: ", cX, "     Dist = ", outDist)
+        return outDist
+    
     def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
         try:
             print("Opening: ", inputTOAImage)
@@ -506,8 +545,11 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             
             darkPxlPercentile = 0.01
             minObjSize = 5
+            blockSize = 200
             
-            offsetsImage = self.findPerBandDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile)
+            #offsetsImage = self.findPerBandDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile)
+            offsetsImage = self.findPerBandLocalDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, blockSize, minObjSize, darkPxlPercentile)
+            
                        
             # TOA Image - Offset Image (if data and < 1 then set min value as 1)... 
             outputImage = os.path.join(outputPath, outputName)
@@ -518,7 +560,6 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         except Exception as e:
             raise e
         
-    
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
         print("Not implemented\n")
         sys.exit()
@@ -526,7 +567,103 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
     def estimateImageToAOD(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
         print("Not implemented\n")
         sys.exit()
+        
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
+        try:
+            print("Estimating AOD Using DOS")
+            arcsiUtils = ARCSIUtils()
+            outputAOTImage = os.path.join(outputPath, outputName)
+            tmpBaseName = os.path.splitext(outputName)[0]
+            imgExtension = arcsiUtils.getFileExtension(outFormat)
+            
+            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, 3, 0.01, 1000)
+                        
+            thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
+            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat=outFormat, numClusters=40, minPxls=10, bands=[5,4,1])
+            
+            stats2CalcTOA = list()
+            stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanB1DOS"))
+            rsgislib.rastergis.populateRATWithStats(dosBlueImage, thresImageClumpsFinal, stats2CalcTOA)
+            
+            stats2CalcRad = list()
+            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanB1RAD"))
+            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=5, meanField="MeanB5RAD"))
+            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=3, meanField="MeanB3RAD"))
+            rsgislib.rastergis.populateRATWithStats(inputRADImage, thresImageClumpsFinal, stats2CalcRad)
 
+            ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
+            Histogram = rat.readColumn(ratDS, "Histogram")
+            
+            MeanB5RAD = rat.readColumn(ratDS, "MeanB5RAD")
+            MeanB3RAD = rat.readColumn(ratDS, "MeanB3RAD")
+            
+            radNDVI = (MeanB5RAD - MeanB3RAD)/(MeanB5RAD + MeanB3RAD)
+            
+            selected = Histogram * 2
+            selected[...] = 0
+            selected[radNDVI>0.2] = 1
+            rat.writeColumn(ratDS, "Selected", selected)
+            
+            rsgislib.rastergis.spatialLocation(thresImageClumpsFinal, "Eastings", "Northings")
+            rsgislib.rastergis.selectClumpsOnGrid(thresImageClumpsFinal, "Selected", "PredictAOTFor", "Eastings", "Northings", "MeanB1DOS", "min", 20, 20)
+            
+            MeanB1DOS = rat.readColumn(ratDS, "MeanB1DOS")
+            MeanB1DOS = MeanB1DOS / 1000
+            MeanB1RAD = rat.readColumn(ratDS, "MeanB1RAD")
+            PredictAOTFor = rat.readColumn(ratDS, "PredictAOTFor")
+                        
+            numAOTValTests = int(math.ceil((aotValMax - aotValMin)/0.05))+1
+            
+            if not numAOTValTests >= 1:
+                raise ARCSIException("min and max AOT range are too close together, they need to be at least 0.05 apart.")
+            
+            cAOT = aotValMin
+            cDist = 0.0
+            minAOT = 0.0
+            minDist = 0.0
+            
+            aotVals = numpy.zeros_like(MeanB1RAD, dtype=numpy.float)
+            
+            for i in range(len(MeanB1RAD)):
+                if PredictAOTFor[i] == 1:
+                    print("Predicting AOD for Segment ", i)
+                    for j in range(numAOTValTests):
+                        cAOT = aotValMin + (0.05 * j)
+                        cDist = self.run6SToOptimiseAODValue(cAOT, MeanB1RAD[i], MeanB1DOS[i], aeroProfile, atmosProfile, grdRefl, surfaceAltitude)
+                        if j == 0:
+                            minAOT = cAOT
+                            minDist = cDist
+                        elif cDist < minDist:
+                            minAOT = cAOT
+                            minDist = cDist
+                    #predAOTArgs = (MinB1RAD[i], MeanB1DOS[i], aeroProfile, atmosProfile, grdRefl, surfaceAltitude)
+                    #res = minimize(self.run6SToOptimiseAODValue, minAOT, method='nelder-mead', options={'maxiter': 20, 'xtol': 0.001, 'disp': True}, args=predAOTArgs)
+                    #aotVals[i] = res.x[0]
+                    aotVals[i] = minAOT
+                    print("IDENTIFIED AOT: ", aotVals[i])
+                else:
+                    aotVals[i] = 0
+            rat.writeColumn(ratDS, "AOT", aotVals)
+            
+            Eastings = rat.readColumn(ratDS, "Eastings")
+            Northings = rat.readColumn(ratDS, "Northings")
+            ratDS = None
+        
+            Eastings = Eastings[PredictAOTFor!=0]
+            Northings = Northings[PredictAOTFor!=0]
+            aotVals = aotVals[PredictAOTFor!=0]
+        
+            interpSmoothing = 10.0
+            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
+                    
+            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver.Delete(thresImageClumpsFinal)
+            gdalDriver.Delete(dosBlueImage)        
+        
+            return outputAOTImage
+        except Exception as e:
+            raise e
+    
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)
         if not dataset is None:
