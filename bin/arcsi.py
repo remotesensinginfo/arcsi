@@ -222,6 +222,7 @@ class ARCSI (object):
             prodsToCalc["TOA"] = False
             prodsToCalc["CLOUDS"] = False
             prodsToCalc["DDVAOT"] = False
+            prodsToCalc["DOSAOT"] = False
             prodsToCalc["SREFSTDMDL"] = False
             prodsToCalc["DOSUB"] = False
             prodsToCalc["THERMAL"] = False
@@ -231,7 +232,7 @@ class ARCSI (object):
                 if prod == 'RAD':
                     prodsToCalc["RAD"] = True
                 elif prod == 'SATURATE':
-                	prodsToCalc["SATURATE"] = True
+                    prodsToCalc["SATURATE"] = True
                 elif prod == 'TOA':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
@@ -253,11 +254,18 @@ class ARCSI (object):
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
                     prodsToCalc["DOSUB"] = True
+                elif prod == 'DOSAOT':
+                    prodsToCalc["RAD"] = True
+                    prodsToCalc["TOA"] = True
+                    prodsToCalc["DOSAOT"] = True
                 elif prod == 'THERMAL':
                     if sensorClass.hasThermal():
                         prodsToCalc["THERMAL"] = True
                     else:
                         raise ARCSIException("The sensor does not have thermal bands. Check you inputs.")
+            
+            if prodsToCalc["DOSAOT"] and prodsToCalc["DDVAOT"]:
+                raise ARCSIException("You cannot specify both the DOSAOT and DDVAOT products, you must choose one or the other.")
             
             radianceImage=""
             saturateImage=""
@@ -266,7 +274,7 @@ class ARCSI (object):
             maskImage=""
             toaImage = ""
             srefImage = ""
-            aodImage = ""
+            aotFile = ""
             cloudsImage = ""
             
             # Step 5: Convert to Radiance
@@ -287,14 +295,14 @@ class ARCSI (object):
                 print("")
             
             if prodsToCalc["SATURATE"]:
-            	# Execute generation of the saturation image
-            	outName = outBaseName + "_sat" + arcsiUtils.getFileExtension(outFormat)
-            	saturateImage = sensorClass.generateImageSaturationMask(outFilePath, outName, outFormat)
-            	if calcStatsPy:
-            		print("Calculating Statistics...")
-            		rsgislib.imageutils.popImageStats(saturateImage, True, -1.0, True)
-            	print("")
-            	
+                # Execute generation of the saturation image
+                outName = outBaseName + "_sat" + arcsiUtils.getFileExtension(outFormat)
+                saturateImage = sensorClass.generateImageSaturationMask(outFilePath, outName, outFormat)
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.imageutils.popImageStats(saturateImage, True, -1.0, True)
+                print("")
+                
             if sensorClass.maskInputImages():
                 # If the image comes with a mask then apply that before moving on.
                 outImgName = outBaseName + "_rad_msk" + arcsiUtils.getFileExtension(outFormat)
@@ -417,10 +425,75 @@ class ARCSI (object):
                     raise ARCSIException("The specified ground reflectance is unknown.")
             
                 outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
-                aodImage = sensorClass.estimateImageToAOD(radianceImage, toaImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, minAOT, maxAOT)
+                aotFile = sensorClass.estimateImageToAOD(radianceImage, toaImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, minAOT, maxAOT)
                 if calcStatsPy:
                     print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(aodImage, True, 0.0, True)
+                    rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
+                print("")
+            
+            if prodsToCalc["DOSAOT"]:
+                aeroProfile = None
+                if aeroProfileOption == None:
+                    raise ARCSIException("An aersol profile has not been specified.")
+                elif aeroProfileOption == "NoAerosols":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.NoAerosols)
+                elif aeroProfileOption == "Continental":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Continental)
+                elif aeroProfileOption == "Maritime":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Maritime)
+                elif aeroProfileOption == "Urban":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Urban)
+                elif aeroProfileOption == "Desert":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Desert)
+                elif aeroProfileOption == "BiomassBurning":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.BiomassBurning)
+                elif aeroProfileOption == "Stratospheric":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Stratospheric)
+                else:
+                    raise ARCSIException("The specified aersol profile is unknown.")
+
+                atmosProfile = None
+                if atmosProfileOption == None:
+                    raise ARCSIException("An atmospheric profile has not been specified.")
+                elif atmosProfileOption == "NoGaseousAbsorption":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.NoGaseousAbsorption)
+                elif atmosProfileOption == "Tropical":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.Tropical)
+                elif atmosProfileOption == "MidlatitudeSummer":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeSummer)
+                elif atmosProfileOption == "MidlatitudeWinter":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeWinter)
+                elif atmosProfileOption == "SubarcticSummer":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticSummer)
+                elif atmosProfileOption == "SubarcticWinter":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticWinter)
+                elif atmosProfileOption == "USStandard1962":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.USStandard1962)
+                else:
+                    raise ARCSIException("The specified atmospheric profile is unknown.")
+
+                if atmosOZoneWaterSpecified:
+                    atmosProfile.UserWaterAndOzone(atmosWaterVal, atmosOZoneVal) 
+                
+                grdRefl = None
+                if grdReflOption == None:
+                    raise ARCSIException("A ground reflectance has not been specified.")
+                elif grdReflOption == "GreenVegetation":
+                      grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.GreenVegetation)
+                elif grdReflOption == "ClearWater":
+                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.ClearWater)
+                elif grdReflOption == "Sand":
+                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.Sand)
+                elif grdReflOption == "LakeWater":
+                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.LakeWater)
+                else:
+                    raise ARCSIException("The specified ground reflectance is unknown.")
+            
+                outName = outBaseName + "_dosaod" + arcsiUtils.getFileExtension(outFormat)
+                aotFile = sensorClass.estimateImageToAODUsingDOS(radianceImage, toaImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, minAOT, maxAOT)
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
                 print("")
             
             # Step 8: Convert to Surface Reflectance using 6S Standard Models
@@ -487,8 +560,8 @@ class ARCSI (object):
                 else:
                     raise ARCSIException("The specified ground reflectance is unknown.")
                 
-                if prodsToCalc["DDVAOT"] and (not aodImage == ""):
-                    imgDS = gdal.Open(aodImage, gdal.GA_ReadOnly )
+                if (prodsToCalc["DDVAOT"] or prodsToCalc["DOSAOT"]) and (not aotFile == ""):
+                    imgDS = gdal.Open(aotFile, gdal.GA_ReadOnly )
                     imgBand = imgDS.GetRasterBand(1)
                     (min,max,mean,stddev) = imgBand.ComputeStatistics(False)
                     if stddev > 0.1:
@@ -692,9 +765,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOSUB and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'SREFSTDMDL', 'DOSUB', 'THERMAL'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'SREFSTDMDL', 'DOSUB', 'THERMAL'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, SREFSTDMDL, DOSUB, THERMAL)''')
+                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, SREFSTDMDL, DOSUB, THERMAL)''')
     # Define the argument for requesting a list of products.
     parser.add_argument("--prodlist", action='store_true', default=False, 
                         help='''List the products which are supported and 
@@ -838,6 +911,9 @@ if __name__ == '__main__':
                 needTmp = True
             elif prod == 'CLOUDS':
                 needTmp = True
+            elif prod == 'DOSAOT':
+                needAODMinMax = True
+                needTmp = True
 
         if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax) and (not args.aotfile):
             print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.")
@@ -868,6 +944,15 @@ if __name__ == '__main__':
             else:
                 print("Taking temp path from environment variable.")
                 args.tmpath = envVar
+        
+        if needTmp: 
+            if not os.path.exists(args.tmpath):
+                print("Error: The temp path specified does not exist, please create it and run again.")
+                sys.exit()
+            if not os.path.isdir(args.tmpath):
+                print("Error: The temp path specified is not a directory, please correct and run again.")
+                sys.exit()
+            
 
         if args.dem == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_DEM_PATH")

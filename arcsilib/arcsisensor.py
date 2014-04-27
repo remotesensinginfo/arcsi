@@ -65,6 +65,12 @@ import os.path
 import numpy
 # Import the RIOS RAT library
 from rios import rat
+# Import the RIOS image reader
+from rios.imagereader import ImageReader
+# Import the RIOS image writer
+from rios.imagewriter import ImageWriter
+# Import the RBF interpolator from scipy
+import scipy.interpolate.rbf
 
 class ARCSIAbstractSensor (object):
     """
@@ -318,76 +324,93 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax): pass
     
+    def calcDarkTargetOffsetsForBand(self, inputTOAImage, offsetImage, band, outFormat, histBinWidth, minObjSize, darkPxlPercentile, tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg):
+        print("Band: ", band)
+        bandHist = rsgislib.imagecalc.getHistogram(inputTOAImage, band, histBinWidth, False, 1, 10000)
+        #print(bandHist)
+        sumPxls = numpy.sum(bandHist[0])
+        #print("Total Num Pixels: ", sumPxls)
+        numPxlThreshold = sumPxls * darkPxlPercentile #0.001 # 1th percentile
+        #print("Number of pixels = ", numPxlThreshold)
+        
+        pxlThreshold = 0
+        pxlCount = 0
+        for bin in bandHist[0]:
+            pxlCount = pxlCount + bin
+            if pxlCount < numPxlThreshold:
+                pxlThreshold = pxlThreshold + histBinWidth
+            else:
+                break
+        print("Image Band Threshold (For Dark Pixels) = ", pxlThreshold)
+        
+        dataType = rsgislib.TYPE_8UINT
+        expression = str('(b1!=0)&&(b1<') + str(pxlThreshold) + str(')?1:0')
+        bandDefns = []
+        bandDefns.append(rsgislib.imagecalc.BandDefn('b1', inputTOAImage, band))
+        rsgislib.imagecalc.bandMath(tmpDarkPxlsImg, expression, outFormat, dataType, bandDefns)
+        rsgislib.segmentation.clump(tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, outFormat, False, 0.0)
+        rsgislib.rastergis.populateStats(tmpDarkPxlsClumpsImg, True, False)
+        rsgislib.segmentation.rmSmallClumps(tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, minObjSize, outFormat)
+        rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg, outFormat, False)
+        rsgislib.rastergis.populateStats(tmpDarkObjsImg, True, False)
+        stats2CalcTOA = list()
+        stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band), minField="MinTOARefl", meanField="MeanTOARefl"))
+        rsgislib.rastergis.populateRATWithStats(inputTOAImage, tmpDarkObjsImg, stats2CalcTOA)
+        
+        ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
+        Histogram = rat.readColumn(ratDS, "Histogram")
+        selected = Histogram * 2
+        selected[...] = 1
+        selected[0] = 0
+        rat.writeColumn(ratDS, "Selected", selected)
+        ratDS = None
+        
+        rsgislib.rastergis.spatialLocation(tmpDarkObjsImg, "Eastings", "Northings")
+        rsgislib.rastergis.selectClumpsOnGrid(tmpDarkObjsImg, "Selected", "SelectedGrid", "Eastings", "Northings", "MeanTOARefl", "min", 20, 20)
+        
+        ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
+        Eastings = rat.readColumn(ratDS, "Eastings")
+        Northings = rat.readColumn(ratDS, "Northings")
+        MinTOARefl = rat.readColumn(ratDS, "MinTOARefl")
+        SelectedGrid = rat.readColumn(ratDS, "SelectedGrid")
+        ratDS = None
+        
+        Eastings = Eastings[SelectedGrid!=0]
+        Northings = Northings[SelectedGrid!=0]
+        MinTOARefl = MinTOARefl[SelectedGrid!=0]
+        
+        interpSmoothing = 10.0
+        self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing)
+        
+        #rsgislib.rastergis.interpolateClumpValues2Image(tmpDarkObjsImg, "SelectedGrid", "Eastings", "Northings", "idwall", "MinTOARefl",  offsetImage, outFormat, rsgislib.TYPE_32FLOAT)
+    
     def findPerBandDarkTargetsOffsets(self, inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile):
         try:
             arcsiUtils = ARCSIUtils()
             tmpBaseName = os.path.splitext(outputName)[0]
             binWidth = 1
-            
+                        
             bandDarkTargetOffsetImages = list()
             imgExtension = arcsiUtils.getFileExtension(outFormat)
-            tmpDarkPxls = os.path.join(tmpPath, tmpBaseName + "_darkpxls" + imgExtension)
-            tmpDarkPxlsClumps = os.path.join(tmpPath, tmpBaseName + "_darkclumps" + imgExtension)
-            tmpDarkPxlsClumpsRMSmall = os.path.join(tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension)
-            tmpDarkObjs = os.path.join(tmpPath, tmpBaseName+"_darkobjs"+imgExtension)
+            tmpDarkPxlsImg = os.path.join(tmpPath, tmpBaseName + "_darkpxls" + imgExtension)
+            tmpDarkPxlsClumpsImg = os.path.join(tmpPath, tmpBaseName + "_darkclumps" + imgExtension)
+            tmpDarkPxlsClumpsRMSmallImg = os.path.join(tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension)
+            tmpDarkObjsImg = os.path.join(tmpPath, tmpBaseName+"_darkobjs"+imgExtension)
             
             for band in range(numBands):
-                print("Band: ", band+1)
-                bandHist = rsgislib.imagecalc.getHistogram(inputTOAImage, band+1, binWidth, False, 1, 10000)
-                #print(bandHist)
-                sumPxls = numpy.sum(bandHist[0])
-                #print("Total Num Pixels: ", sumPxls)
-                numPxlThreshold = sumPxls * 0.001 # 1th percentile
-                #print("Number of pixels = ", numPxlThreshold)
-                
-                pxlThreshold = 0
-                pxlCount = 0
-                for bin in bandHist[0]:
-                    pxlCount = pxlCount + bin
-                    if pxlCount < numPxlThreshold:
-                        pxlThreshold = pxlThreshold + binWidth
-                    else:
-                        break
-                print("Image Band Threshold (For Dark Pixels) = ", pxlThreshold)
-                
-                dataType = rsgislib.TYPE_8UINT
-                expression = str('(b1!=0)&&(b1<') + str(pxlThreshold) + str(')?1:0')
-                bandDefns = []
-                bandDefns.append(rsgislib.imagecalc.BandDefn('b1', inputTOAImage, band+1))
-                rsgislib.imagecalc.bandMath(tmpDarkPxls, expression, outFormat, dataType, bandDefns)
-                rsgislib.segmentation.clump(tmpDarkPxls, tmpDarkPxlsClumps, outFormat, False, 0.0)
-                rsgislib.rastergis.populateStats(tmpDarkPxlsClumps, True, False)
-                rsgislib.segmentation.rmSmallClumps(tmpDarkPxlsClumps, tmpDarkPxlsClumpsRMSmall, minObjSize, outFormat)
-                rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmall, tmpDarkObjs, outFormat, False)
-                rsgislib.rastergis.populateStats(tmpDarkObjs, True, False)
-                stats2CalcTOA = list()
-                stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band+1), minField="MinTOARefl", meanField="MeanTOARefl"))
-                rsgislib.rastergis.populateRATWithStats(inputTOAImage, tmpDarkObjs, stats2CalcTOA)
-                
-                ratDS = gdal.Open(tmpDarkObjs, gdal.GA_Update)
-                Histogram = rat.readColumn(ratDS, "Histogram")
-                selected = Histogram * 2
-                selected[...] = 1
-                selected[0] = 0
-                rat.writeColumn(ratDS, "Selected", selected)
-                ratDS = None
-                
-                rsgislib.rastergis.spatialLocation(tmpDarkObjs, "Eastings", "Northings")
-                rsgislib.rastergis.selectClumpsOnGrid(tmpDarkObjs, "Selected", "SelectedGrid", "Eastings", "Northings", "MeanTOARefl", "min", 10, 10)
-                
                 offsetImage = os.path.join(tmpPath, tmpBaseName+"_darktargetoffs_b"+str(band+1)+imgExtension)
+                self.calcDarkTargetOffsetsForBand(inputTOAImage, offsetImage, band+1, outFormat, binWidth, minObjSize, darkPxlPercentile, tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg)
                 bandDarkTargetOffsetImages.append(offsetImage)
-                rsgislib.rastergis.interpolateClumpValues2Image(tmpDarkObjs, "SelectedGrid", "Eastings", "Northings", "idwall", "MinTOARefl",  offsetImage, outFormat, rsgislib.TYPE_32FLOAT)
             
             outputImage = os.path.join(outputPath, tmpBaseName + "_dosuboffs" + imgExtension)
             print(outputImage)
             rsgislib.imageutils.stackImageBands(bandDarkTargetOffsetImages, None, outputImage, None, 0, outFormat, rsgislib.TYPE_32FLOAT)
             
             gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(tmpDarkPxls)
-            gdalDriver.Delete(tmpDarkPxlsClumps)
-            gdalDriver.Delete(tmpDarkPxlsClumpsRMSmall)
-            gdalDriver.Delete(tmpDarkObjs)
+            gdalDriver.Delete(tmpDarkPxlsImg)
+            gdalDriver.Delete(tmpDarkPxlsClumpsImg)
+            gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
+            gdalDriver.Delete(tmpDarkObjsImg)
             for image in bandDarkTargetOffsetImages:
                 gdalDriver.Delete(image)
             
@@ -395,7 +418,246 @@ class ARCSIAbstractSensor (object):
             
         except Exception as e:
             raise e
+    
+    def performDOSOnSingleBand(self, inputTOAImage, band, outputPath, tmpBaseName, bandName, outFormat, tmpPath, minObjSize, darkPxlPercentile):
+        try:
+            arcsiUtils = ARCSIUtils()
+            binWidth = 1
+                        
+            imgExtension = arcsiUtils.getFileExtension(outFormat)
+            tmpDarkPxlsImg = os.path.join(tmpPath, tmpBaseName + "_darkpxls" + imgExtension)
+            tmpDarkPxlsClumpsImg = os.path.join(tmpPath, tmpBaseName + "_darkclumps" + imgExtension)
+            tmpDarkPxlsClumpsRMSmallImg = os.path.join(tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension)
+            tmpDarkObjsImg = os.path.join(tmpPath, tmpBaseName+"_darkobjs"+imgExtension)
+            
+            offsetImage = os.path.join(outputPath, tmpBaseName+"_darktargetoffs_b"+str(band)+imgExtension)
+            self.calcDarkTargetOffsetsForBand(inputTOAImage, offsetImage, band, outFormat, binWidth, minObjSize, darkPxlPercentile, tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg)
+            
+            outputName = tmpBaseName + "DOS" + bandName + imgExtension
+            outputImage = os.path.join(outputPath, outputName)
+            print(outputImage)
+
+            bandDefns = []
+            bandDefns.append(rsgislib.imagecalc.BandDefn('Off', offsetImage, 1))
+            bandDefns.append(rsgislib.imagecalc.BandDefn('TOA', inputTOAImage, band))
+            expression = '(TOA==0)?0:(TOA-Off)<=0?1:TOA-Off'
+            rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
+                        
+            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver.Delete(tmpDarkPxlsImg)
+            gdalDriver.Delete(tmpDarkPxlsClumpsImg)
+            gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
+            gdalDriver.Delete(tmpDarkObjsImg)
+            
+            return outputImage
+            
+        except Exception as e:
+            raise e
+            
+    def performLocalDOSOnSingleBand(self, inputTOAImage, band, outputPath, tmpBaseName, bandName, outFormat, tmpPath, minObjSize, darkPxlPercentile, blockSize):
+        try:
+            arcsiUtils = ARCSIUtils()
+            bandDarkTargetOffsetImages = list()
+            imgExtension = arcsiUtils.getFileExtension(outFormat)
+            tmpDarkTargetAllImage = os.path.join(tmpPath, tmpBaseName + "_darkpxls_allbands" + imgExtension)
+            tmpDarkPxlsImg = os.path.join(tmpPath, tmpBaseName + "_darkpxls" + imgExtension)
+            tmpDarkPxlsClumpsImg = os.path.join(tmpPath, tmpBaseName + "_darkclumps" + imgExtension)
+            tmpDarkPxlsClumpsRMSmallImg = os.path.join(tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension)
+            tmpDarkObjsImg = os.path.join(tmpPath, tmpBaseName+"_darkobjs"+imgExtension)
+            
+            binWidth = 1
+            self.findDOSLocalDarkTargets(inputTOAImage, tmpDarkTargetAllImage, blockSize, outFormat, binWidth, darkPxlPercentile)
+                        
+            print("Band ", band)
+            rsgislib.imageutils.selectImageBands(tmpDarkTargetAllImage, tmpDarkPxlsImg, outFormat, rsgislib.TYPE_8UINT, [band]) 
+            rsgislib.segmentation.clump(tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, outFormat, False, 0.0)                
+            rsgislib.rastergis.populateStats(tmpDarkPxlsClumpsImg, True, False)
+            rsgislib.segmentation.rmSmallClumps(tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, minObjSize, outFormat)
+            rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg, outFormat, False)
+            rsgislib.rastergis.populateStats(tmpDarkObjsImg, True, False)
+            stats2CalcTOA = list()
+            stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band+1), minField="MinTOARefl", meanField="MeanTOARefl"))
+            rsgislib.rastergis.populateRATWithStats(inputTOAImage, tmpDarkObjsImg, stats2CalcTOA)
+
+            ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
+            Histogram = rat.readColumn(ratDS, "Histogram")
+            selected = Histogram * 2
+            selected[...] = 1
+            selected[0] = 0
+            rat.writeColumn(ratDS, "Selected", selected)
+            ratDS = None
+
+            rsgislib.rastergis.spatialLocation(tmpDarkObjsImg, "Eastings", "Northings")
+            rsgislib.rastergis.selectClumpsOnGrid(tmpDarkObjsImg, "Selected", "SelectedGrid", "Eastings", "Northings", "MeanTOARefl", "min", 20, 20)
         
+            print("Interpolating the offset image...")
+        
+            offsetImage = os.path.join(tmpPath, tmpBaseName+"_darktargetoffs_b"+str(band)+imgExtension)
+        
+            ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
+            Eastings = rat.readColumn(ratDS, "Eastings")
+            Northings = rat.readColumn(ratDS, "Northings")
+            MinTOARefl = rat.readColumn(ratDS, "MinTOARefl")
+            SelectedGrid = rat.readColumn(ratDS, "SelectedGrid")
+            ratDS = None
+        
+            Eastings = Eastings[SelectedGrid!=0]
+            Northings = Northings[SelectedGrid!=0]
+            MinTOARefl = MinTOARefl[SelectedGrid!=0]
+        
+            interpSmoothing = 10.0
+            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing)
+                                                
+            outputName = tmpBaseName + "DOS" + bandName + imgExtension
+            outputImage = os.path.join(outputPath, outputName)
+            print(outputImage)
+
+            bandDefns = []
+            bandDefns.append(rsgislib.imagecalc.BandDefn('Off', offsetImage, 1))
+            bandDefns.append(rsgislib.imagecalc.BandDefn('TOA', inputTOAImage, band))
+            expression = '(TOA==0)?0:(TOA-Off)<=0?1:TOA-Off'
+            rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
+                        
+            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver.Delete(tmpDarkPxlsImg)
+            gdalDriver.Delete(tmpDarkPxlsClumpsImg)
+            gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
+            gdalDriver.Delete(tmpDarkObjsImg)
+            gdalDriver.Delete(tmpDarkTargetAllImage)
+            gdalDriver.Delete(offsetImage)
+            
+            return outputImage
+            
+        except Exception as e:
+            raise e
+    
+    def findDOSLocalDarkTargets(self, inputTOAImage, darkTargetImage, blockSize, outFormat, histBinWidth, darkPxlPercentile):
+        reader = ImageReader(inputTOAImage, windowxsize=blockSize, windowysize=blockSize)
+        writer = None
+        for (info, block) in reader:
+            out = numpy.zeros_like(block)
+                
+            # Iterate through the image bands
+            for i in range(len(out)):
+                minVal = numpy.min(block[i])
+                maxVal = numpy.max(block[i])
+                #print("Band: ", i+1, " Min = ", minVal, " Max = ", maxVal)
+                if ((maxVal - minVal) > 5):
+                    data = block[i].flatten()
+                    data = data[data != 0]
+                
+                    minVal = numpy.min(data)
+                    maxVal = numpy.max(data)
+                
+                    numBins = (math.ceil(maxVal - minVal) / histBinWidth) + 1
+                    if data.shape[0] > ((blockSize*blockSize)*0.1):
+                        #out[i,...] = 1 
+                        histo, histoBins = numpy.histogram(data, bins=numBins, range=(float(minVal), float(maxVal)))
+                        numValues = numpy.sum(histo)
+                        numValsPercentile = math.floor(numValues * darkPxlPercentile)
+                        #print("Num Values: ", numValues, " percentile: ", numValsPercentile)
+                        #print("Histo: ", histo)
+                        #print("Bins: ", histoBins)
+                        binValCount = 0
+                        threshold = 0.0
+                        for n in range(histo.shape[0]):
+                            if (binValCount + histo[n]) > numValsPercentile:
+                                break
+                            else:
+                                binValCount =  binValCount + histo[n]
+                                threshold = histoBins[n+1]
+                        #print("Threshold = ", threshold)
+                        out[i, ((block[i] < threshold) & (block[i] > 0))] = 1
+                    else:
+                        out[i,...] = 0 
+            
+            if writer is None:
+                writer = ImageWriter(darkTargetImage, 
+                                     info=info, 
+                                     firstblock=out, 
+                                     drivername=outFormat,
+                                     creationoptions=[])
+            else:
+                writer.write(out)
+        writer.close(calcStats=False)
+    
+    def findPerBandLocalDarkTargetsOffsets(self, inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, blockSize, minObjSize, darkPxlPercentile):
+        try:
+            arcsiUtils = ARCSIUtils()
+            tmpBaseName = os.path.splitext(outputName)[0]
+            binWidth = 1
+            
+            bandDarkTargetOffsetImages = list()
+            imgExtension = arcsiUtils.getFileExtension(outFormat)
+            tmpDarkTargetAllImage = os.path.join(tmpPath, tmpBaseName + "_darkpxls_allbands" + imgExtension)
+            tmpDarkPxlsImg = os.path.join(tmpPath, tmpBaseName + "_darkpxls" + imgExtension)
+            tmpDarkPxlsClumpsImg = os.path.join(tmpPath, tmpBaseName + "_darkclumps" + imgExtension)
+            tmpDarkPxlsClumpsRMSmallImg = os.path.join(tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension)
+            tmpDarkObjsImg = os.path.join(tmpPath, tmpBaseName+"_darkobjs"+imgExtension)
+            
+            self.findDOSLocalDarkTargets(inputTOAImage, tmpDarkTargetAllImage, blockSize, outFormat, binWidth, darkPxlPercentile)
+                        
+            for band in range(numBands):
+                print("Band ", band+1)
+                rsgislib.imageutils.selectImageBands(tmpDarkTargetAllImage, tmpDarkPxlsImg, outFormat, rsgislib.TYPE_8UINT, [band+1]) 
+                rsgislib.segmentation.clump(tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, outFormat, False, 0.0)                
+                rsgislib.rastergis.populateStats(tmpDarkPxlsClumpsImg, True, False)
+                rsgislib.segmentation.rmSmallClumps(tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, minObjSize, outFormat)
+                rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg, outFormat, False)
+                rsgislib.rastergis.populateStats(tmpDarkObjsImg, True, False)
+                stats2CalcTOA = list()
+                stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band+1), minField="MinTOARefl", meanField="MeanTOARefl"))
+                rsgislib.rastergis.populateRATWithStats(inputTOAImage, tmpDarkObjsImg, stats2CalcTOA)
+        
+                ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
+                Histogram = rat.readColumn(ratDS, "Histogram")
+                selected = Histogram * 2
+                selected[...] = 1
+                selected[0] = 0
+                rat.writeColumn(ratDS, "Selected", selected)
+                ratDS = None
+        
+                rsgislib.rastergis.spatialLocation(tmpDarkObjsImg, "Eastings", "Northings")
+                rsgislib.rastergis.selectClumpsOnGrid(tmpDarkObjsImg, "Selected", "SelectedGrid", "Eastings", "Northings", "MeanTOARefl", "min", 20, 20)
+                
+                print("Interpolating the offset image...")
+                
+                offsetImage = os.path.join(tmpPath, tmpBaseName+"_darktargetoffs_b"+str(band+1)+imgExtension)
+                
+                ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
+                Eastings = rat.readColumn(ratDS, "Eastings")
+                Northings = rat.readColumn(ratDS, "Northings")
+                MinTOARefl = rat.readColumn(ratDS, "MinTOARefl")
+                SelectedGrid = rat.readColumn(ratDS, "SelectedGrid")
+                ratDS = None
+                
+                Eastings = Eastings[SelectedGrid!=0]
+                Northings = Northings[SelectedGrid!=0]
+                MinTOARefl = MinTOARefl[SelectedGrid!=0]
+                
+                interpSmoothing = 10.0
+                self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing)
+                                                
+                bandDarkTargetOffsetImages.append(offsetImage)
+            
+            outputImage = os.path.join(outputPath, tmpBaseName + "_dosuboffs" + imgExtension)
+            print(outputImage)
+            rsgislib.imageutils.stackImageBands(bandDarkTargetOffsetImages, None, outputImage, None, 0, outFormat, rsgislib.TYPE_32FLOAT)
+            
+            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver.Delete(tmpDarkPxlsImg)
+            gdalDriver.Delete(tmpDarkPxlsClumpsImg)
+            gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
+            gdalDriver.Delete(tmpDarkObjsImg)
+            gdalDriver.Delete(tmpDarkTargetAllImage)
+            for image in bandDarkTargetOffsetImages:
+                gdalDriver.Delete(image)
+            
+            return outputImage
+            
+        except Exception as e:
+            raise e
+    
     @abstractmethod
     def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath): pass
 
@@ -404,8 +666,35 @@ class ARCSIAbstractSensor (object):
 
     @abstractmethod
     def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax): pass
+
+    @abstractmethod
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax): pass
     
     @abstractmethod
     def setBandNames(self, imageFile): pass
+    
+    def interpolateImageFromPointData(self, templateInImage, xVals, yVals, zVals, outputImage, outFormat, smoothingParam):
+        print("Interpolating Image: Number of Features = ", xVals.shape[0])
+        rbfi = scipy.interpolate.rbf.Rbf(xVals, yVals, zVals, function='linear', smooth=smoothingParam)
+        
+        reader = ImageReader(templateInImage, windowxsize=200, windowysize=200)
+        writer = None
+        for (info, block) in reader:
+            pxlCoords = info.getBlockCoordArrays()
+            interZ = rbfi(pxlCoords[0].flatten(), pxlCoords[1].flatten())
+            out = numpy.reshape(interZ, block[0].shape)
+            out = numpy.expand_dims(out, axis=0)
+    
+            if writer is None:
+                writer = ImageWriter(outputImage, 
+                                     info=info, 
+                                     firstblock=out, 
+                                     drivername=outFormat,
+                                     creationoptions=[])
+            else:
+                writer.write(out)
+        writer.close(calcStats=True)
+        print("Interpolating Image - Complete")
 
+    
 

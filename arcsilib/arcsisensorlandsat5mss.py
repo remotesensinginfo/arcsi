@@ -61,6 +61,8 @@ import math
 import numpy
 # Import the GDAL python module
 import osgeo.gdal as gdal
+# Import the RIOS RAT module
+from rios import rat
 
 class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
     """
