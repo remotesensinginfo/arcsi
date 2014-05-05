@@ -822,8 +822,9 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                     aotVals[i] = 0
             rat.writeColumn(ratDS, "AOT", aotVals)
             
-            rsgislib.rastergis.interpolateClumpValues2Image(thresImageClumpsFinal, "PredictAOTFor", "Eastings", "Northings", "idwall", "AOT", outputAOTImage, outFormat, rsgislib.TYPE_32FLOAT)
-        
+            interpSmoothing = 10.0
+            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
+            
             gdalDriver = gdal.GetDriverByName(outFormat)
             gdalDriver.Delete(thresImageClumpsFinal)        
         
