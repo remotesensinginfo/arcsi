@@ -526,8 +526,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             
         rsgislib.imagecalibration.apply6SCoeffElevLUTParam(inputRadImage, inputDEMFile, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, elevCoeffs)
         return outputImage
-        
-    
+     
     def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax):
         print("Converting to Surface Reflectance")
         outputImage = os.path.join(outputPath, outputName) 
@@ -560,7 +559,6 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.apply6SCoeffElevAOTLUTParam(inputRadImage, inputDEMFile, inputAOTImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, 0, True, elevAOTCoeffs)
             
         return outputImage
-
 
     def run6SToOptimiseAODValue(self, aotVal, radBlueVal, predBlueVal, aeroProfile, atmosProfile, grdRefl, surfaceAltitude):
         """Used as part of the optimastion for identifying values of AOD"""
@@ -595,7 +593,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         print("\taX: ", aX, " bX: ", bX, " cX: ", cX, "     Dist = ", outDist)
         return outDist
     
-    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
+    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl):
         try:
             print("Opening: ", inputTOAImage)
             toaDataset = gdal.Open(inputTOAImage, gdal.GA_ReadOnly)
@@ -609,8 +607,13 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             
             darkPxlPercentile = 0.01
             minObjSize = 5
+            offsetsImage = ""
             
-            offsetsImage = self.findPerBandDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile)
+            if globalDOS:
+                offsetsImage = self.findPerBandDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile)
+            else:
+                blockSize = 200
+                offsetsImage = self.findPerBandLocalDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, blockSize, minObjSize, darkPxlPercentile)
                        
             # TOA Image - Offset Image (if data and < 1 then set min value as 1)... 
             outputImage = os.path.join(outputPath, outputName)
@@ -651,14 +654,18 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         except Exception as e:
             raise e
 
-    def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
+    def estimateImageToAOD(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
         try:
             arcsiUtils = ARCSIUtils()
             
             outputAOTImage = os.path.join(outputPath, outputName)
             
             thresImageClumpsFinal = self.findDDVTargets(inputTOAImage, outputPath, outputName, outFormat, tmpPath)
-
+            
+            stats2CalcTOA = list()
+            stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanElev"))
+            rsgislib.rastergis.populateRATWithStats(inputDEMFile, thresImageClumpsFinal, stats2CalcTOA)
+            
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, minField="MinB1TOA", meanField="MeanB1TOA"))
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=6, minField="MinB7TOA", meanField="MeanB7TOA"))
@@ -669,6 +676,8 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
 
             ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
             Histogram = rat.readColumn(ratDS, "Histogram")
+            MeanElev = rat.readColumn(ratDS, "MeanElev")
+            
             selected = Histogram * 2
             selected[...] = 1
             selected[0] = 0
@@ -686,7 +695,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             
             rat.writeColumn(ratDS, "PredB1Refl", PredB1Refl)
             
-            numAOTValTests = int(math.ceil((aotValMax - aotValMin)/0.05))
+            numAOTValTests = int(math.ceil((aotValMax - aotValMin)/0.05))+1
             
             if not numAOTValTests >= 1:
                 raise ARCSIException("min and max AOT range are too close together, they need to be at least 0.05 apart.")
@@ -696,21 +705,115 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             minAOT = 0.0
             minDist = 0.0
             
-            aotVals = numpy.zeros_like(MeanB7TOA, dtype=numpy.float)
+            aotVals = numpy.zeros_like(MeanB1RAD, dtype=numpy.float)
             
-            for i in range(len(PredB1Refl)):
+            for i in range(len(MeanB1RAD)):
                 if PredictAOTFor[i] == 1:
                     print("Predicting AOD for Segment ", i)
                     for j in range(numAOTValTests):
                         cAOT = aotValMin + (0.05 * j)
-                        cDist = self.run6SToOptimiseAODValue(cAOT, MeanB1RAD[i], PredB1Refl[i], aeroProfile, atmosProfile, grdRefl, surfaceAltitude)
+                        cDist = self.run6SToOptimiseAODValue(cAOT, MeanB1RAD[i], PredB1Refl[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i])
                         if j == 0:
                             minAOT = cAOT
                             minDist = cDist
                         elif cDist < minDist:
                             minAOT = cAOT
                             minDist = cDist
-                    #predAOTArgs = (MeanB1RAD[i], PredB1Refl[i], aeroProfile, atmosProfile, grdRefl, surfaceAltitude)
+                    #predAOTArgs = (MeanB1RAD[i], PredB1Refl[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i])
+                    #res = minimize(self.run6SToOptimiseAODValue, minAOT, method='nelder-mead', options={'maxiter': 20, 'xtol': 0.001, 'disp': True}, args=predAOTArgs)
+                    #aotVals[i] = res.x[0]
+                    aotVals[i] = minAOT
+                    print("IDENTIFIED AOT: ", aotVals[i])
+                else:
+                    aotVals[i] = 0
+            rat.writeColumn(ratDS, "AOT", aotVals)
+            
+            interpSmoothing = 10.0
+            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
+            
+            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver.Delete(thresImageClumpsFinal)        
+        
+            return outputAOTImage
+        except Exception as e:
+            raise e
+
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax): 
+        try:
+            arcsiUtils = ARCSIUtils()
+            
+            outputAOTImage = os.path.join(outputPath, outputName)
+            tmpBaseName = os.path.splitext(outputName)[0]
+            imgExtension = arcsiUtils.getFileExtension(outFormat)
+            
+            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, 5, 0.01, 1000)
+            
+            thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
+            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat=outFormat, numClusters=20, minPxls=10, bands=[4,5,3])
+            
+            stats2CalcTOA = list()
+            stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanElev"))
+            rsgislib.rastergis.populateRATWithStats(inputDEMFile, thresImageClumpsFinal, stats2CalcTOA)
+            
+            stats2CalcTOA = list()
+            stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanB1DOS"))
+            rsgislib.rastergis.populateRATWithStats(dosBlueImage, thresImageClumpsFinal, stats2CalcTOA)
+
+            stats2CalcRad = list()
+            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanB1RAD"))
+            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=4, meanField="MeanB4RAD"))
+            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=3, meanField="MeanB3RAD"))
+            rsgislib.rastergis.populateRATWithStats(inputRADImage, thresImageClumpsFinal, stats2CalcRad)
+
+            ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
+            Histogram = rat.readColumn(ratDS, "Histogram")
+            MeanElev = rat.readColumn(ratDS, "MeanElev")
+            
+            MeanB4RAD = rat.readColumn(ratDS, "MeanB4RAD")
+            MeanB3RAD = rat.readColumn(ratDS, "MeanB3RAD")
+            
+            radNDVI = (MeanB4RAD - MeanB3RAD)/(MeanB4RAD + MeanB3RAD)
+            
+            selected = Histogram * 2
+            selected[...] = 0
+            selected[radNDVI>0.2] = 1
+            rat.writeColumn(ratDS, "Selected", selected)
+            ratDS = None
+            
+            rsgislib.rastergis.spatialLocation(thresImageClumpsFinal, "Eastings", "Northings")
+            rsgislib.rastergis.selectClumpsOnGrid(thresImageClumpsFinal, "Selected", "PredictAOTFor", "Eastings", "Northings", "MeanB1DOS", "min", 10, 10)
+            
+            ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
+            MeanB1DOS = rat.readColumn(ratDS, "MeanB1DOS")
+            MeanB1DOS = MeanB1DOS / 1000
+            MeanB1RAD = rat.readColumn(ratDS, "MeanB1RAD")
+            PredictAOTFor = rat.readColumn(ratDS, "PredictAOTFor")
+                        
+            numAOTValTests = int(math.ceil((aotValMax - aotValMin)/0.05))+1
+            
+            if not numAOTValTests >= 1:
+                raise ARCSIException("min and max AOT range are too close together, they need to be at least 0.05 apart.")
+            
+            cAOT = aotValMin
+            cDist = 0.0
+            minAOT = 0.0
+            minDist = 0.0
+            
+            aotVals = numpy.zeros_like(MeanB1RAD, dtype=numpy.float)
+            
+            for i in range(len(MeanB1RAD)):
+                if PredictAOTFor[i] == 1:
+                    print("Predicting AOD for Segment ", i)
+                    for j in range(numAOTValTests):
+                        cAOT = aotValMin + (0.05 * j)
+                        cDist = self.run6SToOptimiseAODValue(cAOT, MeanB1RAD[i], MeanB1DOS[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i])
+                        if j == 0:
+                            minAOT = cAOT
+                            minDist = cDist
+                        elif cDist < minDist:
+                            minAOT = cAOT
+                            minDist = cDist
+                    #predAOTArgs = (MeanB1RAD[i], MeanB1DOS[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i])
                     #res = minimize(self.run6SToOptimiseAODValue, minAOT, method='nelder-mead', options={'maxiter': 20, 'xtol': 0.001, 'disp': True}, args=predAOTArgs)
                     #aotVals[i] = res.x[0]
                     aotVals[i] = minAOT
@@ -727,7 +830,6 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             return outputAOTImage
         except Exception as e:
             raise e
-
 
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)

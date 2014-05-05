@@ -659,16 +659,16 @@ class ARCSIAbstractSensor (object):
             raise e
     
     @abstractmethod
-    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath): pass
+    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl): pass
 
     @abstractmethod
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath): pass
 
     @abstractmethod
-    def estimateImageToAOD(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax): pass
+    def estimateImageToAOD(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax): pass
 
     @abstractmethod
-    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax): pass
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax): pass
     
     @abstractmethod
     def setBandNames(self, imageFile): pass

@@ -154,7 +154,12 @@ class ARCSI (object):
         return aotVal
             
     
-    def run(self, inputHeader, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, demFile, aotFile):
+    def run(self, inputHeader, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, 
+            productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, 
+            atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, 
+            atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, 
+            aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, demFile, aotFile, 
+            globalDOS, dosOutRefl):
         """
         A function contains the main flow of the software
         """
@@ -276,6 +281,7 @@ class ARCSI (object):
             srefImage = ""
             aotFile = ""
             cloudsImage = ""
+            outDEMName = ""
             
             # Step 5: Convert to Radiance
             if prodsToCalc["RAD"]:
@@ -365,6 +371,26 @@ class ARCSI (object):
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
                 print("")
             
+            # Create and reproject the DEM file if not specified.
+            if (not (demFile == None)) and (outDEMName == ""):
+                # Interpolate image to output refl image resolution and convert projection to the same as the output image.
+                outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
+                print("Output DEM: ", outDEMName)
+                rsgislib.imageutils.createCopyImage(radianceImage, outDEMName, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)  
+                
+                inDEMDS = gdal.Open(demFile, gdal.GA_ReadOnly)
+                outDEMDS = gdal.Open(outDEMName, gdal.GA_Update)
+
+                print("Subset and reproject DEM...")
+                gdal.ReprojectImage(inDEMDS, outDEMDS, None, None, gdal.GRA_CubicSpline)
+                
+                inDEMDS = None
+                outDEMDS = None
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)  
+                print("")          
+            
             # Step 7: Use image to estimate AOD values
             if prodsToCalc["DDVAOT"]:
                 aeroProfile = None
@@ -425,7 +451,7 @@ class ARCSI (object):
                     raise ARCSIException("The specified ground reflectance is unknown.")
             
                 outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
-                aotFile = sensorClass.estimateImageToAOD(radianceImage, toaImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, minAOT, maxAOT)
+                aotFile = sensorClass.estimateImageToAOD(radianceImage, toaImage, outDEMName, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
@@ -490,7 +516,7 @@ class ARCSI (object):
                     raise ARCSIException("The specified ground reflectance is unknown.")
             
                 outName = outBaseName + "_dosaod" + arcsiUtils.getFileExtension(outFormat)
-                aotFile = sensorClass.estimateImageToAODUsingDOS(radianceImage, toaImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, minAOT, maxAOT)
+                aotFile = sensorClass.estimateImageToAODUsingDOS(radianceImage, toaImage, outDEMName, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
@@ -595,23 +621,6 @@ class ARCSI (object):
                     elevRange = (maxElev - minElev) / 100
                     numElevSteps = math.ceil(elevRange) + 1
                     print("Elevation Ranges from ", minElev, " to ", maxElev, " an LUT with ", numElevSteps, " will be created.")
-
-                    # Interpolate image to output refl image resolution and convert projection to the same as the output image.
-                    outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
-                    print("Output DEM: ", outDEMName)
-                    rsgislib.imageutils.createCopyImage(radianceImage, outDEMName, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)  
-                    
-                    inDEMDS = gdal.Open(demFile, gdal.GA_ReadOnly)
-                    outDEMDS = gdal.Open(outDEMName, gdal.GA_Update)
-
-                    print("Subset and reproject DEM...")
-                    gdal.ReprojectImage(inDEMDS, outDEMDS, None, None, gdal.GRA_CubicSpline)
-                    
-                    inDEMDS = None
-                    outDEMDS = None
-                    if calcStatsPy:
-                        print("Calculating Statistics...")
-                        rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
                         
                     if (not aotFile == None):
                         print("Build an AOT LUT...")
@@ -641,7 +650,7 @@ class ARCSI (object):
             if prodsToCalc["DOSUB"]:
                 print("Convert to reflectance using dark object subtraction.")
                 outName = outBaseName + "_rad_toa_dosub" + arcsiUtils.getFileExtension(outFormat)          
-                srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath)
+                srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath, globalDOS, dosOutRefl)
             
                 print("Setting Band Names...")
                 sensorClass.setBandNames(srefImage)
@@ -681,16 +690,16 @@ class ARCSI (object):
         print("\t-------------------------------------------------------")
         print("\tSenor         | Shorthand   | Functions")
         print("\t-------------------------------------------------------")
-        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, SREFSTDMDL, DOSUB")
-        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, SREFSTDMDL, DOSUB")
-        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, SREFSTDMDL, DOSUB")
-        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, SREFSTDMDL, DOSUB")
-        print("\tLandsat 4 TM  | \'ls5tm\'     | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
-        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, SREFSTDMDL, DOSUB")
-        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
-        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
-        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
-        print("\tRapideye      | \'rapideye\'  | RAD, TOA, SREFSTDMDL, DOSUB")
+        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
+        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
+        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
+        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
+        print("\tLandsat 4 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
+        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
+        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
+        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
+        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
+        print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
         #print("\tSPOT 5        | \'spot5\'     | RAD, TOA")
         #print("\tASTER         | \'aster\'     | RAD, TOA")
         #print("\tIRS P6        | \'irsp6\'     | RAD, TOA")
@@ -709,7 +718,7 @@ if __name__ == '__main__':
     The command line user interface to ARCSI
     """
     
-    print("ARCSI 0.1a Copyright (C) 2013  Peter Bunting")
+    print("ARCSI 0.5a Copyright (C) 2014  Peter Bunting")
     print("This program comes with ABSOLUTELY NO WARRANTY.")
     print("This is free software, and you are welcome to redistribute it")
     print("under certain conditions; See website (http://www.rsgislib.org/arcsi).")
@@ -851,6 +860,12 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--dem", type=str,
                         help='''Specify a DEM which is to be used for building
                         an LUT and applying 6S coefficients with respect to elevation.''')
+    parser.add_argument("--globaldos", action='store_true', default=False, 
+                        help='''Specifies that a global DOS should be applied
+                        rather than a local DOS.''')
+    parser.add_argument("--dosout", type=float, default=20, 
+                        help='''Specifies the reflectance value to which dark objects
+                        are set to during the dark object subtraction.''')
                         
     
     # Call the parser to parse the arguments.
@@ -901,10 +916,12 @@ if __name__ == '__main__':
         needAOD = False
         needAODMinMax = False
         needTmp = False
+        needDEM = False
         for prod in args.prods:
             if prod == 'DDVAOT':
                 needAODMinMax = True
                 needTmp = True
+                needDEM = True
             elif prod == 'SREFSTDMDL':
                 needAOD = True
             elif prod == 'DOSUB':
@@ -914,6 +931,7 @@ if __name__ == '__main__':
             elif prod == 'DOSAOT':
                 needAODMinMax = True
                 needTmp = True
+                needDEM = True
 
         if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax) and (not args.aotfile):
             print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.")
@@ -960,6 +978,11 @@ if __name__ == '__main__':
                 args.dem = envVar
                 print("Taking DEM path from environment variable.")
         
+        if needDEM:
+            if not os.path.exists(args.dem):
+                print("Error: A file path to a DEM has either not been specified or does exist, please check it and run again.")
+                sys.exit()
+        
         if args.aeroimg == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_AEROIMG_PATH")
             if not envVar == None:
@@ -986,7 +1009,13 @@ if __name__ == '__main__':
         if (not args.aerowater == None) or (not args.aerodust == None) or (not args.aerooceanic == None) or (not args.aerosoot == None):
             aeroComponentsSpecified = True
 
-        arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem, args.aotfile)
+        arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, 
+                     args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, 
+                     args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, 
+                     args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, 
+                     args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, 
+                     args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem, 
+                     args.aotfile, args.globaldos, args.dosout)
 
 
 
