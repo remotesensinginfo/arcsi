@@ -668,7 +668,7 @@ class ARCSIAbstractSensor (object):
     def estimateImageToAOD(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax): pass
 
     @abstractmethod
-    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax): pass
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, dosOutRefl): pass
     
     @abstractmethod
     def setBandNames(self, imageFile): pass
