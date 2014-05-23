@@ -434,7 +434,7 @@ class ARCSI (object):
                     raise ARCSIException("The specified atmospheric profile is unknown.")
 
                 if atmosOZoneWaterSpecified:
-                    atmosProfile.UserWaterAndOzone(atmosWaterVal, atmosOZoneVal) 
+                    atmosProfile = Py6S.AtmosProfile.UserWaterAndOzone(atmosWaterVal, atmosOZoneVal) 
                 
                 grdRefl = None
                 if grdReflOption == None:
