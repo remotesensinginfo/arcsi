@@ -516,7 +516,7 @@ class ARCSI (object):
                     raise ARCSIException("The specified ground reflectance is unknown.")
             
                 outName = outBaseName + "_dosaod" + arcsiUtils.getFileExtension(outFormat)
-                aotFile = sensorClass.estimateImageToAODUsingDOS(radianceImage, toaImage, outDEMName, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT)
+                aotFile = sensorClass.estimateImageToAODUsingDOS(radianceImage, toaImage, outDEMName, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, globalDOS, dosOutRefl)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
@@ -865,7 +865,8 @@ if __name__ == '__main__':
                         rather than a local DOS.''')
     parser.add_argument("--dosout", type=float, default=20, 
                         help='''Specifies the reflectance value to which dark objects
-                        are set to during the dark object subtraction.''')
+                        are set to during the dark object subtraction. (Default is 20, 
+                        which is equivalent to 2 % reflectance.''')
                         
     
     # Call the parser to parse the arguments.
