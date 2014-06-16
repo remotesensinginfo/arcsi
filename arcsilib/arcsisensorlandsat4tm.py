@@ -551,7 +551,7 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
                         
             # TOA Image - Offset Image (if data and < 1 then set min value as 1)... 
             outputImage = os.path.join(outputPath, outputName)
-            rsgislib.imagecalibration.applySubtractOffsets(inputTOAImage, offsetsImage, outputImage, outFormat, rsgislib.TYPE_16UINT, True, True, 0.0)
+            rsgislib.imagecalibration.applySubtractOffsets(inputTOAImage, offsetsImage, outputImage, outFormat, rsgislib.TYPE_16UINT, True, True, 0.0, dosOutRefl)
             
             return outputImage
             
@@ -590,6 +590,7 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
             raise e
     
     def estimateImageToAOD(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
+        print("Estimating AOD through Blue - SWIR relationship.")
         try:
             arcsiUtils = ARCSIUtils()
             
@@ -617,10 +618,12 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
             selected[...] = 1
             selected[0] = 0
             rat.writeColumn(ratDS, "Selected", selected)
+            ratDS = None
             
             rsgislib.rastergis.spatialLocation(thresImageClumpsFinal, "Eastings", "Northings")
             rsgislib.rastergis.selectClumpsOnGrid(thresImageClumpsFinal, "Selected", "PredictAOTFor", "Eastings", "Northings", "MinB7TOA", "min", 10, 10)
             
+            ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
             MeanB1TOA = rat.readColumn(ratDS, "MeanB1TOA")
             MeanB7TOA = rat.readColumn(ratDS, "MeanB7TOA")
             MeanB1RAD = rat.readColumn(ratDS, "MeanB1RAD")
@@ -663,6 +666,14 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
                     aotVals[i] = 0
             rat.writeColumn(ratDS, "AOT", aotVals)
             
+            Eastings = rat.readColumn(ratDS, "Eastings")
+            Northings = rat.readColumn(ratDS, "Northings")
+            ratDS = None
+        
+            Eastings = Eastings[PredictAOTFor!=0]
+            Northings = Northings[PredictAOTFor!=0]
+            aotVals = aotVals[PredictAOTFor!=0]
+        
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
             
@@ -675,6 +686,7 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
     
     def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, dosOutRefl): 
         try:
+            print("Estimating AOD Using DOS")
             arcsiUtils = ARCSIUtils()
             
             outputAOTImage = os.path.join(outputPath, outputName)
@@ -686,9 +698,9 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
             darkPxlPercentile = 0.01
             blockSize = 1000
             if globalDOS:
-            	dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, minObjSize, darkPxlPercentile)
+            	dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
-	            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, minObjSize, darkPxlPercentile, blockSize) 
+	            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl) 
             
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
             rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat=outFormat, numClusters=20, minPxls=10, bands=[4,5,3])
@@ -764,6 +776,14 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
                     aotVals[i] = 0
             rat.writeColumn(ratDS, "AOT", aotVals)
             
+            Eastings = rat.readColumn(ratDS, "Eastings")
+            Northings = rat.readColumn(ratDS, "Northings")
+            ratDS = None
+        
+            Eastings = Eastings[PredictAOTFor!=0]
+            Northings = Northings[PredictAOTFor!=0]
+            aotVals = aotVals[PredictAOTFor!=0]
+        
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
             

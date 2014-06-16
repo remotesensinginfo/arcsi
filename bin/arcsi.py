@@ -860,9 +860,9 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--dem", type=str,
                         help='''Specify a DEM which is to be used for building
                         an LUT and applying 6S coefficients with respect to elevation.''')
-    parser.add_argument("--globaldos", action='store_true', default=False, 
-                        help='''Specifies that a global DOS should be applied
-                        rather than a local DOS.''')
+    parser.add_argument("--localdos", action='store_true', default=False, 
+                        help='''Specifies that a local DOS should be applied
+                        rather than a global DOS.''')
     parser.add_argument("--dosout", type=float, default=20, 
                         help='''Specifies the reflectance value to which dark objects
                         are set to during the dark object subtraction. (Default is 20, 
@@ -891,7 +891,6 @@ if __name__ == '__main__':
             sys.exit()
     
         # Check that the output image format has been specified.
-        
         if args.format == None:
             # Print an error message if not and exit.
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUT_FORMAT")
@@ -901,7 +900,6 @@ if __name__ == '__main__':
             else:
                 print("Taking output format from environment variable.")
                 args.format = envVar
-            
         
         # Check that the output image format has been specified.
         if args.outpath == None:
@@ -972,7 +970,6 @@ if __name__ == '__main__':
                 print("Error: The temp path specified is not a directory, please correct and run again.")
                 sys.exit()
             
-
         if args.dem == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_DEM_PATH")
             if not envVar == None:
@@ -1016,7 +1013,7 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, 
                      args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, 
                      args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem, 
-                     args.aotfile, args.globaldos, args.dosout)
+                     args.aotfile, (not args.localdos), args.dosout)
 
 
 

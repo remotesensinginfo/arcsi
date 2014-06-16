@@ -424,7 +424,7 @@ class ARCSILandsat4MSSSensor (ARCSIAbstractSensor):
                                        
             # TOA Image - Offset Image (if data and < 1 then set min value as 1)... 
             outputImage = os.path.join(outputPath, outputName)
-            rsgislib.imagecalibration.applySubtractOffsets(inputTOAImage, offsetsImage, outputImage, outFormat, rsgislib.TYPE_16UINT, True, True, 0.0)
+            rsgislib.imagecalibration.applySubtractOffsets(inputTOAImage, offsetsImage, outputImage, outFormat, rsgislib.TYPE_16UINT, True, True, 0.0, dosOutRefl)
             
             return outputImage
             
@@ -452,9 +452,9 @@ class ARCSILandsat4MSSSensor (ARCSIAbstractSensor):
             darkPxlPercentile = 0.01
             blockSize = 1000
             if globalDOS:
-            	dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, minObjSize, darkPxlPercentile)
+            	dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
-	            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, minObjSize, darkPxlPercentile, blockSize) 
+	            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl) 
                         
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
             rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat=outFormat, numClusters=40, minPxls=10, bands=[5,4,1])

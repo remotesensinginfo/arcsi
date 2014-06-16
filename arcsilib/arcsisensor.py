@@ -354,7 +354,7 @@ class ARCSIAbstractSensor (object):
         rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg, outFormat, False)
         rsgislib.rastergis.populateStats(tmpDarkObjsImg, True, False)
         stats2CalcTOA = list()
-        stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band), minField="MinTOARefl", meanField="MeanTOARefl"))
+        stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band), minField="MinTOARefl"))
         rsgislib.rastergis.populateRATWithStats(inputTOAImage, tmpDarkObjsImg, stats2CalcTOA)
         
         ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
@@ -419,7 +419,7 @@ class ARCSIAbstractSensor (object):
         except Exception as e:
             raise e
     
-    def performDOSOnSingleBand(self, inputTOAImage, band, outputPath, tmpBaseName, bandName, outFormat, tmpPath, minObjSize, darkPxlPercentile):
+    def performDOSOnSingleBand(self, inputTOAImage, band, outputPath, tmpBaseName, bandName, outFormat, tmpPath, minObjSize, darkPxlPercentile, dosOutRefl):
         try:
             arcsiUtils = ARCSIUtils()
             binWidth = 1
@@ -440,7 +440,7 @@ class ARCSIAbstractSensor (object):
             bandDefns = []
             bandDefns.append(rsgislib.imagecalc.BandDefn('Off', offsetImage, 1))
             bandDefns.append(rsgislib.imagecalc.BandDefn('TOA', inputTOAImage, band))
-            expression = '(TOA==0)?0:(TOA-Off)<=0?1:TOA-Off'
+            expression = '(TOA==0)?0:((TOA-Off)+' + str(dosOutRefl) + ')<=0?1(TOA-Off)+' + str(dosOutRefl)
             rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
                         
             gdalDriver = gdal.GetDriverByName(outFormat)
@@ -454,7 +454,7 @@ class ARCSIAbstractSensor (object):
         except Exception as e:
             raise e
             
-    def performLocalDOSOnSingleBand(self, inputTOAImage, band, outputPath, tmpBaseName, bandName, outFormat, tmpPath, minObjSize, darkPxlPercentile, blockSize):
+    def performLocalDOSOnSingleBand(self, inputTOAImage, band, outputPath, tmpBaseName, bandName, outFormat, tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl):
         try:
             arcsiUtils = ARCSIUtils()
             bandDarkTargetOffsetImages = list()
@@ -515,7 +515,7 @@ class ARCSIAbstractSensor (object):
             bandDefns = []
             bandDefns.append(rsgislib.imagecalc.BandDefn('Off', offsetImage, 1))
             bandDefns.append(rsgislib.imagecalc.BandDefn('TOA', inputTOAImage, band))
-            expression = '(TOA==0)?0:(TOA-Off)<=0?1:TOA-Off'
+            expression = '(TOA==0)?0:((TOA-Off)+' + str(dosOutRefl) + ')<=0?1(TOA-Off)+' + str(dosOutRefl)
             rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
                         
             gdalDriver = gdal.GetDriverByName(outFormat)
