@@ -354,7 +354,7 @@ class ARCSIAbstractSensor (object):
         rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg, outFormat, False)
         rsgislib.rastergis.populateStats(tmpDarkObjsImg, True, False)
         stats2CalcTOA = list()
-        stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band), minField="MinTOARefl"))
+        stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band), minField="MinTOARefl", meanField="MeanTOARefl"))
         rsgislib.rastergis.populateRATWithStats(inputTOAImage, tmpDarkObjsImg, stats2CalcTOA)
         
         ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
