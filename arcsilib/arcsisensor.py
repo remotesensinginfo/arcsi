@@ -440,7 +440,7 @@ class ARCSIAbstractSensor (object):
             bandDefns = []
             bandDefns.append(rsgislib.imagecalc.BandDefn('Off', offsetImage, 1))
             bandDefns.append(rsgislib.imagecalc.BandDefn('TOA', inputTOAImage, band))
-            expression = '(TOA==0)?0:((TOA-Off)+' + str(dosOutRefl) + ')<=0?1(TOA-Off)+' + str(dosOutRefl)
+            expression = '(TOA==0)?0:((TOA-Off)+' + str(dosOutRefl) + ')<=0?(TOA-Off)+' + str(dosOutRefl)
             rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
                         
             gdalDriver = gdal.GetDriverByName(outFormat)
@@ -515,7 +515,7 @@ class ARCSIAbstractSensor (object):
             bandDefns = []
             bandDefns.append(rsgislib.imagecalc.BandDefn('Off', offsetImage, 1))
             bandDefns.append(rsgislib.imagecalc.BandDefn('TOA', inputTOAImage, band))
-            expression = '(TOA==0)?0:((TOA-Off)+' + str(dosOutRefl) + ')<=0?1(TOA-Off)+' + str(dosOutRefl)
+            expression = '(TOA==0)?0:((TOA-Off)+' + str(dosOutRefl) + ')<=0?(TOA-Off)+' + str(dosOutRefl)
             rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
                         
             gdalDriver = gdal.GetDriverByName(outFormat)
