@@ -62,6 +62,7 @@ from arcsilib.arcsisensorlandsat2mss import ARCSILandsat2MSSSensor
 from arcsilib.arcsisensorlandsat1mss import ARCSILandsat1MSSSensor
 from arcsilib.arcsisensorlandsat8 import ARCSILandsat8Sensor
 from arcsilib.arcsisensorrapideye import ARCSIRapidEyeSensor
+from arcsilib.arcsisensorworldview2 import ARCSIWorldView2Sensor
 # Import the image utilities module from rsgislib
 import rsgislib.imageutils
 # Import the image calculations module from rsgislib
@@ -105,8 +106,14 @@ class ARCSI (object):
             sensorClass = ARCSILandsat8Sensor()
         elif sensor == 'rapideye':
             sensorClass = ARCSIRapidEyeSensor()
+        elif sensor == 'wv2':
+            sensorClass = ARCSIWorldView2Sensor()
         else:
             raise ARCSIException("Could not get a class representing the sensor specified from the factory.")
+        
+        if sensorClass == None:
+            raise ARCSIException("Something has gone wrong sensorClass is None!")
+
         return sensorClass
         
     def convertVisabilityToAOD(self, vis):
@@ -688,7 +695,7 @@ class ARCSI (object):
         """
         print("Supported Sensors are:")
         print("\t-------------------------------------------------------")
-        print("\tSenor         | Shorthand   | Functions")
+        print("\tSensor        | Shorthand     | Functions")
         print("\t-------------------------------------------------------")
         print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
         print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
@@ -700,9 +707,7 @@ class ARCSI (object):
         print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
         print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
         print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
-        #print("\tSPOT 5        | \'spot5\'     | RAD, TOA")
-        #print("\tASTER         | \'aster\'     | RAD, TOA")
-        #print("\tIRS P6        | \'irsp6\'     | RAD, TOA")
+        print("\WorldView2     | \'wv2\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
         print("\t-------------------------------------------------------")
         
     def listProductDescription(self):
@@ -747,7 +752,7 @@ if __name__ == '__main__':
     # Define the argument for specifying the sensor.
     parser.add_argument("-s", "--sensor", choices=['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm',
                                                    'ls5mss', 'ls5tm', 'ls7', 
-                                                   'ls8', 'rapideye'],  
+                                                   'ls8', 'rapideye', 'wv2'],  
                         help='''Specify the sensor being processed.''')
     # Define the argument for requesting a list of the supported sensors.
     parser.add_argument("--sensorlist", action='store_true', default=False, 
