@@ -293,13 +293,13 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         print("Generate Saturation Image")
         outputImage = os.path.join(outputPath, outputName)
         
-        lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'satVal'])
+        reBand = collections.namedtuple('REBand', ['bandName', 'fileName', 'bandIndex', 'satVal'])
         bandDefnSeq = list()
-        bandDefnSeq.append(lsBand(bandName="Blue", fileName=self.fileName, bandIndex=1, satVal=65535))
-        bandDefnSeq.append(lsBand(bandName="Green", fileName=self.fileName, bandIndex=2, satVal=65535))
-        bandDefnSeq.append(lsBand(bandName="Red", fileName=self.fileName, bandIndex=3, satVal=65535))
-        bandDefnSeq.append(lsBand(bandName="RedEdge", fileName=self.fileName, bandIndex=4, satVal=65535))
-        bandDefnSeq.append(lsBand(bandName="NIR", fileName=self.fileName, bandIndex=5, satVal=65535))
+        bandDefnSeq.append(reBand(bandName="Blue", fileName=self.fileName, bandIndex=1, satVal=65535.0))
+        bandDefnSeq.append(reBand(bandName="Green", fileName=self.fileName, bandIndex=2, satVal=65535.0))
+        bandDefnSeq.append(reBand(bandName="Red", fileName=self.fileName, bandIndex=3, satVal=65535.0))
+        bandDefnSeq.append(reBand(bandName="RedEdge", fileName=self.fileName, bandIndex=4, satVal=65535.0))
+        bandDefnSeq.append(reBand(bandName="NIR", fileName=self.fileName, bandIndex=5, satVal=65535.0))
         
         rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
         

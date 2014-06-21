@@ -38,8 +38,10 @@ Module that contains the ARCSIUtils class.
 from .arcsiexception import ARCSIException
 # Import the OS python module
 import os
-#Import the OSGEO GDAL module
+# Import the OSGEO GDAL module
 import osgeo.gdal as gdal
+# Import the numpy library
+import numpy
 
 class ARCSIUtils (object):
     """
