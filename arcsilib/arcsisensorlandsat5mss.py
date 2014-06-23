@@ -452,12 +452,12 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
             darkPxlPercentile = 0.01
             blockSize = 1000
             if globalDOS:
-            	dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
+            	dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
-	            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", outFormat, tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl) 
+	            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl) 
                         
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
-            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat=outFormat, numClusters=40, minPxls=10, bands=[5,4,1])
+            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat="KEA", numClusters=40, minPxls=10, bands=[5,4,1])
             
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanElev"))
