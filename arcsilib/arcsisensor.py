@@ -466,14 +466,14 @@ class ARCSIAbstractSensor (object):
             tmpDarkObjsImg = os.path.join(tmpPath, tmpBaseName+"_darkobjs"+imgExtension)
             
             binWidth = 1
-            self.findDOSLocalDarkTargets(inputTOAImage, tmpDarkTargetAllImage, blockSize, outFormat, binWidth, darkPxlPercentile)
+            self.findDOSLocalDarkTargets(inputTOAImage, tmpDarkTargetAllImage, blockSize, "KEA", binWidth, darkPxlPercentile)
                         
             print("Band ", band)
-            rsgislib.imageutils.selectImageBands(tmpDarkTargetAllImage, tmpDarkPxlsImg, outFormat, rsgislib.TYPE_8UINT, [band]) 
-            rsgislib.segmentation.clump(tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, outFormat, False, 0.0)                
+            rsgislib.imageutils.selectImageBands(tmpDarkTargetAllImage, tmpDarkPxlsImg, "KEA", rsgislib.TYPE_8UINT, [band]) 
+            rsgislib.segmentation.clump(tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, "KEA", False, 0.0)                
             rsgislib.rastergis.populateStats(tmpDarkPxlsClumpsImg, True, False)
-            rsgislib.segmentation.rmSmallClumps(tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, minObjSize, outFormat)
-            rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg, outFormat, False)
+            rsgislib.segmentation.rmSmallClumps(tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, minObjSize, "KEA")
+            rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg, "KEA", False)
             rsgislib.rastergis.populateStats(tmpDarkObjsImg, True, False)
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band+1), minField="MinTOARefl", meanField="MeanTOARefl"))
@@ -506,7 +506,7 @@ class ARCSIAbstractSensor (object):
             MinTOARefl = MinTOARefl[SelectedGrid!=0]
         
             interpSmoothing = 10.0
-            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing)
+            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, "KEA", interpSmoothing)
                                                 
             outputName = tmpBaseName + "DOS" + bandName + imgExtension
             outputImage = os.path.join(outputPath, outputName)
@@ -518,7 +518,7 @@ class ARCSIAbstractSensor (object):
             expression = '(TOA==0)?0:((TOA-Off)+' + str(dosOutRefl) + ')<=0?1.0:(TOA-Off)+' + str(dosOutRefl)
             rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
                         
-            gdalDriver = gdal.GetDriverByName(outFormat)
+            gdalDriver = gdal.GetDriverByName("KEA")
             gdalDriver.Delete(tmpDarkPxlsImg)
             gdalDriver.Delete(tmpDarkPxlsClumpsImg)
             gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
