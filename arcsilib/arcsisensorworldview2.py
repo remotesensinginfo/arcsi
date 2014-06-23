@@ -592,7 +592,7 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
                 dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 2, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
                         
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
-            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat="KEA", numClusters=40, minPxls=10, bands=[5,4,1])
+            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat="KEA", numClusters=40, minPxls=10, bands=[8,6,1], processInMem=True)
             
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanElev"))
