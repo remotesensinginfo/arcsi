@@ -127,19 +127,19 @@ class ARCSIBuildCommands (object):
             if not grdrefl == None:
                 cmd = cmd + " --grdrefl " + grdrefl
             if not atmosozone == None:
-                cmd = cmd + " --atmosozone " + atmosozone
+                cmd = cmd + " --atmosozone " + str(atmosozone)
             if not atmoswater == None:
-                cmd = cmd + " --atmoswater " + atmoswater
+                cmd = cmd + " --atmoswater " + str(atmoswater)
             if not aerowater == None:
-                cmd = cmd + " --aerowater " + aerowater
+                cmd = cmd + " --aerowater " + str(aerowater)
             if not aerodust == None:
-                cmd = cmd + " --aerodust " + aerodust
+                cmd = cmd + " --aerodust " + str(aerodust)
             if not aerooceanic == None:
-                cmd = cmd + " --aerooceanic " + aerooceanic
+                cmd = cmd + " --aerooceanic " + str(aerooceanic)
             if not aerosoot == None:
-                cmd = cmd + " --aerosoot " + aerosoot
+                cmd = cmd + " --aerosoot " + str(aerosoot)
             if not dosout == None:
-                cmd = cmd + " --dosout " + dosout
+                cmd = cmd + " --dosout " + str(dosout)
             if localdos:
                 cmd = cmd + " --localdos "
             
