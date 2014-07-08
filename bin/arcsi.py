@@ -236,7 +236,7 @@ class ARCSI (object):
             prodsToCalc["DDVAOT"] = False
             prodsToCalc["DOSAOT"] = False
             prodsToCalc["SREFSTDMDL"] = False
-            prodsToCalc["DOSUB"] = False
+            prodsToCalc["DOS"] = False
             prodsToCalc["THERMAL"] = False
             prodsToCalc["SATURATE"] = False
             
@@ -262,10 +262,10 @@ class ARCSI (object):
                 elif prod == 'SREFSTDMDL':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["SREFSTDMDL"] = True
-                elif prod == 'DOSUB':
+                elif prod == 'DOS':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
-                    prodsToCalc["DOSUB"] = True
+                    prodsToCalc["DOS"] = True
                 elif prod == 'DOSAOT':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
@@ -610,7 +610,7 @@ class ARCSI (object):
                     aotVal = self.convertVisabilityToAOD(visVal)
                 
                 if not (aotVal == None):
-                    print("AOT Value: "+ str(aotVal))
+                    print("AOT Value: " + str(aotVal))
                 
                 if (demFile == None):
                     outName = outBaseName + "_rad_srefstdmdl" + arcsiUtils.getFileExtension(outFormat)
@@ -654,7 +654,7 @@ class ARCSI (object):
                 print("")
                     
             # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
-            if prodsToCalc["DOSUB"]:
+            if prodsToCalc["DOS"]:
                 print("Convert to reflectance using dark object subtraction.")
                 outName = outBaseName + "_rad_toa_dosub" + arcsiUtils.getFileExtension(outFormat)          
                 srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath, globalDOS, dosOutRefl)
@@ -697,17 +697,17 @@ class ARCSI (object):
         print("\t-------------------------------------------------------")
         print("\tSensor        | Shorthand     | Functions")
         print("\t-------------------------------------------------------")
-        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
-        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
-        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
-        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
-        print("\tLandsat 4 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
-        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
-        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
-        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
-        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOSUB, THERMAL")
-        print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
-        print("\WorldView2     | \'wv2\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOSUB")
+        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
+        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
+        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
+        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
+        print("\tLandsat 4 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOS, THERMAL")
+        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
+        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOS, THERMAL")
+        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOS, THERMAL")
+        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOS, THERMAL")
+        print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
+        print("\WorldView2     | \'wv2\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
         print("\t-------------------------------------------------------")
         
     def listProductDescription(self):
@@ -723,7 +723,7 @@ if __name__ == '__main__':
     The command line user interface to ARCSI
     """
     
-    print("ARCSI 0.5a Copyright (C) 2014  Peter Bunting")
+    print("ARCSI 0.7a Copyright (C) 2014  Peter Bunting")
     print("This program comes with ABSOLUTELY NO WARRANTY.")
     print("This is free software, and you are welcome to redistribute it")
     print("under certain conditions; See website (http://www.rsgislib.org/arcsi).")
@@ -745,7 +745,7 @@ if __name__ == '__main__':
                                             don't currently support the sensor you 
                                             require.''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.1a')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.7a')
     # Define the argument for specifying the input images header file.
     parser.add_argument("-i", "--inputheader", type=str, 
                         help='''Specify the input image header file.''')
@@ -776,12 +776,12 @@ if __name__ == '__main__':
                         
     # Define the argument for specifying the file path of the output images.
     parser.add_argument("-t", "--tmpath", type=str,
-                        help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOSUB and CLOUDS).''')
+                        help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOS and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'SREFSTDMDL', 'DOSUB', 'THERMAL'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'SREFSTDMDL', 'DOS', 'THERMAL'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, SREFSTDMDL, DOSUB, THERMAL)''')
+                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, SREFSTDMDL, DOS, THERMAL)''')
     # Define the argument for requesting a list of products.
     parser.add_argument("--prodlist", action='store_true', default=False, 
                         help='''List the products which are supported and 
@@ -928,7 +928,7 @@ if __name__ == '__main__':
                 needDEM = True
             elif prod == 'SREFSTDMDL':
                 needAOD = True
-            elif prod == 'DOSUB':
+            elif prod == 'DOS':
                 needTmp = True
             elif prod == 'CLOUDS':
                 needTmp = True
@@ -937,9 +937,7 @@ if __name__ == '__main__':
                 needTmp = True
                 needDEM = True
 
-        if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax) and (not args.aotfile):
-            print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.")
-            sys.exit()
+        
             
         if needAODMinMax and (args.minaot == None) and (args.maxaot == None):
             envVarMinAOT = arcsiUtils.getEnvironmentVariable("ARCSI_MIN_AOT")
@@ -957,11 +955,15 @@ if __name__ == '__main__':
             else:
                 print("Taking max AOT from environment variable.")
                 args.maxaot = float(envVarMaxAOT)
-                
+        
+        if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax) and (not args.aotfile):
+            print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.")
+            sys.exit()
+        
         if needTmp and args.tmpath == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_TMP_PATH")
             if envVar == None:
-                print("Error: If the DDVAOT or DOSUB or CLOUDS product is set then a tempory path needs to be provided.")
+                print("Error: If the DDVAOT or DOS or CLOUDS product is set then a tempory path needs to be provided.")
                 sys.exit()
             else:
                 print("Taking temp path from environment variable.")
@@ -1011,7 +1013,22 @@ if __name__ == '__main__':
         aeroComponentsSpecified = False
         if (not args.aerowater == None) or (not args.aerodust == None) or (not args.aerooceanic == None) or (not args.aerosoot == None):
             aeroComponentsSpecified = True
-
+        
+        if args.dosout == None:
+            envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUTDOS_REFL")
+            if not envVar == None:
+                args.dosout = envVar
+                print("Taking output DOS reflectance from environment variable.")
+                
+        envVar = arcsiUtils.getEnvironmentVariable("ARCSI_USE_LOCALDOS")
+        if not envVar == None:
+            if envVar == "TRUE":
+                args.localdos = True
+                print("Using local DOS method due to environment variable.")
+            else:
+                args.localdos = False
+                print("Using global DOS method due to environment variable.")
+        
         arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, 
                      args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, 
                      args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, 

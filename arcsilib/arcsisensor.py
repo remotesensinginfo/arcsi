@@ -330,32 +330,48 @@ class ARCSIAbstractSensor (object):
         #print(bandHist)
         sumPxls = numpy.sum(bandHist[0])
         #print("Total Num Pixels: ", sumPxls)
-        numPxlThreshold = sumPxls * darkPxlPercentile #0.001 # 1th percentile
-        #print("Number of pixels = ", numPxlThreshold)
+        findTargets = True
         
-        pxlThreshold = 0
-        pxlCount = 0
-        for bin in bandHist[0]:
-            pxlCount = pxlCount + bin
-            if pxlCount < numPxlThreshold:
-                pxlThreshold = pxlThreshold + histBinWidth
-            else:
+        while findTargets:
+            findTargets = False
+            numPxlThreshold = sumPxls * darkPxlPercentile #0.001 # 1th percentile
+            #print("Number of pixels = ", numPxlThreshold)
+        
+            pxlThreshold = 0
+            pxlCount = 0
+            for bin in bandHist[0]:
+                pxlCount = pxlCount + bin
+                if pxlCount < numPxlThreshold:
+                    pxlThreshold = pxlThreshold + histBinWidth
+                else:
+                    break
+            print("Image Band Threshold (For Dark Pixels) = ", pxlThreshold)
+        
+            dataType = rsgislib.TYPE_8UINT
+            expression = str('(b1!=0)&&(b1<=') + str(pxlThreshold) + str(')?1:0')
+            bandDefns = []
+            bandDefns.append(rsgislib.imagecalc.BandDefn('b1', inputTOAImage, band))
+            rsgislib.imagecalc.bandMath(tmpDarkPxlsImg, expression, outFormat, dataType, bandDefns)
+            rsgislib.segmentation.clump(tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, outFormat, False, 0.0)
+            rsgislib.rastergis.populateStats(tmpDarkPxlsClumpsImg, True, False)
+            rsgislib.segmentation.rmSmallClumps(tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, minObjSize, outFormat)
+            rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg, outFormat, False)
+            rsgislib.rastergis.populateStats(tmpDarkObjsImg, True, False)
+            stats2CalcTOA = list()
+            stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band), minField="MinTOARefl", meanField="MeanTOARefl"))
+            rsgislib.rastergis.populateRATWithStats(inputTOAImage, tmpDarkObjsImg, stats2CalcTOA)
+        
+            ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
+            Histogram = rat.readColumn(ratDS, "Histogram")
+            if Histogram.size > 10:
+                findTargets = False
+                ratDS = None
                 break
-        print("Image Band Threshold (For Dark Pixels) = ", pxlThreshold)
-        
-        dataType = rsgislib.TYPE_8UINT
-        expression = str('(b1!=0)&&(b1<') + str(pxlThreshold) + str(')?1:0')
-        bandDefns = []
-        bandDefns.append(rsgislib.imagecalc.BandDefn('b1', inputTOAImage, band))
-        rsgislib.imagecalc.bandMath(tmpDarkPxlsImg, expression, outFormat, dataType, bandDefns)
-        rsgislib.segmentation.clump(tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, outFormat, False, 0.0)
-        rsgislib.rastergis.populateStats(tmpDarkPxlsClumpsImg, True, False)
-        rsgislib.segmentation.rmSmallClumps(tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, minObjSize, outFormat)
-        rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg, outFormat, False)
-        rsgislib.rastergis.populateStats(tmpDarkObjsImg, True, False)
-        stats2CalcTOA = list()
-        stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band), minField="MinTOARefl", meanField="MeanTOARefl"))
-        rsgislib.rastergis.populateRATWithStats(inputTOAImage, tmpDarkObjsImg, stats2CalcTOA)
+            else:
+                findTargets = True
+                darkPxlPercentile = darkPxlPercentile * 2 
+                print("Trying Dark Pixel Percentile Threshold: " + str(darkPxlPercentile))
+                ratDS = None
         
         ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
         Histogram = rat.readColumn(ratDS, "Histogram")
@@ -567,7 +583,7 @@ class ARCSIAbstractSensor (object):
                                 binValCount =  binValCount + histo[n]
                                 threshold = histoBins[n+1]
                         #print("Threshold = ", threshold)
-                        out[i, ((block[i] < threshold) & (block[i] > 0))] = 1
+                        out[i, ((block[i] <= threshold) & (block[i] > 0))] = 1
                     else:
                         out[i,...] = 0 
             
