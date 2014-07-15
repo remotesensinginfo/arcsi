@@ -916,6 +916,13 @@ if __name__ == '__main__':
             else:
                 print("Taking output file path from environment variable.")
                 args.outpath = envVar
+        
+        if not os.path.exists(args.outpath):
+            print("WARNING: Output directory does not exist so creating it...")
+            os.makedirs(args.outpath)
+        elif not os.path.isdir(args.outpath):
+            print("ERROR: Output Path exists but is not a directory...")
+            sys.exit()
                     
         needAOD = False
         needAODMinMax = False
@@ -971,8 +978,8 @@ if __name__ == '__main__':
         
         if needTmp: 
             if not os.path.exists(args.tmpath):
-                print("Error: The temp path specified does not exist, please create it and run again.")
-                sys.exit()
+                print("WARNING: The temp path specified does not exist, it is being created.")
+                os.makedirs(args.tmpath)
             if not os.path.isdir(args.tmpath):
                 print("Error: The temp path specified is not a directory, please correct and run again.")
                 sys.exit()
