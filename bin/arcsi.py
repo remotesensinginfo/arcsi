@@ -887,12 +887,14 @@ if __name__ == '__main__':
     else:
         # Check that the input header parameter has been specified.
         if args.inputheader == None:
-            print("Error: No input header image file has been provided.")
+            print("Error: No input header image file has been provided.\n")
+            parser.print_help()
             sys.exit()
     
         # Check that the senor parameter has been specified.
         if args.sensor == None:
-            print("Error: No sensor has been provided.")
+            print("Error: No sensor has been provided.\n")
+            parser.print_help()
             sys.exit()
     
         # Check that the output image format has been specified.
@@ -900,7 +902,8 @@ if __name__ == '__main__':
             # Print an error message if not and exit.
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUT_FORMAT")
             if envVar == None:
-                print("Error: No output image format provided.")
+                print("Error: No output image format provided.\n")
+                parser.print_help()
                 sys.exit()
             else:
                 print("Taking output format from environment variable.")
@@ -911,7 +914,8 @@ if __name__ == '__main__':
             # Print an error message if not and exit.
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUTPUT_PATH")
             if envVar == None:
-                print("Error: No output file path has been provided.")
+                print("Error: No output file path has been provided.\n")
+                parser.print_help()
                 sys.exit()
             else:
                 print("Taking output file path from environment variable.")
@@ -921,7 +925,8 @@ if __name__ == '__main__':
             print("WARNING: Output directory does not exist so creating it...")
             os.makedirs(args.outpath)
         elif not os.path.isdir(args.outpath):
-            print("ERROR: Output Path exists but is not a directory...")
+            print("ERROR: Output Path exists but is not a directory...\n")
+            parser.print_help()
             sys.exit()
                     
         needAOD = False
@@ -949,7 +954,8 @@ if __name__ == '__main__':
         if needAODMinMax and (args.minaot == None) and (args.maxaot == None):
             envVarMinAOT = arcsiUtils.getEnvironmentVariable("ARCSI_MIN_AOT")
             if envVarMinAOT == None:
-                print("Error: The min and max AOT values for the search should be specified.")
+                print("Error: The min and max AOT values for the search should be specified.\n")
+                parser.print_help()
                 sys.exit()
             else:
                 print("Taking min AOT from environment variable.")
@@ -957,20 +963,23 @@ if __name__ == '__main__':
                 
             envVarMaxAOT = arcsiUtils.getEnvironmentVariable("ARCSI_MAX_AOT")
             if envVarMaxAOT == None:
-                print("Error: The min and max AOT values for the search should be specified.")
+                print("Error: The min and max AOT values for the search should be specified.\n")
+                parser.print_help()
                 sys.exit()
             else:
                 print("Taking max AOT from environment variable.")
                 args.maxaot = float(envVarMaxAOT)
         
         if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax) and (not args.aotfile):
-            print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.")
+            print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.\n")
+            parser.print_help()
             sys.exit()
         
         if needTmp and args.tmpath == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_TMP_PATH")
             if envVar == None:
-                print("Error: If the DDVAOT or DOS or CLOUDS product is set then a tempory path needs to be provided.")
+                print("Error: If the DDVAOT or DOS or CLOUDS product is set then a tempory path needs to be provided.\n")
+                parser.print_help()
                 sys.exit()
             else:
                 print("Taking temp path from environment variable.")
@@ -981,7 +990,8 @@ if __name__ == '__main__':
                 print("WARNING: The temp path specified does not exist, it is being created.")
                 os.makedirs(args.tmpath)
             if not os.path.isdir(args.tmpath):
-                print("Error: The temp path specified is not a directory, please correct and run again.")
+                print("Error: The temp path specified is not a directory, please correct and run again.\n")
+                parser.print_help()
                 sys.exit()
             
         if args.dem == None:
@@ -992,7 +1002,8 @@ if __name__ == '__main__':
         
         if needDEM:
             if not os.path.exists(args.dem):
-                print("Error: A file path to a DEM has either not been specified or does exist, please check it and run again.")
+                print("Error: A file path to a DEM has either not been specified or does exist, please check it and run again.\n")
+                parser.print_help()
                 sys.exit()
         
         if args.aeroimg == None:
@@ -1009,10 +1020,12 @@ if __name__ == '__main__':
 
         atmosOZoneWaterSpecified = False
         if (not args.atmosozone == None) and (args.atmoswater == None):
-            print("Error: If the atmospheric ozone is defined then the atmospheric water needs to be specfied --atmoswater.")
+            print("Error: If the atmospheric ozone is defined then the atmospheric water needs to be specfied --atmoswater.\n")
+            parser.print_help()
             sys.exit()
         elif (not args.atmoswater == None) and (args.atmosozone == None):
-            print("Error: If the atmospheric water is defined then the atmospheric ozone needs to be specfied --atmosozone.")
+            print("Error: If the atmospheric water is defined then the atmospheric ozone needs to be specfied --atmosozone.\n")
+            parser.print_help()
             sys.exit()
         elif (not args.atmoswater == None) and (not args.atmosozone == None):
             atmosOZoneWaterSpecified = True
