@@ -87,6 +87,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         self.senrScanType = ""
         self.pixelFormat = ""
         self.tileID = ""
+        self.orderID = ""
         self.acquIncidAngle = 0.0
         self.acquAzimuthAngle = 0.0
         self.acquCraftViewAngle = 0.0
@@ -160,6 +161,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             
             metadata = root.find('{http://www.opengis.net/gml}metaDataProperty').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}EarthObservationMetaData')
             self.tileID = metadata.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}tileId').text.strip()
+            self.orderID = metadata.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}orderId').text.strip()
             self.pixelFormat = metadata.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}pixelFormat').text.strip()
             print("self.tileID = ", self.tileID)
             print("self.pixelFormat = ", self.pixelFormat)
@@ -271,8 +273,9 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         Provides an implementation for the landsat sensor
         """
         reTileID = "tid" + str(self.tileID)
+        reOrderID = "oid" + str(self.orderID)
         outname = self.defaultGenBaseOutFileName()
-        outname = outname + str("_") + reTileID
+        outname = outname + str("_") + reTileID + str("_") + reOrderID
         return outname
     
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
