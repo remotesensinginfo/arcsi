@@ -5,7 +5,7 @@ Module that contains the ARSCI command to extract data from archives.
 """
 
 ############################################################################
-#  arcsi.py
+#  arcsiextractdata.py
 #
 #  Copyright 2013 ARCSI.
 #
@@ -132,10 +132,12 @@ if __name__ == '__main__':
     
     if args.input == None:
         print("An input directory was not specified.")
+        parser.print_help()
         sys.exit()
     
     if args.output == None:
         print("An output directory was not specified.")
+        parser.print_help()
         sys.exit()
     
     arcsiObj = ARCSIExtractData()

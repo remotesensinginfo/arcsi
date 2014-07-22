@@ -175,10 +175,12 @@ if __name__ == '__main__':
     
     if args.input == None:
         print("An input file was not specified.")
+        parser.print_help()
         sys.exit()
     
     if args.output == None:
         print("An output file was not specified.")
+        parser.print_help()
         sys.exit()
     
     arcsiObj = ARCSIResampleSpectralResponseFuncs()

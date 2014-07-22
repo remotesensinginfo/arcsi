@@ -308,22 +308,27 @@ if __name__ == '__main__':
     
     if args.input == None:
         print("An input directory was not specified.")
+        parser.print_help()
         sys.exit()
         
     if args.output == None:
         print("An output file name and path was not specified.")
+        parser.print_help()
         sys.exit()
         
     if args.header == None:
         print("The unique file name ending of the header files was not specified.")
+        parser.print_help()
         sys.exit()
     
     if args.sensor == None:
         print("The sensor needs to be specified.")
+        parser.print_help()
         sys.exit()
         
     if args.prods == None:
         print("The list of produced to be generated must be specified.")
+        parser.print_help()
         sys.exit()
     
     arcsiObj = ARCSIBuildCommands()
