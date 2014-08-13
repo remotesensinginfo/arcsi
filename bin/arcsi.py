@@ -604,9 +604,10 @@ class ARCSI (object):
                         aotVal = mean           
                     imgDS = None
 
-                if (aotVal == None) and (visVal == None) and (aotFile == None):
+                if (aotVal == None) and (visVal == None) and (aotFile == ""):
                     raise ARCSIException("Either the AOT or the visability need to specified.")
-                elif (aotVal == None) and (aotFile == None):
+                elif (aotVal == None) and (aotFile == ""):
+                    print("Convert to vis to aot...")
                     aotVal = self.convertVisabilityToAOD(visVal)
                 
                 if not (aotVal == None):
@@ -974,7 +975,7 @@ if __name__ == '__main__':
             print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.\n")
             parser.print_help()
             sys.exit()
-        
+                    
         if needTmp and args.tmpath == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_TMP_PATH")
             if envVar == None:
