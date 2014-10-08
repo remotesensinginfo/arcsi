@@ -270,7 +270,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         
     def generateOutputBaseName(self):
         """
-        Provides an implementation for the landsat sensor
+        Customises the generic name for the RapidEye sensor
         """
         reTileID = "tid" + str(self.tileID)
         reOrderID = "oid" + str(self.orderID)
