@@ -111,8 +111,6 @@ class ARCSIUtils (object):
         except Exception as e:
             raise e
         return numpy.array(specResp)
-        
-    
     
     def isSummerOrWinter(self, lat, long, date):
         summerWinter = 0
@@ -148,4 +146,21 @@ class ARCSIUtils (object):
             band.SetMetadataItem('LAYER_TYPE', 'thematic')
         ds = None
         
-
+    def copyGCPs(self, srcImg, destImg):
+        srcDS = gdal.Open(srcImg, gdal.GA_ReadOnly)     
+        if srcDS == None:
+            raise ARCSIException("Could not open the srcImg.")
+        destDS = gdal.Open(destImg, gdal.GA_Update)
+        if destDS == None:
+            raise ARCSIException("Could not open the destImg.")
+            srcDS = None
+        
+        numGCPs = srcDS.GetGCPCount()
+        if numGCPs > 0:
+            gcpProj = srcDS.GetGCPProjection()
+            gcpList = srcDS.GetGCPs()
+            destDS.SetGCPs(gcpList, gcpProj)
+                
+        srcDS = None
+        destDS = None
+        
