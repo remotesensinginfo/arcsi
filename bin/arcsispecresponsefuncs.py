@@ -63,11 +63,11 @@ class ARCSIResampleSpectralResponseFuncs (object):
         print("minWv = ", minWv)
         print("maxWv = ", maxWv)
         
-        rangeWv = int(maxWv - minWv)+1
+        rangeWv = float(maxWv - minWv)
         
         print("rangeWv = ", rangeWv)
         
-        numOfSamples = int(math.ceil(float(rangeWv)/float(sampling)))
+        numOfSamples = int(math.ceil(float(rangeWv)/float(sampling)))+1
         
         print("numOfSamples = ", numOfSamples)
         try:
@@ -96,7 +96,7 @@ class ARCSIResampleSpectralResponseFuncs (object):
                             minDistIdx = j
                 if method == 'NearNeighbour':
                     txt = "{0:f}".format(minDistRF[1])
-                    line = line + txt#str(minDistRF[1])
+                    line = line + txt
                     resps.append(minDistRF[1])
                 else:
                     raise ARCSIException("Method of resampling is not reconised.")
