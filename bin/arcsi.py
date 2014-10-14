@@ -169,7 +169,7 @@ class ARCSI (object):
             atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, 
             atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, 
             aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, demFile, aotFile, 
-            globalDOS, dosOutRefl):
+            globalDOS, dosOutRefl, simpleDOS):
         """
         A function contains the main flow of the software
         """
@@ -660,8 +660,11 @@ class ARCSI (object):
             # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
             if prodsToCalc["DOS"]:
                 print("Convert to reflectance using dark object subtraction.")
-                outName = outBaseName + "_rad_toa_dosub" + arcsiUtils.getFileExtension(outFormat)          
-                srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath, globalDOS, dosOutRefl)
+                outName = outBaseName + "_rad_toa_dosub" + arcsiUtils.getFileExtension(outFormat)  
+                if simpleDOS:
+                    srefImage = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImage, outFilePath, outName, outFormat, dosOutRefl)
+                else:        
+                    srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath, globalDOS, dosOutRefl)
             
                 print("Setting Band Names...")
                 sensorClass.setBandNames(srefImage)
@@ -728,7 +731,7 @@ if __name__ == '__main__':
     The command line user interface to ARCSI
     """
     
-    print("ARCSI 0.7a Copyright (C) 2014  Peter Bunting")
+    print("ARCSI 0.8a Copyright (C) 2014  Peter Bunting")
     print("This program comes with ABSOLUTELY NO WARRANTY.")
     print("This is free software, and you are welcome to redistribute it")
     print("under certain conditions; See website (http://www.rsgislib.org/arcsi).")
@@ -750,7 +753,7 @@ if __name__ == '__main__':
                                             don't currently support the sensor you 
                                             require.''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.7a')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.8a')
     # Define the argument for specifying the input images header file.
     parser.add_argument("-i", "--inputheader", type=str, 
                         help='''Specify the input image header file.''')
@@ -873,6 +876,9 @@ if __name__ == '__main__':
     parser.add_argument("--localdos", action='store_true', default=False, 
                         help='''Specifies that a local DOS should be applied
                         rather than a global DOS.''')
+    parser.add_argument("--simpledos", action='store_true', default=False, 
+                        help='''Specifies that a simple (basic) DOS should be applied
+                        rather than the more complex variable global/local DOS methods.''')
     parser.add_argument("--dosout", type=float, default=20, 
                         help='''Specifies the reflectance value to which dark objects
                         are set to during the dark object subtraction. (Default is 20, 
@@ -946,7 +952,8 @@ if __name__ == '__main__':
             elif prod == 'SREFSTDMDL':
                 needAOD = True
             elif prod == 'DOS':
-                needTmp = True
+                if not args.simpledos:
+                    needTmp = True
             elif prod == 'CLOUDS':
                 needTmp = True
             elif prod == 'DOSAOT':
@@ -1060,7 +1067,7 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, 
                      args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, 
                      args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem, 
-                     args.aotfile, (not args.localdos), args.dosout)
+                     args.aotfile, (not args.localdos), args.dosout, args.simpledos)
 
 
 
