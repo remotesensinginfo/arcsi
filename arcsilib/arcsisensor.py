@@ -395,10 +395,10 @@ class ARCSIAbstractSensor (object):
         Northings = Northings[SelectedGrid!=0]
         MinTOARefl = MinTOARefl[SelectedGrid!=0]
         
-        interpSmoothing = 10.0
-        self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing)
+        #interpSmoothing = 10.0
+        #self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing)
         
-        #rsgislib.rastergis.interpolateClumpValues2Image(tmpDarkObjsImg, "SelectedGrid", "Eastings", "Northings", "idwall", "MinTOARefl",  offsetImage, outFormat, rsgislib.TYPE_32FLOAT)
+        rsgislib.rastergis.interpolateClumpValues2Image(tmpDarkObjsImg, "SelectedGrid", "Eastings", "Northings", "nnandnn", "MinTOARefl", offsetImage, outFormat, rsgislib.TYPE_32FLOAT, 1)
     
     def findPerBandDarkTargetsOffsets(self, inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile):
         try:
@@ -674,6 +674,24 @@ class ARCSIAbstractSensor (object):
         except Exception as e:
             raise e
     
+    def convertImageToReflectanceSimpleDarkSubtract(self, inputTOAImage, outputPath, outputName, outFormat, dosOutRefl):
+        try:
+            print("Perform Simple Dark Object Subtraction")
+            outputImage = os.path.join(outputPath, outputName)
+            
+            percentiles = rsgislib.imagecalc.bandPercentile(inputTOAImage, 0.01, 0)
+                        
+            offsetsList = list()
+            OffVal = collections.namedtuple('DOSOffset', ['offset'])
+            for val in percentiles:
+                offsetsList.append(OffVal(offset=val))
+            
+            rsgislib.imagecalibration.applySubtractSingleOffsets(inputTOAImage, outputImage, outFormat, rsgislib.TYPE_16UINT, True, True, 0.0, dosOutRefl, offsetsList)
+            
+            return outputImage
+        except Exception as e:
+            raise e
+            
     @abstractmethod
     def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl): pass
 

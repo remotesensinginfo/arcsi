@@ -785,8 +785,9 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             Northings = Northings[PredictAOTFor!=0]
             aotVals = aotVals[PredictAOTFor!=0]
         
-            interpSmoothing = 10.0
-            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
+            #interpSmoothing = 10.0
+            #self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
+            rsgislib.rastergis.interpolateClumpValues2Image(thresImageClumpsFinal, "PredictAOTFor", "Eastings", "Northings", "nnandnn", "AOT", outputAOTImage, outFormat, rsgislib.TYPE_32FLOAT, 1)
             
             gdalDriver = gdal.GetDriverByName(outFormat)
             gdalDriver.Delete(thresImageClumpsFinal)
