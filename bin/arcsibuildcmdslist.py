@@ -55,7 +55,7 @@ class ARCSIBuildCommands (object):
                      aeroimg, atmosimg, grdrefl, surfacealtitude, 
                      atmosozone, atmoswater, aerowater, 
                      aerodust, aerooceanic, aerosoot, aot, vis, tmpath, 
-                     minaot, maxaot, dem, localdos, dosout):
+                     minaot, maxaot, dem, localdos, dosout, simpledos):
         
         inputDIR = os.path.abspath(inputDIR)
         outputFile = os.path.abspath(outputFile)
@@ -142,6 +142,8 @@ class ARCSIBuildCommands (object):
                 cmd = cmd + " --dosout " + str(dosout)
             if localdos:
                 cmd = cmd + " --localdos "
+            if simpledos:
+                cmd = cmd + " --simpledos "
             
             print(cmd)
             outFile.write(cmd + "\n")
@@ -152,14 +154,14 @@ if __name__ == '__main__':
     """
     The command line user interface to ARCSI Data Extraction Tool.
     """
-    parser = argparse.ArgumentParser(prog='arcsiextractdata',
-                                    description='''ARCSI command extract data
-                                                   from tar or tar.gz archives.''',
-                                    epilog='''A tools to extract data
-                                              from tar or tar.gz archives into
-                                              individual directories per image''')
+    parser = argparse.ArgumentParser(prog='arcsibuildcmdslist.py',
+                                    description='''ARCSI command to build arcsi.py commands 
+                                                for a set of input images using the same options.''',
+                                    epilog='''A tools to build arcsi.py commands 
+                                           for a set of input images using 
+                                           the same options''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.1a')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.8.1')
     
     parser.add_argument("-i", "--input", type=str, required=True, 
                         help='''Input directory containing the data to be processed''')
@@ -197,9 +199,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOSUB and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'SREFSTDMDL', 'DOSUB', 'THERMAL'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'SREFSTDMDL', 'DOS', 'THERMAL'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, SREFSTDMDL, DOSUB, THERMAL)''')
+                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, SREFSTDMDL, DOS, THERMAL)''')
                         
     # Define the argument which specifies the standard aersol profile to use.
     parser.add_argument("--aeropro", type=str, choices=['NoAerosols', 'Continental', 
@@ -298,7 +300,11 @@ if __name__ == '__main__':
                         help='''Specifies that a local DOS should be applied
                         rather than a global DOS.''')
     
-    parser.add_argument("--dosout", type=float, 
+    parser.add_argument("--simpledos", action='store_true', default=False, 
+                        help='''Specifies that a simple (basic) DOS should be applied
+                        rather than the more complex variable global/local DOS methods.''')
+                        
+    parser.add_argument("--dosout", type=float, default=20, 
                         help='''Specifies the reflectance value to which dark objects
                         are set to during the dark object subtraction. (Default is 20, 
                         which is equivalent to 2 % reflectance.''')
@@ -338,6 +344,6 @@ if __name__ == '__main__':
                      args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, 
                      args.atmosozone, args.atmoswater, args.aerowater, 
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath, 
-                     args.minaot, args.maxaot, args.dem, args.localdos, args.dosout)
+                     args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos)
     
     
