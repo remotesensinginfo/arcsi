@@ -731,7 +731,7 @@ if __name__ == '__main__':
     The command line user interface to ARCSI
     """
     
-    print("ARCSI 0.8a Copyright (C) 2014  Peter Bunting")
+    print("ARCSI 0.8.1 Copyright (C) 2014  Peter Bunting")
     print("This program comes with ABSOLUTELY NO WARRANTY.")
     print("This is free software, and you are welcome to redistribute it")
     print("under certain conditions; See website (http://www.rsgislib.org/arcsi).")
@@ -753,7 +753,7 @@ if __name__ == '__main__':
                                             don't currently support the sensor you 
                                             require.''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.8a')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.8.1')
     # Define the argument for specifying the input images header file.
     parser.add_argument("-i", "--inputheader", type=str, 
                         help='''Specify the input image header file.''')

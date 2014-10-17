@@ -225,7 +225,7 @@ if __name__ == '__main__':
                                               directory of input data into different 
                                               directories.''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 1.0')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.8.1')
     # Define the argument for specifying the input spectral response file.
     parser.add_argument("-i", "--input", type=str, 
                         help='''Input directory containing the input Landsat Scenes.''')
