@@ -161,7 +161,7 @@ if __name__ == '__main__':
                                            for a set of input images using 
                                            the same options''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.8.1')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.0')
     
     parser.add_argument("-i", "--input", type=str, required=True, 
                         help='''Input directory containing the data to be processed''')
@@ -179,7 +179,7 @@ if __name__ == '__main__':
     # Define the argument for specifying the sensor.
     parser.add_argument("-s", "--sensor", choices=['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm',
                                                    'ls5mss', 'ls5tm', 'ls7', 
-                                                   'ls8', 'rapideye', 'wv2'],  
+                                                   'ls8', 'rapideye', 'wv2', 'spot5'],  
                         help='''Specify the sensor being processed.''')
                         
     # Define the argument for specifying the WKT projection file 
