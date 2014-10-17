@@ -1843,7 +1843,7 @@ if __name__ == '__main__':
                                               to at sensor reflectance or top of 
                                               atmosphere reflectance (TOA)''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.8.1')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.0')
     # Define the argument for specifying the input spectral response file.
     parser.add_argument("-i", "--input", type=str, 
                         help='''A seperated (--sep) text file defining the
