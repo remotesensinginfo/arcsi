@@ -117,7 +117,7 @@ if __name__ == '__main__':
                                               from tar or tar.gz archives into
                                               individual directories per image''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.0')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.1')
     # Define the argument for specifying the input spectral response file.
     parser.add_argument("-i", "--input", type=str, 
                         help='''Input directory contains archives (tar and/or tar.gz).''')

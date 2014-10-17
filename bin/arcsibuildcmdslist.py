@@ -161,7 +161,7 @@ if __name__ == '__main__':
                                            for a set of input images using 
                                            the same options''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.0')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.1')
     
     parser.add_argument("-i", "--input", type=str, required=True, 
                         help='''Input directory containing the data to be processed''')

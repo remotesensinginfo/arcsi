@@ -138,7 +138,7 @@ if __name__ == '__main__':
                                               This tool allows a provided spectral response
                                               function to be resampled.''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.0')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.1')
     # Define the argument for specifying the input spectral response file.
     parser.add_argument("-o", "--output", type=str, 
                         help='''A file to where the resampled spectral response functions will

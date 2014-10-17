@@ -633,8 +633,12 @@ class ARCSI (object):
                     numElevSteps = math.ceil(elevRange) + 1
                     print("Elevation Ranges from ", minElev, " to ", maxElev, " an LUT with ", numElevSteps, " will be created.")
                         
-                    if (not aotFile == None):
-                        print("Build an AOT LUT...")
+                    if (aotFile == None) or (aotFile == ""):
+                        print("Build an DEM LUT with AOT == " + str(aotVal) + "...")
+                        outName = outBaseName + "_rad_srefstdmdldem" + arcsiUtils.getFileExtension(outFormat)
+                        srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev)                    
+                    else:
+                        print("Build an AOT and DEM LUT...")
                         statsAOT = rsgislib.imagecalc.getImageStatsInEnv(aotFile, 1, -9999, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
                         
                         minAOT = self.findMinimumAOT(statsAOT[0])
@@ -645,10 +649,7 @@ class ARCSI (object):
                         print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
                         outName = outBaseName + "_rad_srefstdmdldemaot" + arcsiUtils.getFileExtension(outFormat)
                         srefImage = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImage, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT)
-                    else:
-                        outName = outBaseName + "_rad_srefstdmdldem" + arcsiUtils.getFileExtension(outFormat)
-                        srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev)                    
-                
+
                 print("Setting Band Names...")
                 sensorClass.setBandNames(srefImage)
 
@@ -731,7 +732,7 @@ if __name__ == '__main__':
     The command line user interface to ARCSI
     """
     
-    print("ARCSI 0.9.0 Copyright (C) 2014  Peter Bunting")
+    print("ARCSI 0.9.1 Copyright (C) 2014  Peter Bunting")
     print("This program comes with ABSOLUTELY NO WARRANTY.")
     print("This is free software, and you are welcome to redistribute it")
     print("under certain conditions; See website (http://www.rsgislib.org/arcsi).")
@@ -753,7 +754,7 @@ if __name__ == '__main__':
                                             don't currently support the sensor you 
                                             require.''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.0')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.1')
     # Define the argument for specifying the input images header file.
     parser.add_argument("-i", "--inputheader", type=str, 
                         help='''Specify the input image header file.''')
