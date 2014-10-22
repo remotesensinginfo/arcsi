@@ -50,6 +50,8 @@ import math
 import sys
 # Import the python Argument parser
 import argparse
+# Import the arcsi version number
+from arcsilib import ARCSI_VERSION
 
 class ARCSIResampleSpectralResponseFuncs (object):
     """
@@ -129,7 +131,7 @@ if __name__ == '__main__':
     """
     The command line user interface to ARCSI Response Function tool.
     """
-    parser = argparse.ArgumentParser(prog='arcsispecresponsefuncs',
+    parser = argparse.ArgumentParser(prog='arcsispecresponsefuncs.py',
                                     description='''ARCSI command for resampling
                                                    spectral response functions.''',
                                     epilog='''Different tools require the spectral
@@ -138,7 +140,7 @@ if __name__ == '__main__':
                                               This tool allows a provided spectral response
                                               function to be resampled.''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.1')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input spectral response file.
     parser.add_argument("-o", "--output", type=str, 
                         help='''A file to where the resampled spectral response functions will

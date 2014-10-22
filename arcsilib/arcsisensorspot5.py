@@ -75,8 +75,8 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
     A class which represents the RapidEye sensor to read
     header parameters and apply data processing operations.
     """
-    def __init__(self):
-        ARCSIAbstractSensor.__init__(self)
+    def __init__(self, debugMode):
+        ARCSIAbstractSensor.__init__(self, debugMode)
         self.sensor = "SPOT5"
 
         self.fileName = ""
@@ -544,10 +544,10 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
         raise ARCSIException("SPOT5 does not provide an implement of a method to derive AOT from DDV.")
     
-    def estimateImageToAOD(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
+    def estimateImageToAODUsingDDV(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
         raise ARCSIException("SPOT5 does not provide an implement of a method to derive AOT from DDV.")
         
-    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, dosOutRefl):
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl):
         try:
             print("Estimating AOD Using DOS")
             arcsiUtils = ARCSIUtils()
@@ -555,14 +555,17 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
             tmpBaseName = os.path.splitext(outputName)[0]
             imgExtension = arcsiUtils.getFileExtension(outFormat)
             
-            dosBlueImage = ""
-            minObjSize = 3
+            dosGreenImage = ""
+            minObjSize = 5
             darkPxlPercentile = 0.01
             blockSize = 1000
-            if globalDOS:
-                dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
+            if simpleDOS:
+                outputDOSBlueName = tmpBaseName + "DOSGreen" + imgExtension
+                dosGreenImage = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 1)
+            elif globalDOS:
+                dosGreenImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Green", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
-                dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
+                dosGreenImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Green", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
                         
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
             rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat="KEA", numClusters=40, minPxls=10, bands=[5,4,1], processInMem=True)
@@ -573,22 +576,22 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
             
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanB1DOS"))
-            rsgislib.rastergis.populateRATWithStats(dosBlueImage, thresImageClumpsFinal, stats2CalcTOA)
+            rsgislib.rastergis.populateRATWithStats(dosGreenImage, thresImageClumpsFinal, stats2CalcTOA)
             
             stats2CalcRad = list()
             stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanB1RAD"))
-            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=5, meanField="MeanB5RAD"))
             stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=3, meanField="MeanB3RAD"))
+            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=2, meanField="MeanB2RAD"))
             rsgislib.rastergis.populateRATWithStats(inputRADImage, thresImageClumpsFinal, stats2CalcRad)
 
             ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
             Histogram = rat.readColumn(ratDS, "Histogram")
             MeanElev = rat.readColumn(ratDS, "MeanElev")
             
-            MeanB5RAD = rat.readColumn(ratDS, "MeanB5RAD")
-            MeanB3RAD = rat.readColumn(ratDS, "MeanB3RAD")
+            MeanB5RAD = rat.readColumn(ratDS, "MeanB3RAD")
+            MeanB3RAD = rat.readColumn(ratDS, "MeanB2RAD")
             
-            radNDVI = (MeanB5RAD - MeanB3RAD)/(MeanB5RAD + MeanB3RAD)
+            radNDVI = (MeanB3RAD - MeanB2RAD)/(MeanB3RAD + MeanB2RAD)
             
             selected = Histogram * 2
             selected[...] = 0
@@ -648,10 +651,11 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
-                    
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(thresImageClumpsFinal)
-            gdalDriver.Delete(dosBlueImage)        
+            
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(thresImageClumpsFinal)
+                gdalDriver.Delete(dosGreenImage)        
         
             return outputAOTImage
         except Exception as e:

@@ -52,6 +52,8 @@ import math
 import sys
 # Import the python Argument parser
 import argparse
+# Import the arcsi version number
+from arcsilib import ARCSI_VERSION
 
 class ARCSISolarIrradiance (object):
     """
@@ -1829,7 +1831,7 @@ if __name__ == '__main__':
     """
     The command line user interface to ARCSI Irradiance tool.
     """
-    parser = argparse.ArgumentParser(prog='arcsiirradiance',
+    parser = argparse.ArgumentParser(prog='arcsiirradiance.py',
                                     description='''ARCSI command for calculating
                                                 the solar exoatmospheric 
                                                 irradiance (ESUN) for a spectral
@@ -1843,7 +1845,7 @@ if __name__ == '__main__':
                                               to at sensor reflectance or top of 
                                               atmosphere reflectance (TOA)''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.1')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input spectral response file.
     parser.add_argument("-i", "--input", type=str, 
                         help='''A seperated (--sep) text file defining the

@@ -78,39 +78,48 @@ import Py6S
 import osgeo.gdal as gdal
 # Import python math library
 import math
-
+# Import the arcsi version number
+from arcsilib import ARCSI_VERSION
+# Import the arcsi copyright year
+from arcsilib import ARCSI_COPYRIGHT_YEAR
+# Import the arcsi support email
+from arcsilib import ARCSI_SUPPORT_EMAIL
+# Import the arcsi website
+from arcsilib import ARCSI_WEBSITE
+# Import the arcsi copyright names
+from arcsilib import ARCSI_COPYRIGHT_NAMES
 
 class ARCSI (object):
     """
     The \'main\' class which executes the whole ARCSI package.
     """
     
-    def sensorClassFactory(self, sensor):
+    def sensorClassFactory(self, sensor, debugMode):
         sensorClass = None
         if sensor == 'ls7':
-            sensorClass = ARCSILandsat7Sensor()
+            sensorClass = ARCSILandsat7Sensor(debugMode)
         elif sensor == 'ls5tm':
-            sensorClass = ARCSILandsat5TMSensor()
+            sensorClass = ARCSILandsat5TMSensor(debugMode)
         elif sensor == 'ls4tm':
-            sensorClass = ARCSILandsat4TMSensor()
+            sensorClass = ARCSILandsat4TMSensor(debugMode)
         elif sensor == 'ls5mss':
-            sensorClass = ARCSILandsat5MSSSensor()
+            sensorClass = ARCSILandsat5MSSSensor(debugMode)
         elif sensor == 'ls4mss':
-            sensorClass = ARCSILandsat4MSSSensor()
+            sensorClass = ARCSILandsat4MSSSensor(debugMode)
         elif sensor == 'ls3':
-            sensorClass = ARCSILandsat3MSSSensor()
+            sensorClass = ARCSILandsat3MSSSensor(debugMode)
         elif sensor == 'ls2':
-            sensorClass = ARCSILandsat2MSSSensor()
+            sensorClass = ARCSILandsat2MSSSensor(debugMode)
         elif sensor == 'ls1':
-            sensorClass = ARCSILandsat1MSSSensor()
+            sensorClass = ARCSILandsat1MSSSensor(debugMode)
         elif sensor == 'ls8':
-            sensorClass = ARCSILandsat8Sensor()
+            sensorClass = ARCSILandsat8Sensor(debugMode)
         elif sensor == 'rapideye':
-            sensorClass = ARCSIRapidEyeSensor()
+            sensorClass = ARCSIRapidEyeSensor(debugMode)
         elif sensor == 'wv2':
-            sensorClass = ARCSIWorldView2Sensor()
+            sensorClass = ARCSIWorldView2Sensor(debugMode)
         elif sensor == 'spot5':
-            sensorClass = ARCSISPOT5Sensor()
+            sensorClass = ARCSISPOT5Sensor(debugMode)
         else:
             raise ARCSIException("Could not get a class representing the sensor specified from the factory.")
         
@@ -169,7 +178,7 @@ class ARCSI (object):
             atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, 
             atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, 
             aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, demFile, aotFile, 
-            globalDOS, dosOutRefl, simpleDOS):
+            globalDOS, dosOutRefl, simpleDOS, debugMode):
         """
         A function contains the main flow of the software
         """
@@ -183,7 +192,7 @@ class ARCSI (object):
                 wktStr = arcsiUtils.readTextFile(inWKTFile)
             
             # Step 1: Get the Sensor specific class from factory
-            sensorClass = self.sensorClassFactory(sensorStr)
+            sensorClass = self.sensorClassFactory(sensorStr, debugMode)
             
             # Step 2: Read header parameters
             sensorClass.extractHeaderParameters(inputHeader, wktStr)
@@ -202,6 +211,7 @@ class ARCSI (object):
                 else:
                     raise Exception("The aerosol profile from the input image was not recognised.")
                 print("Aerosol Profile = ", aeroProfileOption)
+                print("")
             if not atmosProfileOptionImg == None:
                 print("Get atmos profile from image...")
                 atmosProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(atmosProfileOptionImg, 1, 1, None, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)[0])
@@ -225,11 +235,12 @@ class ARCSI (object):
                 else:
                     raise Exception("The atmosphere profile from the input image was not recognised.")
                 print("Atmosphere Profile = ", atmosProfileOption)
-                
+            	print("")
+            
             # Step 3: Get Output Image Base Name.
             if outBaseName == None:
                 outBaseName = sensorClass.generateOutputBaseName()
-            print("Image Base Name: " + outBaseName)
+            print("Image Base Name: " + outBaseName + "\n")
             
             # Step 4: Find the products which are to be generated.
             prodsToCalc = dict()
@@ -238,10 +249,13 @@ class ARCSI (object):
             prodsToCalc["CLOUDS"] = False
             prodsToCalc["DDVAOT"] = False
             prodsToCalc["DOSAOT"] = False
-            prodsToCalc["SREFSTDMDL"] = False
+            prodsToCalc["SREF"] = False
             prodsToCalc["DOS"] = False
             prodsToCalc["THERMAL"] = False
             prodsToCalc["SATURATE"] = False
+            prodsToCalc["TOPOSHADOW"] = False
+            
+            needAtmModel = False
             
             for prod in productsStr:
                 if prod == 'RAD':
@@ -262,9 +276,11 @@ class ARCSI (object):
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
                     prodsToCalc["DDVAOT"] = True
-                elif prod == 'SREFSTDMDL':
+                    needAtmModel = True
+                elif prod == 'SREF':
                     prodsToCalc["RAD"] = True
-                    prodsToCalc["SREFSTDMDL"] = True
+                    prodsToCalc["SREF"] = True
+                    needAtmModel = True
                 elif prod == 'DOS':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
@@ -273,14 +289,81 @@ class ARCSI (object):
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
                     prodsToCalc["DOSAOT"] = True
+                    needAtmModel = True
                 elif prod == 'THERMAL':
                     if sensorClass.hasThermal():
                         prodsToCalc["THERMAL"] = True
                     else:
                         raise ARCSIException("The sensor does not have thermal bands. Check you inputs.")
-            
+                elif prod == 'TOPOSHADOW':
+                    prodsToCalc["RAD"] = True
+                    prodsToCalc["TOPOSHADOW"] = True
+                   
             if prodsToCalc["DOSAOT"] and prodsToCalc["DDVAOT"]:
                 raise ARCSIException("You cannot specify both the DOSAOT and DDVAOT products, you must choose one or the other.")
+            
+            aeroProfile = None
+            atmosProfile = None
+            grdRefl = None
+            useBRDF = False
+            
+            if needAtmModel:
+                if aeroProfileOption == None:
+                    raise ARCSIException("An aersol profile has not been specified.")
+                elif aeroProfileOption == "NoAerosols":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.NoAerosols)
+                elif aeroProfileOption == "Continental":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Continental)
+                elif aeroProfileOption == "Maritime":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Maritime)
+                elif aeroProfileOption == "Urban":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Urban)
+                elif aeroProfileOption == "Desert":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Desert)
+                elif aeroProfileOption == "BiomassBurning":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.BiomassBurning)
+                elif aeroProfileOption == "Stratospheric":
+                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Stratospheric)
+                else:
+                    raise ARCSIException("The specified aersol profile is unknown.")
+
+                if atmosProfileOption == None:
+                    raise ARCSIException("An atmospheric profile has not been specified.")
+                elif atmosProfileOption == "NoGaseousAbsorption":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.NoGaseousAbsorption)
+                elif atmosProfileOption == "Tropical":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.Tropical)
+                elif atmosProfileOption == "MidlatitudeSummer":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeSummer)
+                elif atmosProfileOption == "MidlatitudeWinter":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeWinter)
+                elif atmosProfileOption == "SubarcticSummer":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticSummer)
+                elif atmosProfileOption == "SubarcticWinter":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticWinter)
+                elif atmosProfileOption == "USStandard1962":
+                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.USStandard1962)
+                else:
+                    raise ARCSIException("The specified atmospheric profile is unknown.")
+
+                if atmosOZoneWaterSpecified:
+                    atmosProfile = Py6S.AtmosProfile.UserWaterAndOzone(atmosWaterVal, atmosOZoneVal) 
+                
+                if grdReflOption == None:
+                    raise ARCSIException("A ground reflectance has not been specified.")
+                elif grdReflOption == "GreenVegetation":
+                      grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.GreenVegetation)
+                elif grdReflOption == "ClearWater":
+                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.ClearWater)
+                elif grdReflOption == "Sand":
+                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.Sand)
+                elif grdReflOption == "LakeWater":
+                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.LakeWater)
+                elif grdReflOption == "BRDFHapke":
+                    grdRefl = Py6S.GroundReflectance.HomogeneousHapke(0.101, -0.263, 0.589, 0.046)
+                    useBRDF = True
+                else:
+                    raise ARCSIException("The specified ground reflectance is unknown.")
             
             radianceImage=""
             saturateImage=""
@@ -292,6 +375,7 @@ class ARCSI (object):
             aotFile = ""
             cloudsImage = ""
             outDEMName = ""
+            topoShadowImage = ""
             
             # Step 5: Convert to Radiance
             if prodsToCalc["RAD"]:
@@ -310,15 +394,6 @@ class ARCSI (object):
                         rsgislib.imageutils.popImageStats(thermalRadImage, True, 0.0, True)
                 print("")
             
-            if prodsToCalc["SATURATE"]:
-                # Execute generation of the saturation image
-                outName = outBaseName + "_sat" + arcsiUtils.getFileExtension(outFormat)
-                saturateImage = sensorClass.generateImageSaturationMask(outFilePath, outName, outFormat)
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(saturateImage, True, -1.0, True)
-                print("")
-                
             if sensorClass.maskInputImages():
                 # If the image comes with a mask then apply that before moving on.
                 outImgName = outBaseName + "_rad_msk" + arcsiUtils.getFileExtension(outFormat)
@@ -330,9 +405,47 @@ class ARCSI (object):
                     if calcStatsPy:
                         print("Calculating Statistics...")
                         rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
-                        rsgislib.imageutils.popImageStats(maskImage, True, 0.0, True)
+                        rsgislib.rastergis.populateStats(maskImage, True, True)
                     print("")
             
+            # Create and reproject the DEM file if not specified.
+            if (not (demFile == None)) and (outDEMName == ""):
+                # Interpolate image to output refl image resolution and convert projection to the same as the output image.
+                outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
+                print("Output DEM: ", outDEMName)
+                rsgislib.imageutils.createCopyImage(radianceImage, outDEMName, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)  
+                
+                inDEMDS = gdal.Open(demFile, gdal.GA_ReadOnly)
+                outDEMDS = gdal.Open(outDEMName, gdal.GA_Update)
+
+                print("Subset and reproject DEM...")
+                gdal.ReprojectImage(inDEMDS, outDEMDS, None, None, gdal.GRA_CubicSpline)
+                
+                inDEMDS = None
+                outDEMDS = None
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)  
+                print("")
+            
+            if prodsToCalc["SATURATE"]:
+                # Execute generation of the saturation image
+                outName = outBaseName + "_sat" + arcsiUtils.getFileExtension(outFormat)
+                saturateImage = sensorClass.generateImageSaturationMask(outFilePath, outName, outFormat)
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.rastergis.populateStats(saturateImage, True, True)
+                print("")
+                
+            if prodsToCalc["TOPOSHADOW"]:
+                # Execute generation of the saturation image
+                outName = outBaseName + "_toposhad" + arcsiUtils.getFileExtension(outFormat)
+                topoShadowImage = sensorClass.generateTopoDirectShadowMask(outDEMName, outFilePath, outName, outFormat, tmpPath)
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.rastergis.populateStats(topoShadowImage, True, True)
+                print("")
+                        
             if prodsToCalc["THERMAL"]:
                 # Execute calibrate thermal to brightness
                 outName = outBaseName + "_thermal" + arcsiUtils.getFileExtension(outFormat)
@@ -380,221 +493,27 @@ class ARCSI (object):
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
                 print("")
-            
-            # Create and reproject the DEM file if not specified.
-            if (not (demFile == None)) and (outDEMName == ""):
-                # Interpolate image to output refl image resolution and convert projection to the same as the output image.
-                outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
-                print("Output DEM: ", outDEMName)
-                rsgislib.imageutils.createCopyImage(radianceImage, outDEMName, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)  
-                
-                inDEMDS = gdal.Open(demFile, gdal.GA_ReadOnly)
-                outDEMDS = gdal.Open(outDEMName, gdal.GA_Update)
-
-                print("Subset and reproject DEM...")
-                gdal.ReprojectImage(inDEMDS, outDEMDS, None, None, gdal.GRA_CubicSpline)
-                
-                inDEMDS = None
-                outDEMDS = None
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)  
-                print("")          
-            
+                        
             # Step 7: Use image to estimate AOD values
             if prodsToCalc["DDVAOT"]:
-                aeroProfile = None
-                if aeroProfileOption == None:
-                    raise ARCSIException("An aersol profile has not been specified.")
-                elif aeroProfileOption == "NoAerosols":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.NoAerosols)
-                elif aeroProfileOption == "Continental":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Continental)
-                elif aeroProfileOption == "Maritime":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Maritime)
-                elif aeroProfileOption == "Urban":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Urban)
-                elif aeroProfileOption == "Desert":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Desert)
-                elif aeroProfileOption == "BiomassBurning":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.BiomassBurning)
-                elif aeroProfileOption == "Stratospheric":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Stratospheric)
-                else:
-                    raise ARCSIException("The specified aersol profile is unknown.")
-
-                atmosProfile = None
-                if atmosProfileOption == None:
-                    raise ARCSIException("An atmospheric profile has not been specified.")
-                elif atmosProfileOption == "NoGaseousAbsorption":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.NoGaseousAbsorption)
-                elif atmosProfileOption == "Tropical":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.Tropical)
-                elif atmosProfileOption == "MidlatitudeSummer":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeSummer)
-                elif atmosProfileOption == "MidlatitudeWinter":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeWinter)
-                elif atmosProfileOption == "SubarcticSummer":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticSummer)
-                elif atmosProfileOption == "SubarcticWinter":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticWinter)
-                elif atmosProfileOption == "USStandard1962":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.USStandard1962)
-                else:
-                    raise ARCSIException("The specified atmospheric profile is unknown.")
-
-                if atmosOZoneWaterSpecified:
-                    atmosProfile = Py6S.AtmosProfile.UserWaterAndOzone(atmosWaterVal, atmosOZoneVal) 
-                
-                grdRefl = None
-                if grdReflOption == None:
-                    raise ARCSIException("A ground reflectance has not been specified.")
-                elif grdReflOption == "GreenVegetation":
-                      grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.GreenVegetation)
-                elif grdReflOption == "ClearWater":
-                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.ClearWater)
-                elif grdReflOption == "Sand":
-                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.Sand)
-                elif grdReflOption == "LakeWater":
-                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.LakeWater)
-                else:
-                    raise ARCSIException("The specified ground reflectance is unknown.")
-            
                 outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
-                aotFile = sensorClass.estimateImageToAOD(radianceImage, toaImage, outDEMName, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT)
+                aotFile = sensorClass.estimateImageToAODUsingDDV(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
                 print("")
             
             if prodsToCalc["DOSAOT"]:
-                aeroProfile = None
-                if aeroProfileOption == None:
-                    raise ARCSIException("An aersol profile has not been specified.")
-                elif aeroProfileOption == "NoAerosols":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.NoAerosols)
-                elif aeroProfileOption == "Continental":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Continental)
-                elif aeroProfileOption == "Maritime":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Maritime)
-                elif aeroProfileOption == "Urban":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Urban)
-                elif aeroProfileOption == "Desert":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Desert)
-                elif aeroProfileOption == "BiomassBurning":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.BiomassBurning)
-                elif aeroProfileOption == "Stratospheric":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Stratospheric)
-                else:
-                    raise ARCSIException("The specified aersol profile is unknown.")
-
-                atmosProfile = None
-                if atmosProfileOption == None:
-                    raise ARCSIException("An atmospheric profile has not been specified.")
-                elif atmosProfileOption == "NoGaseousAbsorption":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.NoGaseousAbsorption)
-                elif atmosProfileOption == "Tropical":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.Tropical)
-                elif atmosProfileOption == "MidlatitudeSummer":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeSummer)
-                elif atmosProfileOption == "MidlatitudeWinter":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeWinter)
-                elif atmosProfileOption == "SubarcticSummer":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticSummer)
-                elif atmosProfileOption == "SubarcticWinter":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticWinter)
-                elif atmosProfileOption == "USStandard1962":
-                    atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.USStandard1962)
-                else:
-                    raise ARCSIException("The specified atmospheric profile is unknown.")
-
-                if atmosOZoneWaterSpecified:
-                    atmosProfile.UserWaterAndOzone(atmosWaterVal, atmosOZoneVal) 
-                
-                grdRefl = None
-                if grdReflOption == None:
-                    raise ARCSIException("A ground reflectance has not been specified.")
-                elif grdReflOption == "GreenVegetation":
-                      grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.GreenVegetation)
-                elif grdReflOption == "ClearWater":
-                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.ClearWater)
-                elif grdReflOption == "Sand":
-                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.Sand)
-                elif grdReflOption == "LakeWater":
-                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.LakeWater)
-                else:
-                    raise ARCSIException("The specified ground reflectance is unknown.")
-            
                 outName = outBaseName + "_dosaod" + arcsiUtils.getFileExtension(outFormat)
-                aotFile = sensorClass.estimateImageToAODUsingDOS(radianceImage, toaImage, outDEMName, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, globalDOS, dosOutRefl)
+                aotFile = sensorClass.estimateImageToAODUsingDOS(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, globalDOS, simpleDOS, dosOutRefl)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
                 print("")
             
             # Step 8: Convert to Surface Reflectance using 6S Standard Models
-            if prodsToCalc["SREFSTDMDL"]:
+            if prodsToCalc["SREF"]:
                 # Execute conversion to surface reflectance by applying 6S using a 'standard' modelled atmosphere.
-                aeroProfile = None
-                if aeroProfileOption == None:
-                    raise ARCSIException("An aersol profile has not been specified.")
-                elif aeroProfileOption == "NoAerosols":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.NoAerosols)
-                elif aeroProfileOption == "Continental":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Continental)
-                elif aeroProfileOption == "Maritime":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Maritime)
-                elif aeroProfileOption == "Urban":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Urban)
-                elif aeroProfileOption == "Desert":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Desert)
-                elif aeroProfileOption == "BiomassBurning":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.BiomassBurning)
-                elif aeroProfileOption == "Stratospheric":
-                    aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Stratospheric)
-                else:
-                    raise ARCSIException("The specified aersol profile is unknown.")
-                
-                atmosProfile = None
-                if atmosOZoneWaterSpecified:
-                    atmosProfile = Py6S.AtmosProfile.UserWaterAndOzone(atmosWaterVal, atmosOZoneVal) 
-                else:
-                    if atmosProfileOption == None:
-                        raise ARCSIException("An atmospheric profile has not been specified.")
-                    elif atmosProfileOption == "NoGaseousAbsorption":
-                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.NoGaseousAbsorption)
-                    elif atmosProfileOption == "Tropical":
-                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.Tropical)
-                    elif atmosProfileOption == "MidlatitudeSummer":
-                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeSummer)
-                    elif atmosProfileOption == "MidlatitudeWinter":
-                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeWinter)
-                    elif atmosProfileOption == "SubarcticSummer":
-                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticSummer)
-                    elif atmosProfileOption == "SubarcticWinter":
-                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticWinter)
-                    elif atmosProfileOption == "USStandard1962":
-                        atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.USStandard1962)
-                    else:
-                        raise ARCSIException("The specified atmospheric profile is unknown.")
-                
-                grdRefl = None
-                useBRDF = False
-                if grdReflOption == None:
-                    raise ARCSIException("A ground reflectance has not been specified.")
-                elif grdReflOption == "GreenVegetation":
-                      grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.GreenVegetation)
-                elif grdReflOption == "ClearWater":
-                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.ClearWater)
-                elif grdReflOption == "Sand":
-                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.Sand)
-                elif grdReflOption == "LakeWater":
-                    grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.LakeWater)
-                elif grdReflOption == "BRDFHapke":
-                    grdRefl = Py6S.GroundReflectance.HomogeneousHapke(0.101, -0.263, 0.589, 0.046)
-                    useBRDF = True
-                else:
-                    raise ARCSIException("The specified ground reflectance is unknown.")
                 
                 if (prodsToCalc["DDVAOT"] or prodsToCalc["DOSAOT"]) and (not aotFile == ""):
                     imgDS = gdal.Open(aotFile, gdal.GA_ReadOnly )
@@ -617,7 +536,7 @@ class ARCSI (object):
                     print("AOT Value: " + str(aotVal))
                 
                 if (demFile == None):
-                    outName = outBaseName + "_rad_srefstdmdl" + arcsiUtils.getFileExtension(outFormat)
+                    outName = outBaseName + "_rad_sref" + arcsiUtils.getFileExtension(outFormat)
                     srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
                 else:
                     # Calc Min, Max Elevation for region intersecting with the image.
@@ -635,7 +554,7 @@ class ARCSI (object):
                         
                     if (aotFile == None) or (aotFile == ""):
                         print("Build an DEM LUT with AOT == " + str(aotVal) + "...")
-                        outName = outBaseName + "_rad_srefstdmdldem" + arcsiUtils.getFileExtension(outFormat)
+                        outName = outBaseName + "_rad_srefdem" + arcsiUtils.getFileExtension(outFormat)
                         srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev)                    
                     else:
                         print("Build an AOT and DEM LUT...")
@@ -647,7 +566,7 @@ class ARCSI (object):
                         aotRange = (maxAOT - minAOT) / 0.05
                         numAOTSteps = math.ceil(aotRange) + 1
                         print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
-                        outName = outBaseName + "_rad_srefstdmdldemaot" + arcsiUtils.getFileExtension(outFormat)
+                        outName = outBaseName + "_rad_srefdemaot" + arcsiUtils.getFileExtension(outFormat)
                         srefImage = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImage, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT)
 
                 print("Setting Band Names...")
@@ -661,7 +580,7 @@ class ARCSI (object):
             # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
             if prodsToCalc["DOS"]:
                 print("Convert to reflectance using dark object subtraction.")
-                outName = outBaseName + "_rad_toa_dosub" + arcsiUtils.getFileExtension(outFormat)  
+                outName = outBaseName + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)  
                 if simpleDOS:
                     srefImage = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImage, outFilePath, outName, outFormat, dosOutRefl)
                 else:        
@@ -705,18 +624,18 @@ class ARCSI (object):
         print("\t-------------------------------------------------------")
         print("\tSensor        | Shorthand     | Functions")
         print("\t-------------------------------------------------------")
-        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
-        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
-        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
-        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
-        print("\tLandsat 4 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOS, THERMAL")
-        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
-        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOS, THERMAL")
-        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOS, THERMAL")
-        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, SREFSTDMDL, DOS, THERMAL")
-        print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
-        print("\WorldView2     | \'wv2\'       | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
-        print("\SPOT5          | \'spot5\'     | RAD, TOA, DOSAOT, SREFSTDMDL, DOS")
+        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
+        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
+        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
+        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
+        print("\tLandsat 4 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
+        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
+        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
+        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
+        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
+        print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
+        print("\WorldView2     | \'wv2\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
+        print("\SPOT5          | \'spot5\'     | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
         print("\t-------------------------------------------------------")
         
     def listProductDescription(self):
@@ -732,11 +651,11 @@ if __name__ == '__main__':
     The command line user interface to ARCSI
     """
     
-    print("ARCSI 0.9.1 Copyright (C) 2014  Peter Bunting")
+    print("ARCSI " + ARCSI_VERSION + " Copyright (C) " + ARCSI_COPYRIGHT_YEAR + " " + ARCSI_COPYRIGHT_NAMES)
     print("This program comes with ABSOLUTELY NO WARRANTY.")
     print("This is free software, and you are welcome to redistribute it")
-    print("under certain conditions; See website (http://www.rsgislib.org/arcsi).")
-    print("Bugs are to be reported to rsgislib-support@googlegroups.com\n")
+    print("under certain conditions; See website (" + ARCSI_WEBSITE + ").")
+    print("Bugs are to be reported to " + ARCSI_SUPPORT_EMAIL + ".\n")
     
     parser = argparse.ArgumentParser(prog='arcsi',
                                     description='''Software for the Atmospheric
@@ -754,7 +673,11 @@ if __name__ == '__main__':
                                             don't currently support the sensor you 
                                             require.''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.1')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
+    # Define the argument to define the debug mode for arcsi.
+    parser.add_argument("--debug", action='store_true', default=False, 
+                        help='''If define the debug mode will be activated, 
+                        therefore intermediate files will not be deleted.''')
     # Define the argument for specifying the input images header file.
     parser.add_argument("-i", "--inputheader", type=str, 
                         help='''Specify the input image header file.''')
@@ -788,9 +711,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOS and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'SREFSTDMDL', 'DOS', 'THERMAL'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, SREFSTDMDL, DOS, THERMAL)''')
+                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, SREF, DOS, THERMAL, TOPOSHADOW)''')
     # Define the argument for requesting a list of products.
     parser.add_argument("--prodlist", action='store_true', default=False, 
                         help='''List the products which are supported and 
@@ -885,10 +808,9 @@ if __name__ == '__main__':
                         are set to during the dark object subtraction. (Default is 20, 
                         which is equivalent to 2 % reflectance.''')
                         
-    
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-    
+        
     arcsiObj = ARCSI()
     arcsiUtils = ARCSIUtils()
     
@@ -950,7 +872,7 @@ if __name__ == '__main__':
                 needAODMinMax = True
                 needTmp = True
                 needDEM = True
-            elif prod == 'SREFSTDMDL':
+            elif prod == 'SREF':
                 needAOD = True
             elif prod == 'DOS':
                 if not args.simpledos:
@@ -961,8 +883,9 @@ if __name__ == '__main__':
                 needAODMinMax = True
                 needTmp = True
                 needDEM = True
-
-        
+            elif prod == 'TOPOSHADOW':
+                needTmp = True
+                needDEM = True
             
         if needAODMinMax and (args.minaot == None) and (args.maxaot == None):
             envVarMinAOT = arcsiUtils.getEnvironmentVariable("ARCSI_MIN_AOT")
@@ -991,7 +914,7 @@ if __name__ == '__main__':
         if needTmp and args.tmpath == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_TMP_PATH")
             if envVar == None:
-                print("Error: If the DDVAOT or DOS or CLOUDS product is set then a tempory path needs to be provided.\n")
+                print("Error: If the DDVAOT or DOS or CLOUDS or TOPOSHADOW product is set then a tempory path needs to be provided.\n")
                 parser.print_help()
                 sys.exit()
             else:
@@ -1068,7 +991,7 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, 
                      args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, 
                      args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem, 
-                     args.aotfile, (not args.localdos), args.dosout, args.simpledos)
+                     args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug)
 
 
 

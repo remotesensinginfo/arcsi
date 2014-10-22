@@ -73,8 +73,8 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
     A class which represents the WorldView2 sensor to read
     header parameters and apply data processing operations.
     """
-    def __init__(self):
-        ARCSIAbstractSensor.__init__(self)
+    def __init__(self, debugMode):
+        ARCSIAbstractSensor.__init__(self, debugMode)
         self.sensor = "WV2"
         self.fileName = ""
         self.catID = ""
@@ -566,11 +566,11 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
         print("Not implemented\n")
         sys.exit()
     
-    def estimateImageToAOD(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
+    def estimateImageToAODUsingDDV(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
         print("Not implemented\n")
         sys.exit()
         
-    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, dosOutRefl):
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl):
         try:
             print("Estimating AOD Using DOS")
             arcsiUtils = ARCSIUtils()
@@ -582,7 +582,10 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             minObjSize = 3
             darkPxlPercentile = 0.01
             blockSize = 1000
-            if globalDOS:
+            if simpleDOS:
+                outputDOSBlueName = tmpBaseName + "DOSBlue" + imgExtension
+                dosBlueImage = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 2)
+            elif globalDOS:
                 dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 2, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
                 dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 2, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
@@ -671,10 +674,11 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
         
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
-                    
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(thresImageClumpsFinal)
-            gdalDriver.Delete(dosBlueImage)        
+            
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(thresImageClumpsFinal)
+                gdalDriver.Delete(dosBlueImage)        
         
             return outputAOTImage
         except Exception as e:

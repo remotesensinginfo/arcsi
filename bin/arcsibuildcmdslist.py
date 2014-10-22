@@ -47,6 +47,8 @@ import sys
 import glob
 # Import the python Argument parser
 import argparse
+# Import the arcsi version number
+from arcsilib import ARCSI_VERSION
 
 class ARCSIBuildCommands (object):
         
@@ -161,7 +163,7 @@ if __name__ == '__main__':
                                            for a set of input images using 
                                            the same options''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.1')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     
     parser.add_argument("-i", "--input", type=str, required=True, 
                         help='''Input directory containing the data to be processed''')
@@ -199,9 +201,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOSUB and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'SREFSTDMDL', 'DOS', 'THERMAL'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, SREFSTDMDL, DOS, THERMAL)''')
+                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, SREF, DOS, THERMAL, TOPOSHADOW)''')
                         
     # Define the argument which specifies the standard aersol profile to use.
     parser.add_argument("--aeropro", type=str, choices=['NoAerosols', 'Continental', 
@@ -284,7 +286,6 @@ if __name__ == '__main__':
     parser.add_argument("--maxaot", type=float,
                         help='''Specifiy the AOT or visability value for the scene. 
                                 If the AOT is specified the visability is ignored.''')
-    
     
     # Define the argument for specifying that statistics and pyramids should be built for 
     # all output images.

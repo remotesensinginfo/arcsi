@@ -75,8 +75,8 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
     A class which represents the RapidEye sensor to read
     header parameters and apply data processing operations.
     """
-    def __init__(self):
-        ARCSIAbstractSensor.__init__(self)
+    def __init__(self, debugMode):
+        ARCSIAbstractSensor.__init__(self, debugMode)
         self.sensor = "RapidEye"
         self.platOrbitType = ""
         self.platSerialId = ""
@@ -345,8 +345,9 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             
             arcsiUtils.setImgThematic(outputCloudsImage)
             
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(stretchedImg)
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(stretchedImg)
             
             return outputCloudsImage
         except Exception as e:
@@ -551,10 +552,10 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             offsetsImage = ""
             
             if globalDOS:
-            	offsetsImage = self.findPerBandDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile)
+                offsetsImage = self.findPerBandDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile)
             else:
-            	blockSize = 200
-            	offsetsImage = self.findPerBandLocalDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, blockSize, minObjSize, darkPxlPercentile)
+                blockSize = 200
+                offsetsImage = self.findPerBandLocalDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, blockSize, minObjSize, darkPxlPercentile)
             
                        
             # TOA Image - Offset Image (if data and < 1 then set min value as 1)... 
@@ -570,11 +571,11 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         print("Not implemented\n")
         sys.exit()
     
-    def estimateImageToAOD(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
+    def estimateImageToAODUsingDDV(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
         print("Not implemented\n")
         sys.exit()
         
-    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, dosOutRefl):
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl):
         try:
             print("Estimating AOD Using DOS")
             arcsiUtils = ARCSIUtils()
@@ -586,10 +587,13 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             minObjSize = 3
             darkPxlPercentile = 0.01
             blockSize = 1000
-            if globalDOS:
-            	dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
+            if simpleDOS:
+                outputDOSBlueName = tmpBaseName + "DOSBlue" + imgExtension
+                dosBlueImage = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 1)
+            elif globalDOS:
+                dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
-	            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
+                dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
                         
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
             rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat="KEA", numClusters=40, minPxls=10, bands=[5,4,1], processInMem=True)
@@ -675,10 +679,11 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
-                    
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(thresImageClumpsFinal)
-            gdalDriver.Delete(dosBlueImage)        
+            
+            if not self.debugMode:  
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(thresImageClumpsFinal)
+                gdalDriver.Delete(dosBlueImage)        
         
             return outputAOTImage
         except Exception as e:
