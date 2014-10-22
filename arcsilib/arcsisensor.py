@@ -55,6 +55,12 @@ import rsgislib.segmentation
 import rsgislib.rastergis
 # Import the RSGISLib Image Utils Module
 import rsgislib.imageutils
+# Import the RSGISLib Image Calibration Module.
+import rsgislib.imagecalibration
+# Import the RSGISLib Elevation Module
+import rsgislib.elevation
+# Import the RSGISLib Image Filtering Module
+import rsgislib.imagefilter
 #Import the OSGEO GDAL module
 import osgeo.gdal as gdal
 # Import the ARCSI utilities class
@@ -80,8 +86,9 @@ class ARCSIAbstractSensor (object):
     """
     __metaclass__ = ABCMeta
         
-    def __init__(self):
+    def __init__(self, debugMode):
         self.sensor = "NA"
+        self.debugMode = debugMode
         self.acquisitionTime = datetime.datetime.today()
         self.latTL = 0.0
         self.lonTL = 0.0
@@ -268,6 +275,35 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def generateImageSaturationMask(self, outputPath, outputName, outFormat): pass
     
+    def generateTopoDirectShadowMask(self,  inputDEMImage, outputPath, outputName, outFormat, tmpPath):
+        try:
+            print("Calculating a direct topographic shadow mask.")
+            print("Solar Zenith = " + str(solarZenith) + " Solar Azimuth = " + str(solarAzimuth))
+            arcsiUtils = ARCSIUtils()
+            outputImage = os.path.join(outputPath, outputName)
+            tmpBaseName = os.path.splitext(outputName)[0]
+            imgExtension = arcsiUtils.getFileExtension(outFormat)        
+            outputTmpFile = os.path.join(tmpPath, tmpBaseName + "_toposhadow_tmp" + imgExtension)
+            
+            demDataset = gdal.Open( inputDEMImage, gdal.GA_ReadOnly )
+            if demDataset is None:
+                raise ARCSIException("Could not open DEM dataset.")
+            demBand = demDataset.GetRasterBand(1)
+            demMax = demBand.GetMaximum()
+            if demMax is None:
+                (demMin,demMax) = band.ComputeRasterMinMax(0)
+            rsgislib.elevation.shadowmask(inputDEMImage, outputTmpFile, self.solarAzimuth, self.solarZenith, demMax, outFormat)
+            rsgislib.imagefilter.applyMedianFilter(outputTmpFile, outputImage, 3, outFormat, rsgislib.TYPE_8UINT)
+            
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(outputTmpFile)
+            
+            return outputImage
+        except Exception as e:
+            raise e
+        
+    
     @abstractmethod
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat): pass
     
@@ -395,10 +431,10 @@ class ARCSIAbstractSensor (object):
         Northings = Northings[SelectedGrid!=0]
         MinTOARefl = MinTOARefl[SelectedGrid!=0]
         
-        #interpSmoothing = 10.0
-        #self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing)
+        interpSmoothing = 10.0
+        self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing)
         
-        rsgislib.rastergis.interpolateClumpValues2Image(tmpDarkObjsImg, "SelectedGrid", "Eastings", "Northings", "nnandnn", "MinTOARefl", offsetImage, outFormat, rsgislib.TYPE_32FLOAT, 1)
+        #rsgislib.rastergis.interpolateClumpValues2Image(tmpDarkObjsImg, "SelectedGrid", "Eastings", "Northings", "nnandnn", "MinTOARefl", offsetImage, outFormat, rsgislib.TYPE_32FLOAT, 1)
     
     def findPerBandDarkTargetsOffsets(self, inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile):
         try:
@@ -422,13 +458,14 @@ class ARCSIAbstractSensor (object):
             print(outputImage)
             rsgislib.imageutils.stackImageBands(bandDarkTargetOffsetImages, None, outputImage, None, 0, outFormat, rsgislib.TYPE_32FLOAT)
             
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(tmpDarkPxlsImg)
-            gdalDriver.Delete(tmpDarkPxlsClumpsImg)
-            gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
-            gdalDriver.Delete(tmpDarkObjsImg)
-            for image in bandDarkTargetOffsetImages:
-                gdalDriver.Delete(image)
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(tmpDarkPxlsImg)
+                gdalDriver.Delete(tmpDarkPxlsClumpsImg)
+                gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
+                gdalDriver.Delete(tmpDarkObjsImg)
+                for image in bandDarkTargetOffsetImages:
+                    gdalDriver.Delete(image)
             
             return outputImage
             
@@ -459,11 +496,12 @@ class ARCSIAbstractSensor (object):
             expression = '(TOA==0)?0:((TOA-Off)+' + str(dosOutRefl) + ')<=0?1.0:(TOA-Off)+' + str(dosOutRefl)
             rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
                         
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(tmpDarkPxlsImg)
-            gdalDriver.Delete(tmpDarkPxlsClumpsImg)
-            gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
-            gdalDriver.Delete(tmpDarkObjsImg)
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(tmpDarkPxlsImg)
+                gdalDriver.Delete(tmpDarkPxlsClumpsImg)
+                gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
+                gdalDriver.Delete(tmpDarkObjsImg)
             
             return outputImage
             
@@ -533,14 +571,15 @@ class ARCSIAbstractSensor (object):
             bandDefns.append(rsgislib.imagecalc.BandDefn('TOA', inputTOAImage, band))
             expression = '(TOA==0)?0:((TOA-Off)+' + str(dosOutRefl) + ')<=0?1.0:(TOA-Off)+' + str(dosOutRefl)
             rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
-                        
-            gdalDriver = gdal.GetDriverByName("KEA")
-            gdalDriver.Delete(tmpDarkPxlsImg)
-            gdalDriver.Delete(tmpDarkPxlsClumpsImg)
-            gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
-            gdalDriver.Delete(tmpDarkObjsImg)
-            gdalDriver.Delete(tmpDarkTargetAllImage)
-            gdalDriver.Delete(offsetImage)
+            
+            if not self.debugMode:            
+                gdalDriver = gdal.GetDriverByName("KEA")
+                gdalDriver.Delete(tmpDarkPxlsImg)
+                gdalDriver.Delete(tmpDarkPxlsClumpsImg)
+                gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
+                gdalDriver.Delete(tmpDarkObjsImg)
+                gdalDriver.Delete(tmpDarkTargetAllImage)
+                gdalDriver.Delete(offsetImage)
             
             return outputImage
             
@@ -660,14 +699,15 @@ class ARCSIAbstractSensor (object):
             print(outputImage)
             rsgislib.imageutils.stackImageBands(bandDarkTargetOffsetImages, None, outputImage, None, 0, outFormat, rsgislib.TYPE_32FLOAT)
             
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(tmpDarkPxlsImg)
-            gdalDriver.Delete(tmpDarkPxlsClumpsImg)
-            gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
-            gdalDriver.Delete(tmpDarkObjsImg)
-            gdalDriver.Delete(tmpDarkTargetAllImage)
-            for image in bandDarkTargetOffsetImages:
-                gdalDriver.Delete(image)
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(tmpDarkPxlsImg)
+                gdalDriver.Delete(tmpDarkPxlsClumpsImg)
+                gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
+                gdalDriver.Delete(tmpDarkObjsImg)
+                gdalDriver.Delete(tmpDarkTargetAllImage)
+                for image in bandDarkTargetOffsetImages:
+                    gdalDriver.Delete(image)
             
             return outputImage
             
@@ -692,6 +732,23 @@ class ARCSIAbstractSensor (object):
         except Exception as e:
             raise e
             
+    def convertImageBandToReflectanceSimpleDarkSubtract(self, inputTOAImage, outputPath, outputName, outFormat, dosOutRefl, imgBand):
+        try:
+            print("Perform Simple Dark Object Subtraction on image band")
+            outputImage = os.path.join(outputPath, outputName)
+            
+            percentiles = rsgislib.imagecalc.bandPercentile(inputTOAImage, 0.01, 0)
+            
+            print("Band offset = " + str(percentiles[imgBand-1]))
+            expression = "((b1-" + str(percentiles[imgBand-1]) + ") + " + str(dosOutRefl) + ") < 0 ?1.0: (b1-" + str(percentiles[imgBand-1]) + ") + " + str(dosOutRefl)
+            bandDefns = []
+            bandDefns.append(rsgislib.imagecalc.BandDefn('b1', inputTOAImage, imgBand))
+            rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
+                        
+            return outputImage
+        except Exception as e:
+            raise e
+            
     @abstractmethod
     def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl): pass
 
@@ -699,10 +756,10 @@ class ARCSIAbstractSensor (object):
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath): pass
 
     @abstractmethod
-    def estimateImageToAOD(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax): pass
+    def estimateImageToAODUsingDDV(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax): pass
 
     @abstractmethod
-    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, dosOutRefl): pass
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl): pass
     
     @abstractmethod
     def setBandNames(self, imageFile): pass

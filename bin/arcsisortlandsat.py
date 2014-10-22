@@ -62,7 +62,8 @@ import argparse
 from arcsilib.arcsiexception import ARCSIException
 # Import the shutil python module.
 import shutil
-
+# Import the arcsi version number
+from arcsilib import ARCSI_VERSION
 
 class ARCSISortLandsatData (object):
     
@@ -225,7 +226,7 @@ if __name__ == '__main__':
                                               directory of input data into different 
                                               directories.''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.1')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input spectral response file.
     parser.add_argument("-i", "--input", type=str, 
                         help='''Input directory containing the input Landsat Scenes.''')

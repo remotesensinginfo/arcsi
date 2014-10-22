@@ -69,8 +69,8 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
     A class which represents the landsat 2 MSS sensor to read
     header parameters and apply data processing operations.
     """
-    def __init__(self):
-        ARCSIAbstractSensor.__init__(self)
+    def __init__(self, debugMode):
+        ARCSIAbstractSensor.__init__(self, debugMode)
         self.sensor = "LS2MSS"
         self.band4File = ""
         self.band5File = ""
@@ -223,7 +223,7 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
         return outname
     
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
-    	raise ARCSIException("Landsat 2 does not provide any image masks, do not use the MASK option.")
+        raise ARCSIException("Landsat 2 does not provide any image masks, do not use the MASK option.")
     
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -268,7 +268,7 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
         return outputImage
     
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath):
-    	raise ARCSIException("Cloud Masking Not Implemented for LS2 MSS.")
+        raise ARCSIException("Cloud Masking Not Implemented for LS2 MSS.")
     
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((4, 3), dtype=numpy.float32)    
@@ -437,11 +437,11 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
         print("Not implemented\n")
         sys.exit()
 
-    def estimateImageToAOD(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
+    def estimateImageToAODUsingDDV(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotValMin, aotValMax):
         print("Not implemented\n")
         sys.exit()
 
-    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, dosOutRefl):
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl):
         try:
             print("Estimating AOD Using DOS")
             arcsiUtils = ARCSIUtils()
@@ -453,10 +453,13 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
             minObjSize = 3
             darkPxlPercentile = 0.01
             blockSize = 1000
-            if globalDOS:
-            	dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
+            if simpleDOS:
+                outputDOSBlueName = tmpBaseName + "DOSBlue" + imgExtension
+                dosBlueImage = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 1)
+            elif globalDOS:
+                dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
-	            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl) 
+                dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl) 
                         
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
             rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat="KEA", numClusters=40, minPxls=10, bands=[5,4,1], processInMem=True)
@@ -542,10 +545,11 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
         
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
-                    
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(thresImageClumpsFinal)
-            gdalDriver.Delete(dosBlueImage)        
+            
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(thresImageClumpsFinal)
+                gdalDriver.Delete(dosBlueImage)        
         
             return outputAOTImage
         except Exception as e:

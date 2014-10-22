@@ -71,8 +71,8 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
     A class which represents the landsat 4 TM sensor to read
     header parameters and apply data processing operations.
     """
-    def __init__(self):
-        ARCSIAbstractSensor.__init__(self)
+    def __init__(self, debugMode):
+        ARCSIAbstractSensor.__init__(self, debugMode)
         self.sensor = "LS4TM"
         self.band1File = ""
         self.band2File = ""
@@ -258,7 +258,7 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
         return True
     
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
-    	raise ARCSIException("Landsat 4 TM does not provide any image masks, do not use the MASK option.")
+        raise ARCSIException("Landsat 4 TM does not provide any image masks, do not use the MASK option.")
     
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -336,10 +336,11 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
             outputTmp1File = os.path.join(tmpPath, tmpBaseName + "_clouds_tmp1" + imgExtension)
             outputTmp2File = os.path.join(tmpPath, tmpBaseName + "_clouds_tmp2" + imgExtension)
             rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, outputImage, outputTmp1File, outputTmp2File, outFormat, 1000.0)
-        
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(outputTmp1File)
-            gdalDriver.Delete(outputTmp2File)        
+            
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(outputTmp1File)
+                gdalDriver.Delete(outputTmp2File)        
             return outputImage    
         except Exception as e:
             raise e
@@ -515,7 +516,7 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
         s.aot550 = aotVal
                 
         # Band 1 (Blue!)
-        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_ETM_B1)
+        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_TM_B1)
         s.run()
         aX = float(s.outputs.values['coef_xa'])
         bX = float(s.outputs.values['coef_xb'])
@@ -580,16 +581,17 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
             rsgislib.segmentation.relabelClumps(thresImageClumpsRMSmall, thresImageClumpsFinal, outFormat, False)
             rsgislib.rastergis.populateStats(thresImageClumpsFinal, True, True)
             
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(thresImage)
-            gdalDriver.Delete(thresImageClumps)
-            gdalDriver.Delete(thresImageClumpsRMSmall)
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(thresImage)
+                gdalDriver.Delete(thresImageClumps)
+                gdalDriver.Delete(thresImageClumpsRMSmall)
         
             return thresImageClumpsFinal
         except Exception as e:
             raise e
     
-    def estimateImageToAOD(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
+    def estimateImageToAODUsingDDV(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
         print("Estimating AOD through Blue - SWIR relationship.")
         try:
             arcsiUtils = ARCSIUtils()
@@ -650,14 +652,14 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
                     print("Predicting AOD for Segment ", i)
                     for j in range(numAOTValTests):
                         cAOT = aotValMin + (0.05 * j)
-                        cDist = self.run6SToOptimiseAODValue(cAOT, MeanB1RAD[i], PredB1Refl[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i])
+                        cDist = self.run6SToOptimiseAODValue(cAOT, MeanB1RAD[i], PredB1Refl[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i]/1000)
                         if j == 0:
                             minAOT = cAOT
                             minDist = cDist
                         elif cDist < minDist:
                             minAOT = cAOT
                             minDist = cDist
-                    #predAOTArgs = (MeanB1RAD[i], PredB1Refl[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i])
+                    #predAOTArgs = (MeanB1RAD[i], PredB1Refl[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i]/1000)
                     #res = minimize(self.run6SToOptimiseAODValue, minAOT, method='nelder-mead', options={'maxiter': 20, 'xtol': 0.001, 'disp': True}, args=predAOTArgs)
                     #aotVals[i] = res.x[0]
                     aotVals[i] = minAOT
@@ -677,14 +679,15 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
             
-            gdalDriver = gdal.GetDriverByName("KEA")
-            gdalDriver.Delete(thresImageClumpsFinal)        
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName("KEA")
+                gdalDriver.Delete(thresImageClumpsFinal)        
         
             return outputAOTImage
         except Exception as e:
             raise e
     
-    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, dosOutRefl): 
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl): 
         try:
             print("Estimating AOD Using DOS")
             arcsiUtils = ARCSIUtils()
@@ -697,10 +700,13 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
             minObjSize = 5
             darkPxlPercentile = 0.01
             blockSize = 1000
-            if globalDOS:
-            	dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
+            if simpleDOS:
+                outputDOSBlueName = tmpBaseName + "DOSBlue" + imgExtension
+                dosBlueImage = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 1)
+            elif globalDOS:
+                dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
-	            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl) 
+                dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl) 
             
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
             rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat="KEA", numClusters=20, minPxls=10, bands=[4,5,3], processInMem=True)
@@ -760,7 +766,7 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
                     print("Predicting AOD for Segment ", i)
                     for j in range(numAOTValTests):
                         cAOT = aotValMin + (0.05 * j)
-                        cDist = self.run6SToOptimiseAODValue(cAOT, MeanB1RAD[i], MeanB1DOS[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i])
+                        cDist = self.run6SToOptimiseAODValue(cAOT, MeanB1RAD[i], MeanB1DOS[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i]/1000)
                         if j == 0:
                             minAOT = cAOT
                             minDist = cDist
@@ -787,9 +793,10 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
             
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(thresImageClumpsFinal)
-            gdalDriver.Delete(dosBlueImage)    
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(thresImageClumpsFinal)
+                gdalDriver.Delete(dosBlueImage)    
         
             return outputAOTImage
         except Exception as e:

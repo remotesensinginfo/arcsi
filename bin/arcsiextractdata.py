@@ -47,6 +47,9 @@ import sys
 import glob
 # Import the python Argument parser
 import argparse
+# Import the arcsi version number
+from arcsilib import ARCSI_VERSION
+
 
 class ARCSIExtractData (object):
     
@@ -110,14 +113,14 @@ if __name__ == '__main__':
     """
     The command line user interface to ARCSI Data Extraction Tool.
     """
-    parser = argparse.ArgumentParser(prog='arcsiextractdata',
+    parser = argparse.ArgumentParser(prog='arcsiextractdata.py',
                                     description='''ARCSI command extract data
                                                    from tar or tar.gz archives.''',
                                     epilog='''A tools to extract data
                                               from tar or tar.gz archives into
                                               individual directories per image''')
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s Version 0.9.1')
+    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input spectral response file.
     parser.add_argument("-i", "--input", type=str, 
                         help='''Input directory contains archives (tar and/or tar.gz).''')

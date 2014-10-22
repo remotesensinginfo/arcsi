@@ -81,8 +81,8 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
     A class which represents the landsat 8 sensor to read
     header parameters and apply data processing operations.
     """
-    def __init__(self):
-        ARCSIAbstractSensor.__init__(self)
+    def __init__(self, debugMode):
+        ARCSIAbstractSensor.__init__(self, debugMode)
         self.sensor = "LS8"
         self.band1File = ""
         self.band2File = ""
@@ -420,10 +420,11 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             outputTmp1File = os.path.join(tmpPath, tmpBaseName + "_clouds_tmp1" + imgExtension)
             outputTmp2File = os.path.join(tmpPath, tmpBaseName + "_clouds_tmp2" + imgExtension)
             rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, outputImage, outputTmp1File, outputTmp2File, outFormat, 1000.0)
-        
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(outputTmp1File)
-            gdalDriver.Delete(outputTmp2File)        
+            
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(outputTmp1File)
+                gdalDriver.Delete(outputTmp2File)        
             return outputImage    
         except Exception as e:
             raise e
@@ -673,17 +674,18 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             rsgislib.segmentation.rmSmallClumps(thresImageClumps, thresImageClumpsRMSmall, 100, outFormat)
             rsgislib.segmentation.relabelClumps(thresImageClumpsRMSmall, thresImageClumpsFinal, outFormat, False)
             rsgislib.rastergis.populateStats(thresImageClumpsFinal, True, True)
-
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(thresImage)
-            gdalDriver.Delete(thresImageClumps)
-            gdalDriver.Delete(thresImageClumpsRMSmall)
+            
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(thresImage)
+                gdalDriver.Delete(thresImageClumps)
+                gdalDriver.Delete(thresImageClumpsRMSmall)
         
             return thresImageClumpsFinal
         except Exception as e:
             raise e
     
-    def estimateImageToAOD(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
+    def estimateImageToAODUsingDDV(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
         print("Estimating AOD through Blue - SWIR relationship.")
         try:            
             outputAOTImage = os.path.join(outputPath, outputName)
@@ -769,14 +771,15 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
             
-            gdalDriver = gdal.GetDriverByName("KEA")
-            gdalDriver.Delete(thresImageClumpsFinal)        
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName("KEA")
+                gdalDriver.Delete(thresImageClumpsFinal)        
         
             return outputAOTImage
         except Exception as e:
             raise e
             
-    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, dosOutRefl):
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl):
         try:
             print("Estimating AOD Using DOS")
             arcsiUtils = ARCSIUtils()
@@ -788,10 +791,13 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             minObjSize = 5
             darkPxlPercentile = 0.01
             blockSize = 1000
-            if globalDOS:
-            	dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 2, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
+            if simpleDOS:
+                outputDOSBlueName = tmpBaseName + "DOSBlue" + imgExtension
+                dosBlueImage = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 2)
+            elif globalDOS:
+                dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 2, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
-	            dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 2, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)            
+                dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 2, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)            
                         
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
             rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat="KEA", numClusters=20, minPxls=10, bands=[5,6,4], processInMem=True)
@@ -878,9 +884,10 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
                     
-            gdalDriver = gdal.GetDriverByName(outFormat)
-            gdalDriver.Delete(thresImageClumpsFinal)
-            gdalDriver.Delete(dosBlueImage)        
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(thresImageClumpsFinal)
+                gdalDriver.Delete(dosBlueImage)        
         
             return outputAOTImage
         except Exception as e:
