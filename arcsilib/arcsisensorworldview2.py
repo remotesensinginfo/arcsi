@@ -73,8 +73,8 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
     A class which represents the WorldView2 sensor to read
     header parameters and apply data processing operations.
     """
-    def __init__(self, debugMode):
-        ARCSIAbstractSensor.__init__(self, debugMode)
+    def __init__(self, debugMode, inputImage):
+        ARCSIAbstractSensor.__init__(self, debugMode, inputImage)
         self.sensor = "WV2"
         self.fileName = ""
         self.catID = ""
@@ -217,7 +217,10 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             #print("Lat: " + str(self.latCentre) + " Long: " + str(self.lonCentre))
             
             filesDIR = os.path.dirname(inputHeader)
-            self.fileName = os.path.join(filesDIR, imageTileInfoTag.find('FILENAME').text.strip())
+            if not self.userSpInputImage is None:
+            	self.fileName = os.path.abspath(self.userSpInputImage)
+            else:
+                self.fileName = os.path.join(filesDIR, imageTileInfoTag.find('FILENAME').text.strip())
             
             # Coastal
             self.absCalFactB1 = float(topLevelInfo.find('BAND_C').find('ABSCALFACTOR').text.strip())

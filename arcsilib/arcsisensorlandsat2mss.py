@@ -69,8 +69,8 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
     A class which represents the landsat 2 MSS sensor to read
     header parameters and apply data processing operations.
     """
-    def __init__(self, debugMode):
-        ARCSIAbstractSensor.__init__(self, debugMode)
+    def __init__(self, debugMode, inputImage):
+        ARCSIAbstractSensor.__init__(self, debugMode, inputImage)
         self.sensor = "LS2MSS"
         self.band4File = ""
         self.band5File = ""
@@ -102,6 +102,9 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
         Understands and parses the Landsat MTL header files
         """
         try:
+            if not self.userSpInputImage is None:
+                raise ARCSIException("Landsat sensor cannot accept a user specified image file - only the images in the header file will be used.")
+                
             print("Reading header file")
             hFile = open(inputHeader, 'r')
             headerParams = dict()

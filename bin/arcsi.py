@@ -94,32 +94,32 @@ class ARCSI (object):
     The \'main\' class which executes the whole ARCSI package.
     """
     
-    def sensorClassFactory(self, sensor, debugMode):
+    def sensorClassFactory(self, sensor, debugMode, inputImage):
         sensorClass = None
         if sensor == 'ls7':
-            sensorClass = ARCSILandsat7Sensor(debugMode)
+            sensorClass = ARCSILandsat7Sensor(debugMode, inputImage)
         elif sensor == 'ls5tm':
-            sensorClass = ARCSILandsat5TMSensor(debugMode)
+            sensorClass = ARCSILandsat5TMSensor(debugMode, inputImage)
         elif sensor == 'ls4tm':
-            sensorClass = ARCSILandsat4TMSensor(debugMode)
+            sensorClass = ARCSILandsat4TMSensor(debugMode, inputImage)
         elif sensor == 'ls5mss':
-            sensorClass = ARCSILandsat5MSSSensor(debugMode)
+            sensorClass = ARCSILandsat5MSSSensor(debugMode, inputImage)
         elif sensor == 'ls4mss':
-            sensorClass = ARCSILandsat4MSSSensor(debugMode)
+            sensorClass = ARCSILandsat4MSSSensor(debugMode, inputImage)
         elif sensor == 'ls3':
-            sensorClass = ARCSILandsat3MSSSensor(debugMode)
+            sensorClass = ARCSILandsat3MSSSensor(debugMode, inputImage)
         elif sensor == 'ls2':
-            sensorClass = ARCSILandsat2MSSSensor(debugMode)
+            sensorClass = ARCSILandsat2MSSSensor(debugMode, inputImage)
         elif sensor == 'ls1':
-            sensorClass = ARCSILandsat1MSSSensor(debugMode)
+            sensorClass = ARCSILandsat1MSSSensor(debugMode, inputImage)
         elif sensor == 'ls8':
-            sensorClass = ARCSILandsat8Sensor(debugMode)
+            sensorClass = ARCSILandsat8Sensor(debugMode, inputImage)
         elif sensor == 'rapideye':
-            sensorClass = ARCSIRapidEyeSensor(debugMode)
+            sensorClass = ARCSIRapidEyeSensor(debugMode, inputImage)
         elif sensor == 'wv2':
-            sensorClass = ARCSIWorldView2Sensor(debugMode)
+            sensorClass = ARCSIWorldView2Sensor(debugMode, inputImage)
         elif sensor == 'spot5':
-            sensorClass = ARCSISPOT5Sensor(debugMode)
+            sensorClass = ARCSISPOT5Sensor(debugMode, inputImage)
         else:
             raise ARCSIException("Could not get a class representing the sensor specified from the factory.")
         
@@ -173,7 +173,7 @@ class ARCSI (object):
         return aotVal
             
     
-    def run(self, inputHeader, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, 
+    def run(self, inputHeader, inputImage, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, 
             productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, 
             atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, 
             atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, 
@@ -192,7 +192,7 @@ class ARCSI (object):
                 wktStr = arcsiUtils.readTextFile(inWKTFile)
             
             # Step 1: Get the Sensor specific class from factory
-            sensorClass = self.sensorClassFactory(sensorStr, debugMode)
+            sensorClass = self.sensorClassFactory(sensorStr, debugMode, inputImage)
             
             # Step 2: Read header parameters
             sensorClass.extractHeaderParameters(inputHeader, wktStr)
@@ -235,7 +235,7 @@ class ARCSI (object):
                 else:
                     raise Exception("The atmosphere profile from the input image was not recognised.")
                 print("Atmosphere Profile = ", atmosProfileOption)
-            	print("")
+                print("")
             
             # Step 3: Get Output Image Base Name.
             if outBaseName == None:
@@ -681,6 +681,9 @@ if __name__ == '__main__':
     # Define the argument for specifying the input images header file.
     parser.add_argument("-i", "--inputheader", type=str, 
                         help='''Specify the input image header file.''')
+    # Define the argument for specifying the input image file - overriding the header file.
+    parser.add_argument("--imagefile", type=str, 
+                        help='''Specify the input image file, overriding the image header.''')
     # Define the argument for specifying the sensor.
     parser.add_argument("-s", "--sensor", choices=['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm',
                                                    'ls5mss', 'ls5tm', 'ls7', 
@@ -985,7 +988,7 @@ if __name__ == '__main__':
                 args.localdos = False
                 print("Using global DOS method due to environment variable.")
         
-        arcsiObj.run(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, 
+        arcsiObj.run(args.inputheader, args.imagefile, args.sensor, args.inwkt, args.format, args.outpath, 
                      args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, 
                      args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, 
                      args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, 
