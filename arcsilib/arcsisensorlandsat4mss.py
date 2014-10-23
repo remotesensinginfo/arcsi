@@ -403,6 +403,39 @@ class ARCSILandsat4MSSSensor (ARCSIAbstractSensor):
             
         return outputImage
     
+    def run6SToOptimiseAODValue(self, aotVal, radBlueVal, predBlueVal, aeroProfile, atmosProfile, grdRefl, surfaceAltitude):
+        """Used as part of the optimastion for identifying values of AOD"""
+        print("Testing AOD Val: ", aotVal,)
+        s = Py6S.SixS()
+        
+        s.atmos_profile = atmosProfile
+        s.aero_profile = aeroProfile
+        s.ground_reflectance = grdRefl
+        s.geometry = Py6S.Geometry.Landsat_TM()
+        s.geometry.month = self.acquisitionTime.month
+        s.geometry.day = self.acquisitionTime.day
+        s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
+        s.geometry.latitude = self.latCentre
+        s.geometry.longitude = self.lonCentre
+        s.altitudes = Py6S.Altitudes()
+        s.altitudes.set_target_custom_altitude(surfaceAltitude)
+        s.altitudes.set_sensor_satellite_level()
+        s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromRadiance(200)
+        s.aot550 = aotVal
+                
+        # Band 1 (Blue!)
+        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_MSS_B1)
+        s.run()
+        aX = float(s.outputs.values['coef_xa'])
+        bX = float(s.outputs.values['coef_xb'])
+        cX = float(s.outputs.values['coef_xc'])
+        tmpVal = (aX*radBlueVal)-bX;
+        reflBlueVal = tmpVal/(1.0+cX*tmpVal)
+
+        outDist = math.sqrt(math.pow((reflBlueVal - predBlueVal),2))
+        print("\taX: ", aX, " bX: ", bX, " cX: ", cX, "     Dist = ", outDist)
+        return outDist
+    
     def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl):
         try:
             print("Opening: ", inputTOAImage)
