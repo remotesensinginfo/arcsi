@@ -628,14 +628,14 @@ class ARCSI (object):
         print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
         print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
         print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
-        print("\tLandsat 4 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
+        print("\tLandsat 4 TM  | \'ls4tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
         print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
         print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
         print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
         print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
         print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
-        print("\WorldView2     | \'wv2\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
-        print("\SPOT5          | \'spot5\'     | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
+        print("\tWorldView2    | \'wv2\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
+        print("\tSPOT5         | \'spot5\'     | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
         print("\t-------------------------------------------------------")
         
     def listProductDescription(self):
@@ -819,7 +819,7 @@ if __name__ == '__main__':
     
     if args.sensorlist:
         arcsiObj.listSensors()
-    if args.prodlist:
+    elif args.prodlist:
         arcsiObj.listProductDescription()
     else:
         # Check that the input header parameter has been specified.
