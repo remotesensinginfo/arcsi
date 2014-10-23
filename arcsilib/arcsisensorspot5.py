@@ -667,8 +667,8 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)
         if not dataset is None:
-            dataset.GetRasterBand(1).SetDescription("GREEN")
-            dataset.GetRasterBand(2).SetDescription("RED")
+            dataset.GetRasterBand(1).SetDescription("Green")
+            dataset.GetRasterBand(2).SetDescription("Red")
             dataset.GetRasterBand(3).SetDescription("NIR")
             dataset.GetRasterBand(4).SetDescription("SWIR")
             dataset = None
