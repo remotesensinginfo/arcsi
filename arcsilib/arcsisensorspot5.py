@@ -273,9 +273,9 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         bandDefnSeq = list()
         
         spot5Band = collections.namedtuple('SPOT5Band', ['bandName', 'bandIndex', 'bias', 'gain'])
-        bandDefnSeq.append(spot5Band(bandName="NIR", bandIndex=1, bias=self.b1Bias, gain=self.b1Gain))
+        bandDefnSeq.append(spot5Band(bandName="NIR", bandIndex=3, bias=self.b1Bias, gain=self.b1Gain))
         bandDefnSeq.append(spot5Band(bandName="Red", bandIndex=2, bias=self.b2Bias, gain=self.b2Gain))
-        bandDefnSeq.append(spot5Band(bandName="Green", bandIndex=3, bias=self.b3Bias, gain=self.b3Gain))
+        bandDefnSeq.append(spot5Band(bandName="Green", bandIndex=1, bias=self.b3Bias, gain=self.b3Gain))
         bandDefnSeq.append(spot5Band(bandName="SWIR", bandIndex=4, bias=self.b4Bias, gain=self.b4Gain))
         rsgislib.imagecalibration.spot5ToRadiance(self.fileName, outputImage, outFormat, bandDefnSeq)
         
@@ -314,9 +314,9 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         outputImage = os.path.join(outputPath, outputName)
         solarIrradianceVals = list()
         IrrVal = collections.namedtuple('SolarIrradiance', ['irradiance'])
-        solarIrradianceVals.append(IrrVal(irradiance=self.b3SolarIrradiance))
-        solarIrradianceVals.append(IrrVal(irradiance=self.b2SolarIrradiance))
         solarIrradianceVals.append(IrrVal(irradiance=self.b1SolarIrradiance))
+        solarIrradianceVals.append(IrrVal(irradiance=self.b2SolarIrradiance))
+        solarIrradianceVals.append(IrrVal(irradiance=self.b3SolarIrradiance))
         solarIrradianceVals.append(IrrVal(irradiance=self.b4SolarIrradiance))
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, 1000, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         
@@ -357,7 +357,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         s.aot550 = aotVal
         
         # Band 1
-        s.wavelength = Py6S.Wavelength(0.750, 0.945, [0.000000,0.000000,0.005400,0.005400,0.016100,0.016100,0.042900,0.042900,0.096600,0.096600,0.183500,0.183500,0.297400,0.297400,0.433700,0.433700,0.565000,0.565000,0.691000,0.691000,0.792200,0.792200,0.873300,0.873300,0.928600,0.928600,0.965000,0.965000,0.989700,0.989700,0.997900,0.997900,1.000000,1.000000,0.991200,0.991200,0.978700,0.978700,0.960700,0.960700,0.940400,0.940400,0.921500,0.921500,0.890800,0.890800,0.869500,0.869500,0.814700,0.814700,0.734400,0.734400,0.612700,0.612700,0.457600,0.457600,0.327200,0.327200,0.216800,0.216800,0.134300,0.134300,0.087400,0.087400,0.058200,0.058200,0.035800,0.035800,0.023700,0.023700,0.016700,0.016700,0.011400,0.011400,0.007800,0.007800,0.005300,0.005300,0.000000])
+        s.wavelength = Py6S.Wavelength(0.450, 0.650, [0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.007200,0.007200,0.054000,0.054000,0.178800,0.178800,0.371900,0.371900,0.557100,0.557100,0.557100,0.696000,0.696000,0.795900,0.795900,0.865400,0.865400,0.920800,0.920800,0.962700,0.962700,0.983800,0.983800,1.000000,1.000000,0.996200,0.996200,0.978300,0.978300,0.949700,0.949700,0.904500,0.904500,0.846800,0.846800,0.789500,0.789500,0.722900,0.722900,0.661100,0.661100,0.593700,0.593700,0.525600,0.525600,0.456500,0.456500,0.377600,0.377600,0.294300,0.294300,0.205300,0.205300,0.132300,0.132300,0.076700,0.076700,0.041900,0.041900,0.022000,0.022000,0.011700,0.011700,0.006700,0.006700,0.003900,0.003900,0.000000,0.000000,0.000000])
         s.run()
         sixsCoeffs[0,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[0,1] = float(s.outputs.values['coef_xb'])
@@ -371,7 +371,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         sixsCoeffs[1,2] = float(s.outputs.values['coef_xc'])
                 
         # Band 3
-        s.wavelength = Py6S.Wavelength(0.450, 0.650, [0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.007200,0.007200,0.054000,0.054000,0.178800,0.178800,0.371900,0.371900,0.557100,0.557100,0.557100,0.696000,0.696000,0.795900,0.795900,0.865400,0.865400,0.920800,0.920800,0.962700,0.962700,0.983800,0.983800,1.000000,1.000000,0.996200,0.996200,0.978300,0.978300,0.949700,0.949700,0.904500,0.904500,0.846800,0.846800,0.789500,0.789500,0.722900,0.722900,0.661100,0.661100,0.593700,0.593700,0.525600,0.525600,0.456500,0.456500,0.377600,0.377600,0.294300,0.294300,0.205300,0.205300,0.132300,0.132300,0.076700,0.076700,0.041900,0.041900,0.022000,0.022000,0.011700,0.011700,0.006700,0.006700,0.003900,0.003900,0.000000,0.000000,0.000000])
+        s.wavelength = Py6S.Wavelength(0.750, 0.945, [0.000000,0.000000,0.005400,0.005400,0.016100,0.016100,0.042900,0.042900,0.096600,0.096600,0.183500,0.183500,0.297400,0.297400,0.433700,0.433700,0.565000,0.565000,0.691000,0.691000,0.792200,0.792200,0.873300,0.873300,0.928600,0.928600,0.965000,0.965000,0.989700,0.989700,0.997900,0.997900,1.000000,1.000000,0.991200,0.991200,0.978700,0.978700,0.960700,0.960700,0.940400,0.940400,0.921500,0.921500,0.890800,0.890800,0.869500,0.869500,0.814700,0.814700,0.734400,0.734400,0.612700,0.612700,0.457600,0.457600,0.327200,0.327200,0.216800,0.216800,0.134300,0.134300,0.087400,0.087400,0.058200,0.058200,0.035800,0.035800,0.023700,0.023700,0.016700,0.016700,0.011400,0.011400,0.007800,0.007800,0.005300,0.005300,0.000000])
         s.run()
         sixsCoeffs[2,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[2,1] = float(s.outputs.values['coef_xb'])
@@ -667,9 +667,9 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)
         if not dataset is None:
-            dataset.GetRasterBand(1).SetDescription("NIR")
+            dataset.GetRasterBand(1).SetDescription("GREEN")
             dataset.GetRasterBand(2).SetDescription("RED")
-            dataset.GetRasterBand(3).SetDescription("GREEN")
+            dataset.GetRasterBand(3).SetDescription("NIR")
             dataset.GetRasterBand(4).SetDescription("SWIR")
             dataset = None
         else:
