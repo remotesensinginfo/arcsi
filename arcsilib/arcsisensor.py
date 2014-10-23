@@ -86,8 +86,9 @@ class ARCSIAbstractSensor (object):
     """
     __metaclass__ = ABCMeta
         
-    def __init__(self, debugMode):
+    def __init__(self, debugMode, inputImage):
         self.sensor = "NA"
+        self.userSpInputImage = inputImage
         self.debugMode = debugMode
         self.acquisitionTime = datetime.datetime.today()
         self.latTL = 0.0

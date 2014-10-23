@@ -75,8 +75,8 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
     A class which represents the RapidEye sensor to read
     header parameters and apply data processing operations.
     """
-    def __init__(self, debugMode):
-        ARCSIAbstractSensor.__init__(self, debugMode)
+    def __init__(self, debugMode, inputImage):
+        ARCSIAbstractSensor.__init__(self, debugMode, inputImage)
         self.sensor = "RapidEye"
         self.platOrbitType = ""
         self.platSerialId = ""
@@ -107,6 +107,20 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             print("Reading header file")
             tree = ET.parse(inputHeader)
             root = tree.getroot()
+            
+            rapideyeUrl = '{http://schemas.rapideye.de/products/productMetadataGeocorrected}'
+            metaDataProperty = root.find('{http://www.opengis.net/gml}metaDataProperty')
+            eoMetaData = metaDataProperty.find(rapideyeUrl+'EarthObservationMetaData')
+            if eoMetaData is None:
+                rapideyeUrl = '{http://schemas.rapideye.de/products/productMetadataSensor}'
+                eoMetaData = metaDataProperty.find(rapideyeUrl+'EarthObservationMetaData')
+            productType = eoMetaData.find('{http://earth.esa.int/eop}productType').text.strip()
+            print("productType = \'" + productType + "\'")
+                        
+            if (productType == "L1B") and (self.userSpInputImage is None):
+                raise ARCSIException("L1B data is supported by ARCSI only when a user defined image is provided.")
+            elif (productType != "L3A") & (productType != "L1B"):
+                raise ARCSIException("Only L3A and L1B data are supported by ARCSI.")
                 
             eoPlatform = root.find('{http://www.opengis.net/gml}using').find('{http://earth.esa.int/eop}EarthObservationEquipment').find('{http://earth.esa.int/eop}platform').find('{http://earth.esa.int/eop}Platform')               
             self.platShortHand = eoPlatform.find('{http://earth.esa.int/eop}shortName').text.strip()
@@ -123,21 +137,21 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             self.instShortHand = eoInstrument.find('{http://earth.esa.int/eop}shortName').text.strip()
             print("self.instShortHand = ", self.instShortHand)
                 
-            eoSensor = root.find('{http://www.opengis.net/gml}using').find('{http://earth.esa.int/eop}EarthObservationEquipment').find('{http://earth.esa.int/eop}sensor').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}Sensor')
+            eoSensor = root.find('{http://www.opengis.net/gml}using').find('{http://earth.esa.int/eop}EarthObservationEquipment').find('{http://earth.esa.int/eop}sensor').find(rapideyeUrl+'Sensor')
             self.senrType = eoSensor.find('{http://earth.esa.int/eop}sensorType').text.strip()
             print("self.senrType = ", self.senrType)
             self.senrRes = float(eoSensor.find('{http://earth.esa.int/eop}resolution').text.strip())
             print("self.senrRes = ", self.senrRes)
-            self.senrScanType = eoSensor.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}scanType').text.strip()
+            self.senrScanType = eoSensor.find(rapideyeUrl+'scanType').text.strip()
             print("self.senrScanType = ", self.senrScanType)
                 
-            eoAcquParams = root.find('{http://www.opengis.net/gml}using').find('{http://earth.esa.int/eop}EarthObservationEquipment').find('{http://earth.esa.int/eop}acquisitionParameters').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}Acquisition')
+            eoAcquParams = root.find('{http://www.opengis.net/gml}using').find('{http://earth.esa.int/eop}EarthObservationEquipment').find('{http://earth.esa.int/eop}acquisitionParameters').find(rapideyeUrl+'Acquisition')
             
             self.acquIncidAngle = float(eoAcquParams.find('{http://earth.esa.int/eop}incidenceAngle').text.strip())
             print("self.acquIncidAngle: ", self.acquIncidAngle)
-            self.acquAzimuthAngle = float(eoAcquParams.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}azimuthAngle').text.strip())
+            self.acquAzimuthAngle = float(eoAcquParams.find(rapideyeUrl+'azimuthAngle').text.strip())
             print("self.acquAzimuthAngle: ", self.acquAzimuthAngle)
-            self.acquCraftViewAngle = float(eoAcquParams.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}spaceCraftViewAngle').text.strip())
+            self.acquCraftViewAngle = float(eoAcquParams.find(rapideyeUrl+'spaceCraftViewAngle').text.strip())
             print("self.acquCraftViewAngle: ", self.acquCraftViewAngle)
             
             self.solarZenith = 90-float(eoAcquParams.find('{http://earth.esa.int/opt}illuminationElevationAngle').text.strip())
@@ -148,7 +162,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             print("self.senorZenith: ", self.senorZenith)
             self.senorAzimuth = self.acquAzimuthAngle
             print("self.senorAzimuth: ", self.senorAzimuth)
-            timeStr = eoAcquParams.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}acquisitionDateTime').text.strip()
+            timeStr = eoAcquParams.find(rapideyeUrl+'acquisitionDateTime').text.strip()
             timeStr = timeStr.replace('Z', '')
             try:
                 self.acquisitionTime = datetime.datetime.strptime(timeStr, "%Y-%m-%dT%H:%M:%S.%f")
@@ -159,34 +173,37 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     raise e
             print("self.acquisitionTime: ", self.acquisitionTime)
             
-            metadata = root.find('{http://www.opengis.net/gml}metaDataProperty').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}EarthObservationMetaData')
-            self.tileID = metadata.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}tileId').text.strip()
-            self.orderID = metadata.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}orderId').text.strip()
-            self.pixelFormat = metadata.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}pixelFormat').text.strip()
+            metadata = root.find('{http://www.opengis.net/gml}metaDataProperty').find(rapideyeUrl+'EarthObservationMetaData')
+            if not  metadata.find(rapideyeUrl+'tileId') is None:
+                self.tileID = metadata.find(rapideyeUrl+'tileId').text.strip()
+            else:
+                self.tileID = ""
+            self.orderID = metadata.find(rapideyeUrl+'orderId').text.strip()
+            self.pixelFormat = metadata.find(rapideyeUrl+'pixelFormat').text.strip()
             print("self.tileID = ", self.tileID)
             print("self.pixelFormat = ", self.pixelFormat)
             
             
-            centrePt = root.find('{http://www.opengis.net/gml}target').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}Footprint').find('{http://www.opengis.net/gml}centerOf').find('{http://www.opengis.net/gml}Point').find('{http://www.opengis.net/gml}pos').text.strip()
+            centrePt = root.find('{http://www.opengis.net/gml}target').find(rapideyeUrl+'Footprint').find('{http://www.opengis.net/gml}centerOf').find('{http://www.opengis.net/gml}Point').find('{http://www.opengis.net/gml}pos').text.strip()
             centrePtSplit = centrePt.split(' ')
             self.latCentre = float(centrePtSplit[0])
             self.lonCentre = float(centrePtSplit[1])
             print("self.latCentre = ", self.latCentre)
             print("self.lonCentre = ", self.lonCentre)
             
-            imgBounds = root.find('{http://www.opengis.net/gml}target').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}Footprint').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}geographicLocation')
-            tlPoint = imgBounds.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}topLeft')
-            self.latTL = float(tlPoint.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}latitude').text)
-            self.lonTL = float(tlPoint.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}longitude').text)
-            trPoint = imgBounds.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}topRight')
-            self.latTR = float(trPoint.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}latitude').text)
-            self.lonTR = float(trPoint.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}longitude').text)
-            brPoint = imgBounds.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}bottomRight')
-            self.latBR = float(brPoint.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}latitude').text)
-            self.lonBR = float(brPoint.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}longitude').text)
-            blPoint = imgBounds.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}bottomLeft')
-            self.latBL = float(blPoint.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}latitude').text)
-            self.lonBL = float(blPoint.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}longitude').text)
+            imgBounds = root.find('{http://www.opengis.net/gml}target').find(rapideyeUrl+'Footprint').find(rapideyeUrl+'geographicLocation')
+            tlPoint = imgBounds.find(rapideyeUrl+'topLeft')
+            self.latTL = float(tlPoint.find(rapideyeUrl+'latitude').text)
+            self.lonTL = float(tlPoint.find(rapideyeUrl+'longitude').text)
+            trPoint = imgBounds.find(rapideyeUrl+'topRight')
+            self.latTR = float(trPoint.find(rapideyeUrl+'latitude').text)
+            self.lonTR = float(trPoint.find(rapideyeUrl+'longitude').text)
+            brPoint = imgBounds.find(rapideyeUrl+'bottomRight')
+            self.latBR = float(brPoint.find(rapideyeUrl+'latitude').text)
+            self.lonBR = float(brPoint.find(rapideyeUrl+'longitude').text)
+            blPoint = imgBounds.find(rapideyeUrl+'bottomLeft')
+            self.latBL = float(blPoint.find(rapideyeUrl+'latitude').text)
+            self.lonBL = float(blPoint.find(rapideyeUrl+'longitude').text)
                         
             print("self.latTL = ", self.latTL)
             print("self.lonTL = ", self.lonTL)
@@ -198,23 +215,23 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             print("self.lonBL = ", self.lonBL)
             
             
-            productInfo = root.find('{http://www.opengis.net/gml}resultOf').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}EarthObservationResult').find('{http://earth.esa.int/eop}product').find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}ProductInformation')
+            productInfo = root.find('{http://www.opengis.net/gml}resultOf').find(rapideyeUrl+'EarthObservationResult').find('{http://earth.esa.int/eop}product').find(rapideyeUrl+'ProductInformation')
 
-            spatialRef = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}spatialReferenceSystem')
+            spatialRef = productInfo.find(rapideyeUrl+'spatialReferenceSystem')
             
-            epsgCode = int(spatialRef.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}epsgCode').text)
+            epsgCode = int(spatialRef.find(rapideyeUrl+'epsgCode').text)
             inProj = osr.SpatialReference()
             inProj.ImportFromEPSG(epsgCode)
             if self.inWKT == "":
                 self.inWKT = inProj.ExportToWkt()
             print("WKT: ", self.inWKT)
             
-            self.numOfBands = int(productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}numBands').text.strip())
+            self.numOfBands = int(productInfo.find(rapideyeUrl+'numBands').text.strip())
             print('self.numOfBands = ', self.numOfBands)
             if self.numOfBands != 5:
                 raise ARCSIException("The number of image band is not equal to 5 according to XML header.")
             
-            radioCorrAppliedStr = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}radiometricCorrectionApplied').text.strip()
+            radioCorrAppliedStr = productInfo.find(rapideyeUrl+'radiometricCorrectionApplied').text.strip()
             if radioCorrAppliedStr == "true":
                 self.radioCorrApplied = True
             else:
@@ -222,14 +239,14 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             
             if self.radioCorrApplied:
                 try:
-                    self.radioCorrVersion = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}radiometricCalibrationVersion').text.strip()
+                    self.radioCorrVersion = productInfo.find(rapideyeUrl+'radiometricCalibrationVersion').text.strip()
                 except Exception:
                     self.radioCorrVersion = 'Unknown'
             else:
                 self.radioCorrVersion = 'Not Applied'
             print('self.radioCorrVersion = ', self.radioCorrVersion)
             
-            atmosCorrAppliedStr = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}atmosphericCorrectionApplied').text.strip()
+            atmosCorrAppliedStr = productInfo.find(rapideyeUrl+'atmosphericCorrectionApplied').text.strip()
             if atmosCorrAppliedStr == "true":
                 self.atmosCorrApplied = True
             else:
@@ -239,18 +256,21 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
             if self.atmosCorrApplied:
                 raise ARCSIException("An atmosheric correction has already been applied according to the metadata.")
             
-            elevCorrAppliedStr = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}elevationCorrectionApplied').text.strip()
+            elevCorrAppliedStr = productInfo.find(rapideyeUrl+'elevationCorrectionApplied').text.strip()
             if elevCorrAppliedStr == "true":
                 self.elevCorrApplied = True
             else:
                 self.elevCorrApplied = False
             print('self.elevCorrApplied = ', self.elevCorrApplied)
             
-            self.geoCorrLevel = productInfo.find('{http://schemas.rapideye.de/products/productMetadataGeocorrected}geoCorrectionLevel').text.strip()
+            self.geoCorrLevel = productInfo.find(rapideyeUrl+'geoCorrectionLevel').text.strip()
             print('self.geoCorrLevel = ', self.geoCorrLevel)
             
             filesDIR = os.path.dirname(inputHeader)
-            self.fileName = os.path.join(filesDIR, productInfo.find('{http://earth.esa.int/eop}fileName').text.strip())
+            if not self.userSpInputImage is None:
+                self.fileName = os.path.abspath(self.userSpInputImage)
+            else:
+                self.fileName = os.path.join(filesDIR, productInfo.find('{http://earth.esa.int/eop}fileName').text.strip())
             print('self.fileName = ', self.fileName)
             
             # Haven't been defined yet!!
@@ -272,10 +292,12 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         """
         Customises the generic name for the RapidEye sensor
         """
-        reTileID = "tid" + str(self.tileID)
-        reOrderID = "oid" + str(self.orderID)
+        reTileID = ""
+        if self.tileID != "":
+            reTileID = "_tid" + str(self.tileID)
+        reOrderID = "_oid" + str(self.orderID)
         outname = self.defaultGenBaseOutFileName()
-        outname = outname + str("_") + reTileID + str("_") + reOrderID
+        outname = outname + reTileID + reOrderID
         return outname
     
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):

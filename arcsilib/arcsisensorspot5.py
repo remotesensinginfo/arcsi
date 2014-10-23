@@ -75,8 +75,8 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
     A class which represents the RapidEye sensor to read
     header parameters and apply data processing operations.
     """
-    def __init__(self, debugMode):
-        ARCSIAbstractSensor.__init__(self, debugMode)
+    def __init__(self, debugMode, inputImage):
+        ARCSIAbstractSensor.__init__(self, debugMode, inputImage)
         self.sensor = "SPOT5"
 
         self.fileName = ""
@@ -199,7 +199,10 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
             print("self.senorAzimuth: ", self.senorAzimuth)            
             
             filesDIR = os.path.dirname(inputHeader)
-            self.fileName = os.path.join(filesDIR, root.find('Data_Access').find('Data_File').find('DATA_FILE_PATH').attrib['href'])
+            if not self.userSpInputImage is None:
+            	self.fileName = os.path.abspath(self.userSpInputImage)
+            else:
+                self.fileName = os.path.join(filesDIR, root.find('Data_Access').find('Data_File').find('DATA_FILE_PATH').attrib['href'])
             print("self.fileName = " + self.fileName)            
             
             spectralBandInfo = root.find('Image_Interpretation').findall('Spectral_Band_Info')
