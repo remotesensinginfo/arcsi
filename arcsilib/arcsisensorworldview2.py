@@ -218,7 +218,7 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             
             filesDIR = os.path.dirname(inputHeader)
             if not self.userSpInputImage is None:
-            	self.fileName = os.path.abspath(self.userSpInputImage)
+                self.fileName = os.path.abspath(self.userSpInputImage)
             else:
                 self.fileName = os.path.join(filesDIR, imageTileInfoTag.find('FILENAME').text.strip())
             
