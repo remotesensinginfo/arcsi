@@ -200,7 +200,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
             
             filesDIR = os.path.dirname(inputHeader)
             if not self.userSpInputImage is None:
-            	self.fileName = os.path.abspath(self.userSpInputImage)
+                self.fileName = os.path.abspath(self.userSpInputImage)
             else:
                 self.fileName = os.path.join(filesDIR, root.find('Data_Access').find('Data_File').find('DATA_FILE_PATH').attrib['href'])
             print("self.fileName = " + self.fileName)            
