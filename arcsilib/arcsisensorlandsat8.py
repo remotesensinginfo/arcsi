@@ -772,7 +772,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             aotVals = aotVals[PredictAOTFor!=0]
         
             interpSmoothing = 10.0
-            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
+            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing, True, 0.05)
             
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName("KEA")
@@ -796,14 +796,14 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             blockSize = 1000
             if simpleDOS:
                 outputDOSBlueName = tmpBaseName + "DOSBlue" + imgExtension
-                dosBlueImage = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 2)
+                dosBlueImage, bandOff = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 2)
             elif globalDOS:
                 dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 2, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
                 dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 2, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)            
                         
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
-            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat="KEA", numClusters=20, minPxls=10, bands=[5,6,4], processInMem=True)
+            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalformat="KEA", numClusters=20, minPxls=10, bands=[5,6,4], processInMem=True)
             
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanElev"))
@@ -885,7 +885,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             aotVals = aotVals[PredictAOTFor!=0]
         
             interpSmoothing = 10.0
-            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
+            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing, True, 0.05)
                     
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
@@ -895,6 +895,12 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             return outputAOTImage
         except Exception as e:
             raise e
+     
+     def estimateSingleAOTFromDOS(self, radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl):
+        try:
+            return self.estimateSingleAOTFromDOSBandImpl(radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl, 2)
+        except Exception as e:
+            raise
             
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)

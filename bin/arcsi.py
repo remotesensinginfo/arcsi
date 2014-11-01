@@ -249,6 +249,7 @@ class ARCSI (object):
             prodsToCalc["CLOUDS"] = False
             prodsToCalc["DDVAOT"] = False
             prodsToCalc["DOSAOT"] = False
+            prodsToCalc["DOSAOTSGL"] = False
             prodsToCalc["SREF"] = False
             prodsToCalc["DOS"] = False
             prodsToCalc["THERMAL"] = False
@@ -276,6 +277,11 @@ class ARCSI (object):
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
                     prodsToCalc["DDVAOT"] = True
+                    needAtmModel = True
+                elif prod == 'DOSAOTSGL':
+                    prodsToCalc["RAD"] = True
+                    prodsToCalc["TOA"] = True
+                    prodsToCalc["DOSAOTSGL"] = True
                     needAtmModel = True
                 elif prod == 'SREF':
                     prodsToCalc["RAD"] = True
@@ -493,8 +499,27 @@ class ARCSI (object):
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
                 print("")
-                        
-            # Step 7: Use image to estimate AOD values
+            
+            
+            # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
+            if prodsToCalc["DOS"]:
+                print("Convert to reflectance using dark object subtraction.")
+                outName = outBaseName + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)  
+                if simpleDOS:
+                    srefImage = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImage, outFilePath, outName, outFormat, dosOutRefl)
+                else:        
+                    srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath, globalDOS, dosOutRefl)
+            
+                print("Setting Band Names...")
+                sensorClass.setBandNames(srefImage)
+
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+                    print("")
+            
+                       
+            # Step 9: Use image to estimate AOD values
             if prodsToCalc["DDVAOT"]:
                 outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
                 aotFile = sensorClass.estimateImageToAODUsingDDV(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT)
@@ -511,7 +536,10 @@ class ARCSI (object):
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
                 print("")
             
-            # Step 8: Convert to Surface Reflectance using 6S Standard Models
+            if prodsToCalc["DOSAOTSGL"]:
+            	aotVal = sensorClass.estimateSingleAOTFromDOS(radianceImage, toaImage, outDEMName, tmpPath, outBaseName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl)
+            
+            # Step 10: Convert to Surface Reflectance using 6S Standard Models
             if prodsToCalc["SREF"]:
                 # Execute conversion to surface reflectance by applying 6S using a 'standard' modelled atmosphere.
                 
@@ -519,11 +547,9 @@ class ARCSI (object):
                     imgDS = gdal.Open(aotFile, gdal.GA_ReadOnly )
                     imgBand = imgDS.GetRasterBand(1)
                     (min,max,mean,stddev) = imgBand.ComputeStatistics(False)
-                    if stddev > 0.1:
-                        aotVal = mean - stddev
-                        print("WARNING: The standard deviation of AOT values is high - use an LUT and full version of ARCSI.")
-                    else:
-                        aotVal = mean           
+                    print("AOT Mean (Std Dev) = " + str(mean) + " (" + str(stddev) + ")")
+                    print("AOT [Min, Max] = [" + str(min) + "," + str(max) + "]")
+                    aotVal = mean           
                     imgDS = None
 
                 if (aotVal == None) and (visVal == None) and (aotFile == ""):
@@ -577,22 +603,7 @@ class ARCSI (object):
                     rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
                 print("")
                     
-            # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
-            if prodsToCalc["DOS"]:
-                print("Convert to reflectance using dark object subtraction.")
-                outName = outBaseName + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)  
-                if simpleDOS:
-                    srefImage = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImage, outFilePath, outName, outFormat, dosOutRefl)
-                else:        
-                    srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath, globalDOS, dosOutRefl)
             
-                print("Setting Band Names...")
-                sensorClass.setBandNames(srefImage)
-
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
-                    print("")
                 
         except ARCSIException as e:
             print("Error: " + str(e))
@@ -714,9 +725,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOS and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, SREF, DOS, THERMAL, TOPOSHADOW)''')
+                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW)''')
     # Define the argument for requesting a list of products.
     parser.add_argument("--prodlist", action='store_true', default=False, 
                         help='''List the products which are supported and 
@@ -767,7 +778,8 @@ if __name__ == '__main__':
     # Define the argument which specifies the ground reflectance.
     parser.add_argument("--grdrefl", type=str, default="GreenVegetation", choices=['GreenVegetation',  
     'ClearWater', 'Sand', 'LakeWater', 'BRDFHapke'], help='''Specify the ground reflectance used for the 
-                                                6S model. (GreenVegetation, ClearWater, Sand, LakeWater, BRDFHapke).''')
+                                                             6S model. (GreenVegetation, ClearWater, Sand, 
+                                                             LakeWater, BRDFHapke).''')
     # Define the argument for specifying the surface elevation for the scene.
     parser.add_argument("--surfacealtitude", type=float, default="0",
                         help='''Specify the altiude (in km) of the surface being sensed.''')
@@ -809,7 +821,7 @@ if __name__ == '__main__':
     parser.add_argument("--dosout", type=float, default=20, 
                         help='''Specifies the reflectance value to which dark objects
                         are set to during the dark object subtraction. (Default is 20, 
-                        which is equivalent to 2 % reflectance.''')
+                        which is equivalent to 2 percent reflectance.''')
                         
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -886,6 +898,13 @@ if __name__ == '__main__':
                 needAODMinMax = True
                 needTmp = True
                 needDEM = True
+            elif prod == 'DOSAOTSGL':
+                needAODMinMax = True
+                needDEM = True
+                if not args.simpledos:
+                    print("ERROR: 'DOSAOTSGL' product can only be used with the --simpledos option.\n")
+                    parser.print_help()
+                    sys.exit()
             elif prod == 'TOPOSHADOW':
                 needTmp = True
                 needDEM = True

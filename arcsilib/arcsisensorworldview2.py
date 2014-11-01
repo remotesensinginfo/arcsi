@@ -520,8 +520,8 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
         s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromRadiance(200)
         s.aot550 = aotVal
                 
-        # Band 2 (Blue!)
-        s.wavelength = Py6S.Wavelength(0.450, 0.510, [0.6457, 0.6825, 0.7193, 0.7561, 0.7929, 0.8001, 0.8073, 0.8145, 0.8217, 0.8353, 0.8489, 0.8624, 0.8760, 0.8862, 0.8964, 0.9066, 0.9168, 0.9277, 0.9387, 0.9496, 0.9606, 0.8384, 0.7161, 0.5939, 0.4717])
+        # Band 2 - Blue
+        s.wavelength = Py6S.Wavelength(0.45, 0.51, [0.6457, 0.6825, 0.7193, 0.7561, 0.7929, 0.8001, 0.8073, 0.8145, 0.8217, 0.8353, 0.8489, 0.8624, 0.8760, 0.8862, 0.8964, 0.9066, 0.9168, 0.9277, 0.9387, 0.9496, 0.9606, 0.8384, 0.7161, 0.5939, 0.4717])
         s.run()
         aX = float(s.outputs.values['coef_xa'])
         bX = float(s.outputs.values['coef_xb'])
@@ -587,14 +587,14 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             blockSize = 1000
             if simpleDOS:
                 outputDOSBlueName = tmpBaseName + "DOSBlue" + imgExtension
-                dosBlueImage = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 2)
+                dosBlueImage, bandOff = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 2)
             elif globalDOS:
                 dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 2, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
                 dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 2, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
                         
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
-            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat="KEA", numClusters=40, minPxls=10, bands=[8,6,1], processInMem=True)
+            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalformat="KEA", numClusters=40, minPxls=10, bands=[8,6,1], processInMem=True)
             
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanElev"))
@@ -676,7 +676,7 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             aotVals = aotVals[PredictAOTFor!=0]
         
             interpSmoothing = 10.0
-            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
+            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing, True, 0.05)
             
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
@@ -686,6 +686,12 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             return outputAOTImage
         except Exception as e:
             raise e
+    
+    def estimateSingleAOTFromDOS(self, radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl):
+        try:
+            return self.estimateSingleAOTFromDOSBandImpl(radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl, 2)
+        except Exception as e:
+            raise
     
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)

@@ -476,7 +476,6 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
         s.aero_profile = aeroProfile
-        #s.ground_reflectance = Py6S.GroundReflectance.HomogeneousHapke(0.101, -0.263, 0.589, 0.046)
         s.ground_reflectance = grdRefl
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
@@ -494,8 +493,8 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromRadiance(200)
         s.aot550 = aotVal
                 
-        # Band 1 (Blue!)
-        s.wavelength = Py6S.Wavelength(0.435, 0.515, [0.001, 0.004, 0.321, 0.719, 0.74, 0.756, 0.77, 0.78, 0.784, 0.792, 0.796, 0.799, 0.806, 0.804, 0.807, 0.816, 0.82, 0.825, 0.84, 0.845, 0.862, 0.875, 0.886, 0.905, 0.928, 0.936, 0.969, 0.967, 1, 0.976, 0.437, 0.029, 0.001])
+        # Band 2 (Red!)
+        s.wavelength = Py6S.Wavelength(0.580, 0.7425, [0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.001700,0.001700,0.022000,0.022000,0.116500,0.116500,0.315300,0.315300,0.533600,0.533600,0.704900,0.704900,0.826400,0.826400,0.902100,0.902100,0.951500,0.951500,0.979600,0.979600,0.994200,0.994200,1.000000,1.000000,0.997300,0.997300,0.981800,0.981800,0.945000,0.945000,0.863200,0.863200,0.717100,0.717100,0.534000,0.534000,0.356000,0.356000,0.222900,0.222900,0.132700,0.132700,0.079200,0.079200,0.047600,0.047600,0.029100,0.029100,0.018000,0.018000,0.011100,0.011100,0.006800,0.006800,0.004200,0.004200,0.002500,0.002500])
         s.run()
         aX = float(s.outputs.values['coef_xa'])
         bX = float(s.outputs.values['coef_xb'])
@@ -564,14 +563,14 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
             blockSize = 1000
             if simpleDOS:
                 outputDOSBlueName = tmpBaseName + "DOSGreen" + imgExtension
-                dosGreenImage = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 1)
+                dosGreenImage, bandOff = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 1)
             elif globalDOS:
                 dosGreenImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Green", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
                 dosGreenImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Green", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
                         
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
-            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalFormat="KEA", numClusters=40, minPxls=10, bands=[5,4,1], processInMem=True)
+            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalformat="KEA", numClusters=40, minPxls=10, bands=[5,4,1], processInMem=True)
             
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanElev"))
@@ -653,7 +652,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
             aotVals = aotVals[PredictAOTFor!=0]
         
             interpSmoothing = 10.0
-            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing)
+            self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing, True, 0.05)
             
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
@@ -663,6 +662,12 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
             return outputAOTImage
         except Exception as e:
             raise e
+    
+    def estimateSingleAOTFromDOS(self, radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl):
+        try:
+            return self.estimateSingleAOTFromDOSBandImpl(radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl, 2)
+        except Exception as e:
+            raise
     
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)
