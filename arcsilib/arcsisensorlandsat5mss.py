@@ -117,14 +117,18 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
                             headerParams[lineVals[0].strip()] = lineVals[1].strip().replace('"','')
             hFile.close()
             print("Extracting Header Values")
+            
             # Get the sensor info.
-            if ((headerParams["SPACECRAFT_ID"] == "LANDSAT_5") or (headerParams["SPACECRAFT_ID"] == "LANDSAT5")) and (headerParams["SENSOR_ID"] == "MSS"):
+            if ((headerParams["SPACECRAFT_ID"].upper() == "LANDSAT_5") or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT5")) and (headerParams["SENSOR_ID"].upper() == "MSS"):
                 self.sensor = "LS5MSS"
             else:
                 raise ARCSIException("Do no recognise the spacecraft and sensor or combination.")
             
             # Get row/path
-            self.row = int(headerParams["WRS_ROW"])
+            try:
+                self.row = int(headerParams["WRS_ROW"])
+            except Exception as e:
+                self.row = int(headerParams["STARTING_ROW"])
             self.path = int(headerParams["WRS_PATH"])
             
             # Get date and time of the acquisition

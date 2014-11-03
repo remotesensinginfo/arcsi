@@ -118,7 +118,7 @@ class ARCSILandsat4MSSSensor (ARCSIAbstractSensor):
             hFile.close()
             print("Extracting Header Values")
             # Get the sensor info.
-            if ((headerParams["SPACECRAFT_ID"] == "LANDSAT_4") or (headerParams["SPACECRAFT_ID"] == "LANDSAT4")) and (headerParams["SENSOR_ID"] == "MSS"):
+            if ((headerParams["SPACECRAFT_ID"].upper() == "LANDSAT_4") or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT4")) and (headerParams["SENSOR_ID"].upper() == "MSS"):
                 self.sensor = "LS4MSS"
             else:
                 raise ARCSIException("Do no recognise the spacecraft and sensor or combination.")

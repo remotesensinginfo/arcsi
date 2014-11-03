@@ -79,6 +79,8 @@ from rios.imagereader import ImageReader
 from rios.imagewriter import ImageWriter
 # Import the RBF interpolator from scipy
 import scipy.interpolate.rbf
+# Import scipy interpolation library
+import scipy.interpolate 
 
 class ARCSIAbstractSensor (object):
     """
@@ -432,7 +434,7 @@ class ARCSIAbstractSensor (object):
         MinTOARefl = MinTOARefl[SelectedGrid!=0]
         
         interpSmoothing = 10.0
-        self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing, 0.0)
+        self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing, True, 0.0)
     
     def findPerBandDarkTargetsOffsets(self, inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile):
         try:
@@ -765,7 +767,6 @@ class ARCSIAbstractSensor (object):
     def estimateSingleAOTFromDOSBandImpl(self, radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, dosOutRefl, imgBand):
         try:
             print("Estimating a single AOD value Using DOS")
-            
             # Using a simple DOS find RAD and SREF a value from within the image.
             radVal = 0.0
             srefVal = 0.0
@@ -809,7 +810,7 @@ class ARCSIAbstractSensor (object):
             
             maxObjSizeArrIdx = numpy.where(Histogram == numpy.max(Histogram))
             
-            print("maxObjSizeArrIdx = ", maxObjSizeArrIdx[0][0])
+            #print("maxObjSizeArrIdx = ", maxObjSizeArrIdx[0][0])
             
             reflTOA = MeanTOARefl[maxObjSizeArrIdx][0]
             reflDOS = reflTOA - bandOff
@@ -819,10 +820,10 @@ class ARCSIAbstractSensor (object):
             radVal = MeanRad[maxObjSizeArrIdx][0]
             elevVal = MeanElev[maxObjSizeArrIdx][0]
             
-            print("reflTOA = ", reflTOA)
-            print("reflDOS = ", reflDOS)
-            print("radVal = ", radVal)
-            print("elevVal = ", elevVal)
+            #print("reflTOA = ", reflTOA)
+            #print("reflDOS = ", reflDOS)
+            #print("radVal = ", radVal)
+            #print("elevVal = ", elevVal)
             
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
@@ -861,15 +862,42 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def setBandNames(self, imageFile): pass
     
+#    def interpolateImageFromPointData(self, templateInImage, xVals, yVals, zVals, outputImage, outFormat, smoothingParam, notNegOut, notNegMinVal):
+#        print("Interpolating Image: Number of Features = ", xVals.shape[0])
+#        rbfi = scipy.interpolate.rbf.Rbf(xVals, yVals, zVals, function='linear', smooth=smoothingParam)
+#        
+#        reader = ImageReader(templateInImage, windowxsize=200, windowysize=200)
+#        writer = None
+#        for (info, block) in reader:
+#            pxlCoords = info.getBlockCoordArrays()
+#            interZ = rbfi(pxlCoords[0].flatten(), pxlCoords[1].flatten())
+#            if notNegOut:
+#                interZ = numpy.where(interZ < 0, notNegMinVal, interZ)
+#            out = numpy.reshape(interZ, block[0].shape)
+#            out = numpy.expand_dims(out, axis=0)
+#    
+#            if writer is None:
+#                writer = ImageWriter(outputImage, 
+#                                     info=info, 
+#                                     firstblock=out, 
+#                                     drivername=outFormat,
+#                                     creationoptions=[])
+#            else:
+#                writer.write(out)
+#        writer.close(calcStats=True)
+#        print("Interpolating Image - Complete")
+        
+        
     def interpolateImageFromPointData(self, templateInImage, xVals, yVals, zVals, outputImage, outFormat, smoothingParam, notNegOut, notNegMinVal):
         print("Interpolating Image: Number of Features = ", xVals.shape[0])
-        rbfi = scipy.interpolate.rbf.Rbf(xVals, yVals, zVals, function='linear', smooth=smoothingParam)
         
         reader = ImageReader(templateInImage, windowxsize=200, windowysize=200)
         writer = None
         for (info, block) in reader:
             pxlCoords = info.getBlockCoordArrays()
-            interZ = rbfi(pxlCoords[0].flatten(), pxlCoords[1].flatten())
+            interZnn = scipy.interpolate.griddata((xVals, yVals), zVals, (pxlCoords[0].flatten(), pxlCoords[1].flatten()), method='nearest')
+            interZcub = scipy.interpolate.griddata((xVals, yVals), zVals, (pxlCoords[0].flatten(), pxlCoords[1].flatten()), method='cubic')
+            interZ = numpy.where(numpy.isnan(interZcub), interZnn, interZcub)
             if notNegOut:
                 interZ = numpy.where(interZ < 0, notNegMinVal, interZ)
             out = numpy.reshape(interZ, block[0].shape)

@@ -155,7 +155,7 @@ class ARCSI (object):
     def findMinimumAOT(self, aot):
         aotVal = 0
         outAOT = 0
-        for i in range(20):
+        for i in range(200):
             if (aot > aotVal) & (aot < (aotVal+0.05)):
                 outAOT = aotVal
                 break
@@ -165,7 +165,7 @@ class ARCSI (object):
     def findMaximumAOT(self, aot):
         aotVal = 0
         outAOT = 0
-        for i in range(20):
+        for i in range(200):
             if (aot > aotVal) & (aot < (aotVal+0.05)):
                 outAOT = aotVal+ 0.05
                 break
@@ -177,8 +177,8 @@ class ARCSI (object):
             productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, 
             atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, 
             atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, 
-            aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, demFile, aotFile, 
-            globalDOS, dosOutRefl, simpleDOS, debugMode):
+            aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, 
+            demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode):
         """
         A function contains the main flow of the software
         """
@@ -520,6 +520,12 @@ class ARCSI (object):
             
                        
             # Step 9: Use image to estimate AOD values
+            if prodsToCalc["DOSAOTSGL"]:
+            	aotVal = sensorClass.estimateSingleAOTFromDOS(radianceImage, toaImage, outDEMName, tmpPath, outBaseName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl)
+            	minAOT = aotVal - lowAOT
+            	maxAOT = aotVal + upAOT
+            	print("AOT Search Range = [" + str(minAOT) + ", " + str(maxAOT) + "]")
+            
             if prodsToCalc["DDVAOT"]:
                 outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
                 aotFile = sensorClass.estimateImageToAODUsingDDV(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT)
@@ -535,10 +541,7 @@ class ARCSI (object):
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
                 print("")
-            
-            if prodsToCalc["DOSAOTSGL"]:
-            	aotVal = sensorClass.estimateSingleAOTFromDOS(radianceImage, toaImage, outDEMName, tmpPath, outBaseName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl)
-            
+                        
             # Step 10: Convert to Surface Reflectance using 6S Standard Models
             if prodsToCalc["SREF"]:
                 # Execute conversion to surface reflectance by applying 6S using a 'standard' modelled atmosphere.
@@ -632,24 +635,24 @@ class ARCSI (object):
         ARCSI command line argument.
         """
         print("Supported Sensors are:")
-        print("\t-------------------------------------------------------")
+        print("\t-----------------------------------------------------------------------------------------------------")
         print("\tSensor        | Shorthand     | Functions")
-        print("\t-------------------------------------------------------")
-        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
-        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
-        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
-        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
-        print("\tLandsat 4 TM  | \'ls4tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
-        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
-        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
-        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
-        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, SREF, DOS, THERMAL, TOPOSHADOW")
-        print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
-        print("\tWorldView2    | \'wv2\'       | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
-        print("\tSPOT5         | \'spot5\'     | RAD, TOA, DOSAOT, SREF, DOS, TOPOSHADOW")
-        print("\t-------------------------------------------------------")
+        print("\t-----------------------------------------------------------------------------------------------------")
+        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
+        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
+        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
+        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
+        print("\tLandsat 4 TM  | \'ls4tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW")
+        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
+        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW")
+        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW")
+        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW")
+        print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
+        print("\tWorldView2    | \'wv2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
+        print("\tSPOT5         | \'spot5\'     | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
+        print("\t-----------------------------------------------------------------------------------------------------")
         
-    def listProductDescription(self):
+    def listProductDescription(self, product):
         """
         A function which lists the currently supported products
         and describes what that are and the parameters they require.
@@ -785,20 +788,28 @@ if __name__ == '__main__':
                         help='''Specify the altiude (in km) of the surface being sensed.''')
     # Define the argument for specifying the AOT value for the scene
     parser.add_argument("--aot", type=float, 
-                        help='''Specifiy the AOT or visability value for the scene. 
+                        help='''Specifiy the AOT value for the scene. 
                                 If the AOT is specified the visability is ignored.''')
     # Define the argument for specifying the visability value for the scene
     parser.add_argument("--vis", type=float, 
-                        help='''Specifiy the AOT or visability value for the scene. 
+                        help='''Specifiy the visibility value for the scene. 
                                 If the AOT is specified the visability is ignored.''')
     # Define the argument for specifying the AOT value for the scene
     parser.add_argument("--minaot", type=float, default=0.05,
-                        help='''Specifiy the AOT or visability value for the scene. 
-                                If the AOT is specified the visability is ignored.''')
+                        help='''Specify the minimum AOT value within the search space 
+                                used to identify AOT values for the scene''')
                         # Define the argument for specifying the AOT value for the scene
     parser.add_argument("--maxaot", type=float, default=0.5,
-                        help='''Specifiy the AOT or visability value for the scene. 
-                                If the AOT is specified the visability is ignored.''')
+                        help='''Specify the maximum AOT value within the search space 
+                                used to identify AOT values for the scene.''')
+	# Define the argument for specifying the AOT value for the scene
+    parser.add_argument("--lowaot", type=float, default=0.1,
+                        help='''Specify the lower AOT amount to be removed from the AOT 
+                                estimate for defining --minaot within search space. (Default 0.1)''')
+                        # Define the argument for specifying the AOT value for the scene
+    parser.add_argument("--upaot", type=float, default=0.4,
+                        help='''Specify the upper AOT amount to be added to the AOT 
+                                estimate for defining --maxaot within search space. (Default 0.4)''')
     # Define the argument for specifying the AOT image file for the scene
     parser.add_argument("--aotfile", type=str, 
                         help='''Specifiy an image file with AOT values for the
@@ -822,6 +833,7 @@ if __name__ == '__main__':
                         help='''Specifies the reflectance value to which dark objects
                         are set to during the dark object subtraction. (Default is 20, 
                         which is equivalent to 2 percent reflectance.''')
+    
                         
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -901,10 +913,6 @@ if __name__ == '__main__':
             elif prod == 'DOSAOTSGL':
                 needAODMinMax = True
                 needDEM = True
-                if not args.simpledos:
-                    print("ERROR: 'DOSAOTSGL' product can only be used with the --simpledos option.\n")
-                    parser.print_help()
-                    sys.exit()
             elif prod == 'TOPOSHADOW':
                 needTmp = True
                 needDEM = True
@@ -1012,8 +1020,8 @@ if __name__ == '__main__':
                      args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, 
                      args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, 
                      args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, 
-                     args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.dem, 
-                     args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug)
+                     args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, 
+                     args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug)
 
 
 
