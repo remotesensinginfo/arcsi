@@ -521,17 +521,17 @@ class ARCSI (object):
                        
             # Step 9: Use image to estimate AOD values
             if prodsToCalc["DOSAOTSGL"]:
-            	aotVal = sensorClass.estimateSingleAOTFromDOS(radianceImage, toaImage, outDEMName, tmpPath, outBaseName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl)
-            	minAOT = aotVal - lowAOT
-            	maxAOT = aotVal + upAOT
-            	print("AOT Search Range = [" + str(minAOT) + ", " + str(maxAOT) + "]")
+                aotVal = sensorClass.estimateSingleAOTFromDOS(radianceImage, toaImage, outDEMName, tmpPath, outBaseName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl)
+                minAOT = aotVal - lowAOT
+                maxAOT = aotVal + upAOT
+                print("AOT Search Range = [" + str(minAOT) + ", " + str(maxAOT) + "]")
             
             if prodsToCalc["DDVAOT"]:
                 outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
                 aotFile = sensorClass.estimateImageToAODUsingDDV(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT)
                 dataset = gdal.Open(aotFile, gdal.GA_Update)
-        		dataset.GetRasterBand(1).SetDescription("AOT")
-        		dataset = None
+                dataset.GetRasterBand(1).SetDescription("AOT")
+                dataset = None
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
@@ -541,8 +541,8 @@ class ARCSI (object):
                 outName = outBaseName + "_dosaod" + arcsiUtils.getFileExtension(outFormat)
                 aotFile = sensorClass.estimateImageToAODUsingDOS(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, globalDOS, simpleDOS, dosOutRefl)
                 dataset = gdal.Open(aotFile, gdal.GA_Update)
-        		dataset.GetRasterBand(1).SetDescription("AOT")
-        		dataset = None
+                dataset.GetRasterBand(1).SetDescription("AOT")
+                dataset = None
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
@@ -808,7 +808,7 @@ if __name__ == '__main__':
     parser.add_argument("--maxaot", type=float, default=0.5,
                         help='''Specify the maximum AOT value within the search space 
                                 used to identify AOT values for the scene.''')
-	# Define the argument for specifying the AOT value for the scene
+    # Define the argument for specifying the AOT value for the scene
     parser.add_argument("--lowaot", type=float, default=0.1,
                         help='''Specify the lower AOT amount to be removed from the AOT 
                                 estimate for defining --minaot within search space. (Default 0.1)''')
