@@ -529,6 +529,9 @@ class ARCSI (object):
             if prodsToCalc["DDVAOT"]:
                 outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
                 aotFile = sensorClass.estimateImageToAODUsingDDV(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT)
+                dataset = gdal.Open(aotFile, gdal.GA_Update)
+        		dataset.GetRasterBand(1).SetDescription("AOT")
+        		dataset = None
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
@@ -537,6 +540,9 @@ class ARCSI (object):
             if prodsToCalc["DOSAOT"]:
                 outName = outBaseName + "_dosaod" + arcsiUtils.getFileExtension(outFormat)
                 aotFile = sensorClass.estimateImageToAODUsingDOS(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, globalDOS, simpleDOS, dosOutRefl)
+                dataset = gdal.Open(aotFile, gdal.GA_Update)
+        		dataset.GetRasterBand(1).SetDescription("AOT")
+        		dataset = None
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
