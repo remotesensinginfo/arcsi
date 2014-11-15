@@ -639,7 +639,10 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName+"_thresdclumpsFinal"+arcsiUtils.getFileExtension(outFormat))
             
             percentiles = rsgislib.imagecalc.bandPercentile(inputTOAImage, 0.05, 0)
-            b6Thres = str(percentiles[5])
+            if percentiles[5] > 30:
+                b6Thres = str(percentiles[5])
+            else
+                b6Thres = "30.0"
             print("SWIR DDV Threshold = ", b6Thres)
             
             thresMathBands = list()
