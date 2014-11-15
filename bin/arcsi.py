@@ -523,6 +523,8 @@ class ARCSI (object):
             if prodsToCalc["DOSAOTSGL"]:
                 aotVal = sensorClass.estimateSingleAOTFromDOS(radianceImage, toaImage, outDEMName, tmpPath, outBaseName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl)
                 minAOT = aotVal - lowAOT
+                if minAOT < 0.01:
+                    minAOT = 0.05
                 maxAOT = aotVal + upAOT
                 print("AOT Search Range = [" + str(minAOT) + ", " + str(maxAOT) + "]")
             
@@ -558,7 +560,10 @@ class ARCSI (object):
                     (min,max,mean,stddev) = imgBand.ComputeStatistics(False)
                     print("AOT Mean (Std Dev) = " + str(mean) + " (" + str(stddev) + ")")
                     print("AOT [Min, Max] = [" + str(min) + "," + str(max) + "]")
-                    aotVal = mean           
+                    aotVal = mean
+                    if aotVal < 0.01:
+                        print("WARNING: Something has gone wrong as AOT value is 0 or below. Setting to 0.05")
+                        aotVal = 0.05
                     imgDS = None
 
                 if (aotVal == None) and (visVal == None) and (aotFile == ""):
@@ -596,6 +601,8 @@ class ARCSI (object):
                         statsAOT = rsgislib.imagecalc.getImageStatsInEnv(aotFile, 1, -9999, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
                         
                         minAOT = self.findMinimumAOT(statsAOT[0])
+                        if minAOT < 0.01:
+                            minAOT = 0.05
                         maxAOT = self.findMaximumAOT(statsAOT[1])
                         
                         aotRange = (maxAOT - minAOT) / 0.05
@@ -663,7 +670,7 @@ class ARCSI (object):
         A function which lists the currently supported products
         and describes what that are and the parameters they require.
         """
-        print("Hello World.")
+        print("Hello World. this has not be written yet!")
 
 
 if __name__ == '__main__':

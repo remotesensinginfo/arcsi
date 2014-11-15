@@ -50,6 +50,8 @@ from arcsilib import ARCSI_VERSION
 # Import matplotlib module
 import matplotlib.pyplot as plt
 import matplotlib.dates as matdate
+# Import numpy
+import numpy
 
 class ARCSIPlotExtractedStats (object):
     """
@@ -94,27 +96,50 @@ class ARCSIPlotExtractedStats (object):
         except Exception as e:
             raise e
     
-    def generatePlot(self, datesVals, minVals, maxVals, avgVals, stdVals, outputPlotFile, fieldBase, plotTitle):
+    def generatePlotStdDevRegion(self, datesVals, minVals, maxVals, avgVals, stdVals, outputPlotFile, fieldBase, plotTitle, nStdDev):
         try:
+            overallMean = numpy.mean(avgVals)
+            overallStdDev = numpy.std(avgVals)
             
-            upperVals = []
+            print("Mean = ", overallMean)
+            print("Std Dev = ", overallStdDev)
+            
+            low1StdDev = overallMean - (overallStdDev * nStdDev)
+            upp1StdDev = overallMean + (overallStdDev * nStdDev)
+            
+            #print("Lower Bound = ", low1StdDev)
+            #print("Upper Bound = ", upp1StdDev)
+            
+            lowerErrVals = []
+            upperErrVals = []
+            
             lowerVals = []
+            upperVals = []
             
             for i in range(len(datesVals)):
                 lowVal = avgVals[i] - stdVals[i]
                 if lowVal < minVals[i]:
                     lowVal = minVals[i]
-                lowerVals.append(lowVal)
+                lowerErrVals.append(avgVals[i]-lowVal)
+                lowerVals.append(low1StdDev)
                 
                 upVal = avgVals[i] + stdVals[i]
                 if upVal > maxVals[i]:
                     upVal = maxVals[i]
-                upperVals.append(upVal)
+                upperErrVals.append(upVal-avgVals[i])
+                upperVals.append(upp1StdDev)
+            
+            asymmetric_error = [lowerErrVals, upperErrVals]
+            
+            dateFlt = matdate.date2num(datesVals)
+            
+            
             
             fig = plt.figure(figsize=(10, 5), dpi=80)
             ax1 = fig.add_subplot(111)
             
             ax1.plot_date(datesVals, avgVals, 'k-', label='Mean', zorder=10)
+            ax1.errorbar(dateFlt, avgVals, yerr=asymmetric_error)
             ax1.fill_between(datesVals, lowerVals, upperVals, alpha=0.2, linewidth=1.0, facecolor='g', edgecolor=[0.70,0.70,0.70], label='Bounds', zorder=-1)
             
             ax1Range = ax1.axis('tight')
@@ -132,7 +157,49 @@ class ARCSIPlotExtractedStats (object):
             raise e
     
     
-    def processAndPlotData(self, inputStatsFile, outputPlotFile, fieldBase, plotTitle):
+    def generatePlotSimple(self, datesVals, minVals, maxVals, avgVals, stdVals, outputPlotFile, fieldBase, plotTitle):
+        try:
+            lowerErrVals = []
+            upperErrVals = []
+            
+            for i in range(len(datesVals)):
+                lowVal = avgVals[i] - stdVals[i]
+                if lowVal < minVals[i]:
+                    lowVal = minVals[i]
+                lowerErrVals.append(avgVals[i]-lowVal)
+                
+                upVal = avgVals[i] + stdVals[i]
+                if upVal > maxVals[i]:
+                    upVal = maxVals[i]
+                upperErrVals.append(upVal-avgVals[i])
+            
+            asymmetric_error = [lowerErrVals, upperErrVals]
+            
+            dateFlt = matdate.date2num(datesVals)
+                        
+            fig = plt.figure(figsize=(10, 5), dpi=80)
+            ax1 = fig.add_subplot(111)
+            
+            ax1.plot_date(datesVals, avgVals, 'k-', label='Mean', zorder=10)
+            ax1.errorbar(dateFlt, avgVals, yerr=asymmetric_error)
+            
+            ax1Range = ax1.axis('tight')
+            
+            plt.grid(color='k', linestyle='--', linewidth=0.5)
+            plt.title(plotTitle)
+            plt.xlabel("Date")
+            ax1.set_ylabel(fieldBase)
+        
+            plt.savefig(outputPlotFile, format='PDF')
+            
+        except ARCSIException as e:
+            raise e
+        except Exception as e:
+            raise e
+    
+    
+    
+    def processAndPlotData(self, inputStatsFile, outputPlotFile, fieldBase, plotTitle, simplePlot):
         try:
             print("Processing Plot \'" + plotTitle + "\'")
             fieldBase = fieldBase.strip()
@@ -201,7 +268,10 @@ class ARCSIPlotExtractedStats (object):
             #print(avgVals)
             #print(stdVals)
             
-            self.generatePlot(datesVals, minVals, maxVals, avgVals, stdVals, outputPlotFile, fieldBase, plotTitle)
+            if simplePlot:
+                self.generatePlotSimple(datesVals, minVals, maxVals, avgVals, stdVals, outputPlotFile, fieldBase, plotTitle)
+            else:
+                self.generatePlotStdDevRegion(datesVals, minVals, maxVals, avgVals, stdVals, outputPlotFile, fieldBase, plotTitle, 1.0)
             print("Completed")
         except ARCSIException as e:
             raise e
@@ -234,7 +304,9 @@ if __name__ == '__main__':
                         
     parser.add_argument("-o", "--output", type=str, 
                         help='''Output PDF file for the plot.''')
-
+    
+    parser.add_argument("--simple", action='store_true', default=False, 
+                        help='''Just a simple line plot with error bars''')
     
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -260,7 +332,7 @@ if __name__ == '__main__':
         sys.exit()
     
     arcsiObj = ARCSIPlotExtractedStats()
-    arcsiObj.processAndPlotData(args.input, args.output, args.field, args.title)
+    arcsiObj.processAndPlotData(args.input, args.output, args.field, args.title, args.simple)
         
         
         

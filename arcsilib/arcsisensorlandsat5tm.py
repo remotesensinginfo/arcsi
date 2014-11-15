@@ -600,15 +600,6 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             arcsiUtils = ARCSIUtils()
             
             outputAOTImage = os.path.join(outputPath, outputName)
-            inputTOAImageOrig = inputTOAImage
-            
-            arcsiUtils = ARCSIUtils()
-            tmpBaseName = os.path.splitext(outputName)[0]
-            inTOAMaskedImage = os.path.join(tmpPath, tmpBaseName+"_toamasked"+arcsiUtils.getFileExtension(outFormat))
-            
-            if not shadowMask is None:
-                rsgislib.imageutils.maskImage(inputTOAImageOrig, shadowMask, inTOAMaskedImage, outFormat, rsgislib.TYPE_16UINT, 0.0, 1.0)
-                inputTOAImage = inTOAMaskedImage
             
             thresImageClumpsFinal = self.findDDVTargets(inputTOAImage, outputPath, outputName, "KEA", tmpPath)
             
