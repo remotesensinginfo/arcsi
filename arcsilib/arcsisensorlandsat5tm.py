@@ -689,8 +689,6 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName("KEA")
                 gdalDriver.Delete(thresImageClumpsFinal)
-                if not shadowMask is None:
-                    gdalDriver.Delete(inTOAMaskedImage)
             return outputAOTImage
         except Exception as e:
             raise e
