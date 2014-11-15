@@ -670,7 +670,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             percentiles = rsgislib.imagecalc.bandPercentile(inputTOAImage, 0.05, 0)
             if percentiles[6] > 30:
                 b7Thres = str(percentiles[6])
-            else
+            else:
                 b7Thres = "30.0"
             print("SWIR DDV Threshold = ", b7Thres)
             
