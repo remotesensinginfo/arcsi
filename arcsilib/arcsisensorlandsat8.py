@@ -666,12 +666,16 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             thresImageClumps = os.path.join(tmpPath, tmpBaseName+"_thresdclumps"+arcsiUtils.getFileExtension(outFormat))
             thresImageClumpsRMSmall = os.path.join(tmpPath, tmpBaseName+"_thresdclumpsgt10"+arcsiUtils.getFileExtension(outFormat))
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName+"_thresdclumpsFinal"+arcsiUtils.getFileExtension(outFormat))
-                       
+            
+            percentiles = rsgislib.imagecalc.bandPercentile(inputTOAImage, 0.05, 0)
+            b7Thres = str(percentiles[6])
+            print("SWIR DDV Threshold = ", b7Thres)
+            
             thresMathBands = list()
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b4', fileName=inputTOAImage, bandIndex=4))
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b5', fileName=inputTOAImage, bandIndex=5))
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b7', fileName=inputTOAImage, bandIndex=7))
-            rsgislib.imagecalc.bandMath(thresImage, "(b7<30)&&(b7!=0)&&(((b5-b4)/(b5+b4))>0.1)?1:0", outFormat, rsgislib.TYPE_8UINT, thresMathBands)
+            rsgislib.imagecalc.bandMath(thresImage, "(b7<" + b7Thres + ")&&(b7!=0)&&(((b5-b4)/(b5+b4))>0.1)?1:0", outFormat, rsgislib.TYPE_8UINT, thresMathBands)
             rsgislib.segmentation.clump(thresImage, thresImageClumps, outFormat, False, 0.0)
             rsgislib.rastergis.populateStats(thresImageClumps, True, True)
             rsgislib.segmentation.rmSmallClumps(thresImageClumps, thresImageClumpsRMSmall, 100, outFormat)
