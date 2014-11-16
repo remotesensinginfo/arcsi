@@ -59,7 +59,7 @@ class ARCSIPlotExtractedStats (object):
     arcsiextractroistats.py command.
     """
     
-    def parseInputFile(self, inputStatsFile):
+    def parseInputFile(self, inputStatsFile, featureID):
         try:
             statsData = []
             fieldNames = []
@@ -86,7 +86,8 @@ class ARCSIPlotExtractedStats (object):
                         else:
                             rowData.append(float(data))
                         fieldIdx += 1
-                    statsData.append(rowData)
+                    if rowData[1] == featureID:
+                        statsData.append(rowData)
                 row+=1
 
             inStats.close()
@@ -199,11 +200,11 @@ class ARCSIPlotExtractedStats (object):
     
     
     
-    def processAndPlotData(self, inputStatsFile, outputPlotFile, fieldBase, plotTitle, simplePlot):
+    def processAndPlotData(self, inputStatsFile, outputPlotFile, fieldBase, plotTitle, simplePlot, featureID):
         try:
             print("Processing Plot \'" + plotTitle + "\'")
             fieldBase = fieldBase.strip()
-            statsData, fieldNames = self.parseInputFile(inputStatsFile)
+            statsData, fieldNames = self.parseInputFile(inputStatsFile, featureID)
             #print(statsData)
                         
             minField = fieldBase + "Min"
@@ -299,6 +300,11 @@ if __name__ == '__main__':
                                 Note, this should be the base name, i.e., 
                                 Red not RedAvg or RedMax''')
                                 
+    parser.add_argument("-e", "--feature", type=int, default=0,
+                        help='''Integer specifying the feature from the 
+                        shapefile defining the ROI to be plotted. If just
+                        1 feature then value is zero (default).''')
+                                
     parser.add_argument("-t", "--title", type=str, 
                         help='''String for the title to be added to the plot.''')
                         
@@ -332,7 +338,7 @@ if __name__ == '__main__':
         sys.exit()
     
     arcsiObj = ARCSIPlotExtractedStats()
-    arcsiObj.processAndPlotData(args.input, args.output, args.field, args.title, args.simple)
+    arcsiObj.processAndPlotData(args.input, args.output, args.field, args.title, args.simple, args.feature)
         
         
         
