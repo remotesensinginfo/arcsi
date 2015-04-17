@@ -1,18 +1,26 @@
-.. arcsi documentation master file, created by
-   sphinx-quickstart on Sun May  4 22:40:05 2014.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+Atmospheric and Radiometric Correction of Satellite Imagery (ARCSI)
+====================================================================
 
-Welcome to ARCSI's documentation!
-=================================
+The Atmospheric and Radiometric Correction of Satellite Imagery (ARCSI) software provides a command line tool for the atmospheric correction of Earth Observation imagery. The aim of ARCSI is to provide as automatic as possible method of retrieving the atmospheric correction parameters and using them to parameterise 6S.
 
-Contents:
+ARCSI is available to download from https://bitbucket.org/petebunting/arcsi/
+
+User Documentation
+-------------------
 
 .. toctree::
    :maxdepth: 2
    
-   arcsi
+   scripts
+   tutorial
 
+Library Documentation
+-----------------------
+
+.. toctree::
+   :maxdepth: 2
+ 
+   arcsi
 
 
 Indices and tables
