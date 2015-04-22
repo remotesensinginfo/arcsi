@@ -225,7 +225,7 @@ parameters via the command line as shown below:
 
 Once you have run the command (shown above) open the images within
 TuiView and compare the surface reflectance, radiance and TOA images,
-Figure [fig:comparisonOfSREFTOARAD]. Please remember that you can open
+Figure 1. Please remember that you can open
 multiple TuiView windows and tile them (File > Tile Windows...). Using
 the band combination NIR, SWIR1 and RED is recommended. As you view the
 scene look at the shapefile of the spectral curve and the image pixel
@@ -236,7 +236,7 @@ band combination), what do you notice about the image pixel values?
 .. figure:: Figures/TuiViewComparison_SREFTOARAD.png
    :alt: Comparison of spectral curves for SREF, TOA and Radiance.
 
-   Comparison of spectral curves for SREF, TOA and Radiance.
+   Figure 1. Comparison of spectral curves for SREF, TOA and Radiance.
 
 You should have noticed that they are different and that is due to the
 fact that AOT is variable across the scene. Within this tutorial we
