@@ -42,6 +42,8 @@ from .arcsisensor import ARCSIAbstractSensor
 from .arcsiexception import ARCSIException
 # Import the ARCSI utilities class
 from .arcsiutils import ARCSIUtils
+# Import the ARCSI landsat utilities class
+from .arcsiutils import ARCSILandsatMetaUtils
 # Import the datetime module
 import datetime
 # Import the GDAL/OGR spatial reference library
@@ -147,18 +149,27 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             hFile.close()
             print("Extracting Header Values")
             # Get the sensor info.
-            if ((headerParams["SPACECRAFT_ID"].upper() == "LANDSAT_7") or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT7")) and (headerParams["SENSOR_ID"].upper() == "ETM"):
+            if ((headerParams["SPACECRAFT_ID"].upper() == "LANDSAT_7") or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT7")) and ((headerParams["SENSOR_ID"].upper() == "ETM") or (headerParams["SENSOR_ID"].upper() == "ETM+")):
                 self.sensor = "LS7"
             else:
                 raise ARCSIException("Do no recognise the spacecraft and sensor or combination.")
             
             # Get row/path
-            self.row = int(headerParams["WRS_ROW"])
+            try:
+                self.row = int(headerParams["WRS_ROW"])
+            except KeyError:
+                self.row = int(headerParams["STARTING_ROW"])
             self.path = int(headerParams["WRS_PATH"])
             
             # Get date and time of the acquisition
-            acData = headerParams["DATE_ACQUIRED"].split('-')
-            acTime = headerParams["SCENE_CENTER_TIME"].split(':')
+            try:
+                acData = headerParams["DATE_ACQUIRED"].split('-')
+            except KeyError:
+                acData = headerParams["ACQUISITION_DATE"].split('-')
+            try:
+                acTime = headerParams["SCENE_CENTER_TIME"].split(':')
+            except KeyError:
+                acTime = headerParams["SCENE_CENTER_SCAN_TIME"].split(':')
             secsTime = acTime[2].split('.')
             self.acquisitionTime = datetime.datetime(int(acData[0]), int(acData[1]), int(acData[2]), int(acTime[0]), int(acTime[1]), int(secsTime[0]))
             
@@ -166,29 +177,49 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             self.solarAzimuth = float(headerParams["SUN_AZIMUTH"])
             
             # Get the geographic lat/long corners of the image.
-            self.latTL = float(headerParams["CORNER_UL_LAT_PRODUCT"])
-            self.lonTL = float(headerParams["CORNER_UL_LON_PRODUCT"])
-            self.latTR = float(headerParams["CORNER_UR_LAT_PRODUCT"])
-            self.lonTR = float(headerParams["CORNER_UR_LON_PRODUCT"])
-            self.latBL = float(headerParams["CORNER_LL_LAT_PRODUCT"])
-            self.lonBL = float(headerParams["CORNER_LL_LON_PRODUCT"])
-            self.latBR = float(headerParams["CORNER_LR_LAT_PRODUCT"])
-            self.lonBR = float(headerParams["CORNER_LR_LON_PRODUCT"])
-            
+            geoCorners = ARCSILandsatMetaUtils.getGeographicCorners(headerParams)
+
+            self.latTL = geoCorners[0]
+            self.lonTL = geoCorners[1]
+            self.latTR = geoCorners[2]
+            self.lonTR = geoCorners[3]
+            self.latBL = geoCorners[4]
+            self.lonBL = geoCorners[5]
+            self.latBR = geoCorners[6]
+            self.lonBR = geoCorners[7]
+
             # Get the projected X/Y corners of the image
-            self.xTL = float(headerParams["CORNER_UL_PROJECTION_X_PRODUCT"])
-            self.yTL = float(headerParams["CORNER_UL_PROJECTION_Y_PRODUCT"])
-            self.xTR = float(headerParams["CORNER_UR_PROJECTION_X_PRODUCT"])
-            self.yTR = float(headerParams["CORNER_UR_PROJECTION_Y_PRODUCT"])
-            self.xBL = float(headerParams["CORNER_LL_PROJECTION_X_PRODUCT"])
-            self.yBL = float(headerParams["CORNER_LL_PROJECTION_Y_PRODUCT"])
-            self.xBR = float(headerParams["CORNER_LR_PROJECTION_X_PRODUCT"])
-            self.yBR = float(headerParams["CORNER_LR_PROJECTION_Y_PRODUCT"])
+            projectedCorners = ARCSILandsatMetaUtils.getProjectedCorners(headerParams)
             
+            self.xTL = projectedCorners[0]
+            self.yTL = projectedCorners[1]
+            self.xTR = projectedCorners[2]
+            self.yTR = projectedCorners[3]
+            self.xBL = projectedCorners[4]
+            self.yBL = projectedCorners[5]
+            self.xBR = projectedCorners[6]
+            self.yBR = projectedCorners[7]
+  
             # Get projection
             inProj = osr.SpatialReference()
-            if (headerParams["MAP_PROJECTION"] == "UTM") and (headerParams["DATUM"] == "WGS84") and (headerParams["ELLIPSOID"] == "WGS84"):
-                utmZone = int(headerParams["UTM_ZONE"])
+            if (headerParams["MAP_PROJECTION"] == "UTM"):
+                try:
+                    datum = headerParams["DATUM"]
+                    if datum != "WGS84":
+                        raise ARCSIException("Datum not recogised. Expected 'WGS84' got '{}'".format(datum))
+                except KeyError:
+                    pass
+                try:
+                    ellipsoid = headerParams["ELLIPSOID"]
+                    if ellipsoid != "WGS84":
+                        raise ARCSIException("Ellipsoid not recogised. Expected 'WGS84' got '{}'".format(ellipsoid))
+                except KeyError:
+                    pass
+                try:
+                    utmZone = int(headerParams["UTM_ZONE"])
+                except KeyError:
+                    utmZone = int(headerParams["ZONE_NUMBER"])
+                # FIXME: should this be hardcoded to north?
                 utmCode = "WGS84UTM" + str(utmZone) + str("N")
                 #print("UTM: ", utmCode)
                 inProj.ImportFromEPSG(self.epsgCodes[utmCode])
@@ -217,56 +248,103 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             
             #print("Lat: " + str(self.latCentre) + " Long: " + str(self.lonCentre))
             
+            metaFilenames = ARCSILandsatMetaUtils.getBandFilenames(headerParams, 8)
+            
             filesDIR = os.path.dirname(inputHeader)
             
-            self.band1File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_1"])
-            self.band2File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_2"])
-            self.band3File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_3"])
-            self.band4File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_4"])
-            self.band5File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_5"])
-            self.band6aFile = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_6_VCID_1"])
-            self.band6bFile = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_6_VCID_2"])
-            self.band7File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_7"])
-            self.bandPanFile = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_8"])
-            
-            self.b1CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_1"])
-            self.b1CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_1"])
-            self.b2CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_2"])
-            self.b2CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_2"])
-            self.b3CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_3"])
-            self.b3CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_3"])
-            self.b4CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_4"])
-            self.b4CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_4"])
-            self.b5CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_5"])
-            self.b5CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_5"])
-            self.b6aCalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_6_VCID_1"])
-            self.b6aCalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_6_VCID_1"])
-            self.b6bCalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_6_VCID_1"])
-            self.b6bCalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_6_VCID_2"])
-            self.b7CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_7"])
-            self.b7CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_7"])
-            self.b8CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_8"])
-            self.b8CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_8"])
-            
-            self.b1MinRad = float(headerParams["RADIANCE_MINIMUM_BAND_1"])
-            self.b1MaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_1"])
-            self.b2MinRad = float(headerParams["RADIANCE_MINIMUM_BAND_2"])
-            self.b2MaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_2"])
-            self.b3MinRad = float(headerParams["RADIANCE_MINIMUM_BAND_3"])
-            self.b3MaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_3"])
-            self.b4MinRad = float(headerParams["RADIANCE_MINIMUM_BAND_4"])
-            self.b4MaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_4"])
-            self.b5MinRad = float(headerParams["RADIANCE_MINIMUM_BAND_5"])
-            self.b5MaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_5"])
-            self.b6aMinRad = float(headerParams["RADIANCE_MINIMUM_BAND_6_VCID_1"])
-            self.b6aMaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_6_VCID_1"])
-            self.b6bMinRad = float(headerParams["RADIANCE_MINIMUM_BAND_6_VCID_2"])
-            self.b6bMaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_6_VCID_2"])
-            self.b7MinRad = float(headerParams["RADIANCE_MINIMUM_BAND_7"])
-            self.b7MaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_7"])
-            self.b8MinRad = float(headerParams["RADIANCE_MINIMUM_BAND_8"])
-            self.b8MaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_8"])
-            
+            self.band1File = os.path.join(filesDIR, metaFilenames[0])
+            self.band2File = os.path.join(filesDIR, metaFilenames[1])
+            self.band3File = os.path.join(filesDIR, metaFilenames[2])
+            self.band4File = os.path.join(filesDIR, metaFilenames[3])
+            self.band5File = os.path.join(filesDIR, metaFilenames[4])
+            self.band7File = os.path.join(filesDIR, metaFilenames[6])
+            self.bandPanFile = os.path.join(filesDIR, metaFilenames[7])
+           
+            try:
+                self.band6aFile = os.path.join(filesDIR,headerParams["FILE_NAME_BAND_6_VCID_1"])
+            except KeyError:
+                self.band6aFile = os.path.join(filesDIR,headerParams["BAND61_FILE_NAME"])
+            try:
+                self.band6bFile = os.path.join(filesDIR,headerParams["FILE_NAME_BAND_6_VCID_2"])
+            except KeyError:
+                self.band6bFile = os.path.join(filesDIR,headerParams["BAND62_FILE_NAME"])
+           
+            bands_list = ["1","2","3","4","5","6_VCID_1","6_VCID_2","7","8"]
+
+            metaQCalMinList = {}
+            metaQCalMaxList = {}
+
+            for band_num in bands_list:
+                try:
+                    metaQCalMinList[band_num] = float(headerParams["QUANTIZE_CAL_MIN_BAND_{}".format(band_num)])
+                    metaQCalMaxList[band_num] = float(headerParams["QUANTIZE_CAL_MAX_BAND_{}".format(band_num)])
+                except KeyError:
+                    if band_num == "6_VCID_1":
+                        metaQCalMinList[band_num] = float(headerParams["QCALMIN_BAND61"])
+                        metaQCalMaxList[band_num] = float(headerParams["QCALMAX_BAND61"])
+                    elif band_num == "6_VCID_2":
+                        metaQCalMinList[band_num] = float(headerParams["QCALMIN_BAND62"])
+                        metaQCalMaxList[band_num] = float(headerParams["QCALMAX_BAND62"])
+                    else:
+                        metaQCalMinList[band_num] = float(headerParams["QCALMIN_BAND{}".format(band_num)])
+                        metaQCalMaxList[band_num] = float(headerParams["QCALMAX_BAND{}".format(band_num)])
+
+            self.b1CalMin = metaQCalMinList["1"]
+            self.b1CalMax = metaQCalMaxList["1"]
+            self.b2CalMin = metaQCalMinList["2"]
+            self.b2CalMax = metaQCalMaxList["2"]
+            self.b3CalMin = metaQCalMinList["3"]
+            self.b3CalMax = metaQCalMaxList["3"]
+            self.b4CalMin = metaQCalMinList["4"]
+            self.b4CalMax = metaQCalMaxList["4"]
+            self.b5CalMin = metaQCalMinList["5"]
+            self.b5CalMax = metaQCalMaxList["5"]
+            self.b6aCalMin = metaQCalMinList["6_VCID_1"]
+            self.b6aCalMax = metaQCalMaxList["6_VCID_1"]
+            self.b6bCalMin = metaQCalMinList["6_VCID_2"]
+            self.b6bCalMax = metaQCalMaxList["6_VCID_2"]
+            self.b7CalMin = metaQCalMinList["7"]
+            self.b7CalMax = metaQCalMaxList["7"]
+            self.b8CalMin = metaQCalMinList["8"]
+            self.b8CalMax = metaQCalMaxList["8"] 
+
+            metaRadMinList = {}
+            metaRadMaxList = {}
+
+            for band_num in bands_list:
+                try:
+                    metaRadMinList[band_num] = float(headerParams["RADIANCE_MIN_BAND_{}".format(band_num)])
+                    metaRadMaxList[band_num] = float(headerParams["RADIANCE_MAX_BAND_{}".format(band_num)])
+                except KeyError:
+                    if band_num == "6_VCID_1":
+                        metaRadMinList[band_num] = float(headerParams["LMIN_BAND61"])
+                        metaRadMaxList[band_num] = float(headerParams["LMAX_BAND61"])
+                    elif band_num == "6_VCID_2":
+                        metaRadMinList[band_num] = float(headerParams["LMIN_BAND62"])
+                        metaRadMaxList[band_num] = float(headerParams["LMAX_BAND62"])
+                    else:
+                        metaRadMinList[band_num] = float(headerParams["LMIN_BAND{}".format(band_num)])
+                        metaRadMaxList[band_num] = float(headerParams["LMAX_BAND{}".format(band_num)])
+
+            self.b1MinRad = metaRadMinList["1"]
+            self.b1MaxRad = metaRadMaxList["1"]
+            self.b2MinRad = metaRadMinList["2"]
+            self.b2MaxRad = metaRadMaxList["2"]
+            self.b3MinRad = metaRadMinList["3"]
+            self.b3MaxRad = metaRadMaxList["3"]
+            self.b4MinRad = metaRadMinList["4"]
+            self.b4MaxRad = metaRadMaxList["4"]
+            self.b5MinRad = metaRadMinList["5"]
+            self.b5MaxRad = metaRadMaxList["5"]
+            self.b6aMinRad = metaRadMinList["6_VCID_1"]
+            self.b6aMaxRad = metaRadMaxList["6_VCID_1"]
+            self.b6bMinRad = metaRadMinList["6_VCID_2"]
+            self.b6bMaxRad = metaRadMaxList["6_VCID_2"]
+            self.b7MinRad = metaRadMinList["7"]
+            self.b7MaxRad = metaRadMaxList["7"]
+            self.b8MinRad = metaRadMinList["8"]
+            self.b8MaxRad = metaRadMaxList["8"] 
+
         except Exception as e:
             raise e
         
