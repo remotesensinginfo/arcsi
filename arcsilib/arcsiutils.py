@@ -253,7 +253,15 @@ class ARCSILandsatMetaUtils(object):
             try:
                 metaFilenames.append(headerParams["FILE_NAME_BAND_{}".format(i)])
             except KeyError:
-                metaFilenames.append(headerParams["BAND{}_FILE_NAME".format(i)])
+                try:
+                    metaFilenames.append(headerParams["BAND{}_FILE_NAME".format(i)])
+                # For Landsat 7 ETM+ There are two band 6 files.
+                # Just set to 'None' here and fetch separately.
+                except Exception:
+                    if i == 6:
+                        metaFilenames.append(None)
+                    else:
+                        raise
 
         return metaFilenames
 

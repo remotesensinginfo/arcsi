@@ -179,8 +179,6 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             self.lonBR = geoCorners[7]
 
             # Get the projected X/Y corners of the image
-            # Same as above, use a list to try and avoid a try/except for
-            # each variable
             projectedCorners = ARCSILandsatMetaUtils.getProjectedCorners(headerParams)
             
             self.xTL = projectedCorners[0]
