@@ -163,4 +163,97 @@ class ARCSIUtils (object):
                 
         srcDS = None
         destDS = None
+
+class ARCSILandsatMetaUtils(object):
+    """
+    A class with common functions for parsing Landsat
+    metadata
+    """
+
+    @staticmethod
+    def getGeographicCorners(headerParams):
+        """
+        Function to get geographic coordinates of image from metatdata
+
+        Returns array containing:
+
+        * UL_LON
+        * UL_LAT
+        * UR_LON
+        * UR_LAT
+        * LL_LAT
+        * LL_LON
+        * LR_LAT
+        * LR_LON
+
+        """
+        outCornerCoords = []
+        geoVarList = [["UL","LAT"],
+                      ["UL","LON"],
+                      ["UR","LAT"],
+                      ["UR","LON"],
+                      ["LL","LAT"],
+                      ["LL","LON"],
+                      ["LR","LAT"],
+                      ["LR","LON"]]
+
+        for geoItem in geoVarList:
+            try:
+                outCornerCoords.append(float(headerParams["CORNER_{0}_{1}_PRODUCT".format(geoItem[0],geoItem[1])]))
+            except KeyError:
+                outCornerCoords.append(float(headerParams["PRODUCT_{0}_CORNER_{1}".format(geoItem[0],geoItem[1])]))
+
+        return outCornerCoords
+
+    @staticmethod
+    def getProjectedCorners(headerParams):
+        """
+        Function to get projected coordinates of image from metatdata
+
+        Returns array containing:
+
+        * UL_X
+        * UL_Y
+        * UR_X
+        * UR_Y
+        * LL_X
+        * LL_Y
+        * LR_X
+        * LR_Y
+
+        """
+        outCornerCoords = []
+        projectedVarList =  [["UL","X"],
+                             ["UL","Y"],
+                             ["UR","X"],
+                             ["UR","Y"],
+                             ["LL","X"],
+                             ["LL","Y"],
+                             ["LR","X"],
+                             ["LR","Y"]]
+
+        for projectedItem in projectedVarList:
+            try:
+                outCornerCoords.append(float(headerParams["CORNER_{0}_PROJECTION_{1}_PRODUCT".format(projectedItem[0],projectedItem[1])]))
+            except KeyError:
+                outCornerCoords.append(float(headerParams["PRODUCT_{0}_CORNER_MAP{1}".format(projectedItem[0],projectedItem[1])]))
+
+        return outCornerCoords
+
+    @staticmethod
+    def getBandFilenames(headerParams, nBands):
+        """
+        Get filenames for individual bands
+
+        Returns a list with a name for each band.
+        """
+        metaFilenames = []
         
+        for i in range(1,nBands+1):
+            try:
+                metaFilenames.append(headerParams["FILE_NAME_BAND_{}".format(i)])
+            except KeyError:
+                metaFilenames.append(headerParams["BAND{}_FILE_NAME".format(i)])
+
+        return metaFilenames
+
