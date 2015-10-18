@@ -98,8 +98,8 @@ class ARCSIExtractData (object):
         inputDIR = os.path.abspath(inputDIR)
         outputDIR = os.path.abspath(outputDIR)
         
-        # First, do the tar.gz / tar.bz files.
-        inputFileListTarGz = glob.glob(os.path.join(inputDIR, "*.tar.[bg]z"))
+        # First, do the tar.gz files.
+        inputFileListTarGz = glob.glob(os.path.join(inputDIR, "*.tar.gz"))
         self.untargzFiles(inputFileListTarGz, outputDIR, noFolders)
         
         # Second, do the tar files.
