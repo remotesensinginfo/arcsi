@@ -597,6 +597,17 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
             raise
     
     def setBandNames(self, imageFile):
+        """
+        Set band names for Landsat 2 MMS
+
+        Green: 500 - 600 nm
+        Red: 600 - 700 nm
+        NIR1: 700 - 800 nm
+        NIR2: 800 - 1100 nm
+
+        http://landsat.usgs.gov/about_landsat2.php
+        
+        """
         dataset = gdal.Open(imageFile, gdal.GA_Update)
         dataset.GetRasterBand(1).SetDescription("Blue")
         dataset.GetRasterBand(2).SetDescription("Green")
