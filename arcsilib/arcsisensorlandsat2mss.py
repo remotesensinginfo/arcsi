@@ -609,8 +609,8 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
         
         """
         dataset = gdal.Open(imageFile, gdal.GA_Update)
-        dataset.GetRasterBand(1).SetDescription("Blue")
-        dataset.GetRasterBand(2).SetDescription("Green")
-        dataset.GetRasterBand(3).SetDescription("Red")
-        dataset.GetRasterBand(4).SetDescription("NIR")
+        dataset.GetRasterBand(1).SetDescription("Green")
+        dataset.GetRasterBand(2).SetDescription("Red")
+        dataset.GetRasterBand(3).SetDescription("NIR1")
+        dataset.GetRasterBand(4).SetDescription("NIR2")
         dataset = None
