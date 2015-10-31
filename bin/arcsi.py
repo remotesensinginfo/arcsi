@@ -38,6 +38,8 @@ Module that contains the ARSCI Main class.
 #
 ############################################################################
 
+# Import the print function (for Python 2)
+from __future__ import print_function
 # Import the system library
 import sys
 # Import the OS python module
@@ -46,6 +48,8 @@ import os
 import argparse
 # Import the time module
 import time
+# Import the copy module
+import copy
 # Import the ARCSI exception class
 from arcsilib.arcsiexception import ARCSIException
 # Import the ARCSI utilities class
@@ -185,6 +189,9 @@ class ARCSI (object):
         
         startTime = time.time()
         arcsiUtils = ARCSIUtils()
+        # Create list to store products to be calculated and those actually calculated.
+        prodsToCalc = dict()
+        prodsCalculated = dict()
         try:
             # Read WKT file if provided.
             wktStr = None
@@ -243,7 +250,6 @@ class ARCSI (object):
             print("Image Base Name: " + outBaseName + "\n")
             
             # Step 4: Find the products which are to be generated.
-            prodsToCalc = dict()
             prodsToCalc["RAD"] = False
             prodsToCalc["TOA"] = False
             prodsToCalc["CLOUDS"] = False
@@ -256,6 +262,8 @@ class ARCSI (object):
             prodsToCalc["SATURATE"] = False
             prodsToCalc["TOPOSHADOW"] = False
             
+            # Make a copy of the dictionary to store calculated products.
+            prodsCalculated = copy.copy(prodsToCalc)
             needAtmModel = False
             
             for prod in productsStr:
@@ -398,6 +406,7 @@ class ARCSI (object):
                     rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
                     if not thermalRadImage == None:
                         rsgislib.imageutils.popImageStats(thermalRadImage, True, 0.0, True)
+                prodsCalculated["RAD"] = True
                 print("")
             
             if sensorClass.maskInputImages():
@@ -441,6 +450,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.rastergis.populateStats(saturateImage, True, True)
+                prodsCalculated["SATURATE"] = True
                 print("")
                 
             if prodsToCalc["TOPOSHADOW"]:
@@ -450,6 +460,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.rastergis.populateStats(topoShadowImage, True, True)
+                prodsCalculated["TOPOSHADOW"] = True
                 print("")
                         
             if prodsToCalc["THERMAL"]:
@@ -459,6 +470,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(thermalBrightImage, True, 0.0, True)
+                prodsCalculated["THERMAL"] = True
                 print("")
             
             # Step 6: Convert to TOA
@@ -471,6 +483,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
+                prodsCalculated["TOA"] = True
                 print("")
             
             # Step 7: Generate Cloud Masks
@@ -498,6 +511,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
+                prodsCalculated["CLOUDS"] = True
                 print("")
             
             
@@ -517,6 +531,7 @@ class ARCSI (object):
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
                     print("")
+                prodsCalculated["DOS"] = True
             
                        
             # Step 9: Use image to estimate AOD values
@@ -527,6 +542,7 @@ class ARCSI (object):
                     minAOT = 0.05
                 maxAOT = aotVal + upAOT
                 print("AOT Search Range = [" + str(minAOT) + ", " + str(maxAOT) + "]")
+                prodsCalculated["DOSAOTSGL"] = True
             
             if prodsToCalc["DDVAOT"]:
                 outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
@@ -537,6 +553,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
+                prodsCalculated["DDVAOT"] = True
                 print("")
             
             if prodsToCalc["DOSAOT"]:
@@ -548,6 +565,7 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
+                prodsCalculated["DOSAOT"] = True
                 print("")
                         
             # Step 10: Convert to Surface Reflectance using 6S Standard Models
@@ -617,15 +635,25 @@ class ARCSI (object):
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+                prodsCalculated["SREF"] = True
                 print("")
                     
             
                 
         except ARCSIException as e:
-            print("Error: " + str(e))
+            print("Error: " + str(e), file=sys.stderr)
         except Exception as e:
-            print("Error: " + str(e))
+            print("Error: " + str(e), file=sys.stderr)
         finally:
+            failedProdsList = []
+            # Check all requested products have been created
+            for key in prodsToCalc.keys():
+                if prodsToCalc[key] is not prodsCalculated[key]:
+                    failedProdsList.append(key)
+            if len(failedProdsList) > 0:
+                print("Error: The following products were not generated:",file=sys.stderr)
+                print(" ".join(failedProdsList),file=sys.stderr)
+
             elapsedTime = (time.time() - startTime)
             hours = 0
             minutes = 0
