@@ -598,7 +598,7 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
     
     def setBandNames(self, imageFile):
         """
-        Set band names for Landsat 2 MMS
+        Set band names for Landsat 2 MSS
 
         Green: 500 - 600 nm
         Red: 600 - 700 nm
