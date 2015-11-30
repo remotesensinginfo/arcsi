@@ -36,11 +36,11 @@ $ python setup.py install
 from distutils.core import setup
 
 setup(name='ARCSI', 
-    version='0.13.1', 
+    version='0.13.2', 
     description='Atmospheric and Radiometic Correction of Satellite Imagery',
     author='Pete Bunting',
     author_email='pfb@aber.ac.uk',
-    scripts=['bin/arcsi.py', 'bin/arcsisolarirradiance.py', 'bin/arcsispecresponsefuncs.py', 'bin/arcsiextractdata.py', 'bin/arcsibuildcmdslist.py', 'bin/arcsisortlandsat.py', 'bin/arcsiextractroistats.py', 'bin/arcsiplotextractedstats.py'],
+    scripts=['bin/arcsi.py', 'bin/arcsisolarirradiance.py', 'bin/arcsispecresponsefuncs.py', 'bin/arcsiextractdata.py', 'bin/arcsibuildcmdslist.py', 'bin/arcsisortlandsat.py', 'bin/arcsiextractroistats.py', 'bin/arcsiplotextractedstats.py', 'bin/arcsisensitivity.py'],
     packages=['arcsilib'],
     license='LICENSE.txt',
     url='https://bitbucket.org/petebunting/arcsi',

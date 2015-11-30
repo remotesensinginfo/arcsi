@@ -101,9 +101,11 @@ class ARCSIPlotExtractedStats (object):
         try:
             overallMean = numpy.mean(avgVals)
             overallStdDev = numpy.std(avgVals)
+            overallMeanStdDev = numpy.mean(stdVals)
             
             print("Mean = ", overallMean)
-            print("Std Dev = ", overallStdDev)
+            print("Std Dev of Mean = ", overallStdDev)
+            print("Mean Std Dev = ", overallMeanStdDev)
             
             low1StdDev = overallMean - (overallStdDev * nStdDev)
             upp1StdDev = overallMean + (overallStdDev * nStdDev)
@@ -131,17 +133,14 @@ class ARCSIPlotExtractedStats (object):
                 upperVals.append(upp1StdDev)
             
             asymmetric_error = [lowerErrVals, upperErrVals]
-            
             dateFlt = matdate.date2num(datesVals)
-            
-            
             
             fig = plt.figure(figsize=(10, 5), dpi=80)
             ax1 = fig.add_subplot(111)
             
             ax1.plot_date(datesVals, avgVals, 'k-', label='Mean', zorder=10)
-            ax1.errorbar(dateFlt, avgVals, yerr=asymmetric_error)
-            ax1.fill_between(datesVals, lowerVals, upperVals, alpha=0.2, linewidth=1.0, facecolor='g', edgecolor=[0.70,0.70,0.70], label='Bounds', zorder=-1)
+            ax1.errorbar(dateFlt, avgVals, yerr=asymmetric_error, ecolor='k', label='1 Sample Std. Dev.')
+            ax1.fill_between(datesVals, lowerVals, upperVals, alpha=0.2, linewidth=1.0, facecolor=[0.70,0.70,0.70], edgecolor=[0.70,0.70,0.70], label='1 Mean Std. Dev.', zorder=-1)
             
             ax1Range = ax1.axis('tight')
             
@@ -182,7 +181,7 @@ class ARCSIPlotExtractedStats (object):
             ax1 = fig.add_subplot(111)
             
             ax1.plot_date(datesVals, avgVals, 'k-', label='Mean', zorder=10)
-            ax1.errorbar(dateFlt, avgVals, yerr=asymmetric_error)
+            ax1.errorbar(dateFlt, avgVals, yerr=asymmetric_error, ecolor='k')
             
             ax1Range = ax1.axis('tight')
             
