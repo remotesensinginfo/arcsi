@@ -699,6 +699,30 @@ class ARCSI (object):
         and describes what that are and the parameters they require.
         """
         print("Hello World. this has not be written yet!")
+    
+    def listEnvVars(self):
+        """
+        A function which lists the available environmental variables for ARCSI.
+        """
+        
+        print("ARCSI_OUT_FORMAT       in place of the -f, --format option")
+        print("ARCSI_OUTPUT_PATH      in place of the -o, --outpath option")
+        print("ARCSI_TMP_PATH         in place of the --tmpath option")
+        print("ARCSI_DEM_PATH         in place of the -d, --dem option")
+        print("ARCSI_AEROIMG_PATH     in place of the --aeroimg option")
+        print("ARCSI_ATMOSIMG_PATH    in place of the --atmosimg option")
+        print("ARCSI_MIN_AOT          in place of the --minaot option")
+        print("ARCSI_MAX_AOT          in place of the --maxaot option")
+        print("ARCSI_LOW_AOT          in place of the --lowaot option")
+        print("ARCSI_UP_AOT           in place of the --upaot option")
+        print("ARCSI_OUTDOS_REFL      in place of the --dosout option")
+        print("                       Note reflectance values are multiplied")
+        print("                       by 1000 so a value of 20 is 2 %")
+        print("ARCSI_USE_LOCALDOS     in place of the --localdos (variable ")
+        print("                       values can be either `TRUE' or `FALSE') option")
+        print("ARCSI_USE_SIMPLEDOS    in place of the --simpledos (variable ")
+        print("                       values can be either `TRUE' or `FALSE') option")
+        print("")
 
 
 if __name__ == '__main__':
@@ -748,6 +772,9 @@ if __name__ == '__main__':
     parser.add_argument("--sensorlist", action='store_true', default=False, 
                         help='''List the sensors which are supported 
                                 and the require names.''')
+    # Define the argument for requesting a list of the available environment variables.
+    parser.add_argument("--envvars", action='store_true', default=False, 
+                        help='''List the available environmental variables for ARCSI.''')
     # Define the argument for specifying the WKT projection file 
     # for the intput file.
     parser.add_argument("--inwkt", type=str, 
@@ -886,6 +913,8 @@ if __name__ == '__main__':
         arcsiObj.listSensors()
     elif args.prodlist:
         arcsiObj.listProductDescription()
+    elif args.envvars:
+        arcsiObj.listEnvVars()
     else:
         # Check that the input header parameter has been specified.
         if args.inputheader == None:
@@ -977,6 +1006,17 @@ if __name__ == '__main__':
                 print("Taking max AOT from environment variable.")
                 args.maxaot = float(envVarMaxAOT)
         
+        if args.lowaot is None:     
+            envVarLowAOT = arcsiUtils.getEnvironmentVariable("ARCSI_LOW_AOT")
+            if not envVarLowAOT is None:
+                args.lowaot = float(envVarLowAOT)
+        
+        if args.upaot is None:     
+            envVarUpAOT = arcsiUtils.getEnvironmentVariable("ARCSI_UP_AOT")
+            if not envVarUpAOT is None:
+                args.upaot = float(envVarUpAOT)
+            
+        
         if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax) and (not args.aotfile):
             print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.\n")
             parser.print_help()
@@ -1055,6 +1095,15 @@ if __name__ == '__main__':
             else:
                 args.localdos = False
                 print("Using global DOS method due to environment variable.")
+        
+        envVar = arcsiUtils.getEnvironmentVariable("ARCSI_USE_SIMPLEDOS")
+        if not envVar == None:
+            if envVar == "TRUE":
+                args.simpledos = True
+                print("Using simple DOS method due to environment variable.")
+            else:
+                args.simpledos = False
+                print("Not using simple DOS method due to environment variable.")
         
         arcsiObj.run(args.inputheader, args.imagefile, args.sensor, args.inwkt, args.format, args.outpath, 
                      args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, 
