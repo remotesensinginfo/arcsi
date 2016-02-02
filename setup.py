@@ -32,8 +32,8 @@ $ python setup.py install
 # History:
 # Version 1.0 - Created.
 
-
 from distutils.core import setup
+import os
 
 setup(name='ARCSI', 
     version='0.13.2', 
@@ -42,6 +42,10 @@ setup(name='ARCSI',
     author_email='pfb@aber.ac.uk',
     scripts=['bin/arcsi.py', 'bin/arcsisolarirradiance.py', 'bin/arcsispecresponsefuncs.py', 'bin/arcsiextractdata.py', 'bin/arcsibuildcmdslist.py', 'bin/arcsisortlandsat.py', 'bin/arcsiextractroistats.py', 'bin/arcsiplotextractedstats.py', 'bin/arcsisensitivity.py'],
     packages=['arcsilib'],
+    package_dir={'arcsilib': 'arcsilib'},
+    data_files=[(os.path.join('share','arcsi'),
+                [os.path.join('data','WorldAerosolParams.kea'),
+                 os.path.join('data','WorldAtmosphereParams.kea')])],
     license='LICENSE.txt',
     url='https://bitbucket.org/petebunting/arcsi',
     classifiers=['Intended Audience :: Developers',
