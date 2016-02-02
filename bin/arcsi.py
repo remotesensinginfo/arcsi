@@ -50,6 +50,8 @@ import argparse
 import time
 # Import the copy module
 import copy
+# Import ARCSI library
+import arcsilib
 # Import the ARCSI exception class
 from arcsilib.arcsiexception import ARCSIException
 # Import the ARCSI utilities class
@@ -1058,12 +1060,17 @@ if __name__ == '__main__':
             if not envVar == None:
                 args.aeroimg = envVar
                 print("Taking aerosol profile image path from environment variable.")
-                
+            else:
+                args.aeroimg = arcsilib.DEFAULT_ARCSI_AEROIMG_PATH
+
         if args.atmosimg == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_ATMOSIMG_PATH")
             if not envVar == None:
                 args.atmosimg = envVar
                 print("Taking atmosphere profile image path from environment variable.")
+            else:
+                args.atmosimg = arcsilib.DEFAULT_ARCSI_ATMOSIMG_PATH
+
 
         atmosOZoneWaterSpecified = False
         if (not args.atmosozone == None) and (args.atmoswater == None):
