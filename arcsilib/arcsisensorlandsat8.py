@@ -53,6 +53,8 @@ import os.path
 import rsgislib
 # Import the RSGISLib Image Calibration Module.
 import rsgislib.imagecalibration
+# Import the RSGISLib Image Utilities Module.
+import rsgislib.imageutils
 # Import the RSGISLib Image Calculations Module.
 import rsgislib.imagecalc
 # Import the RSGISLib segmentation Module
@@ -342,6 +344,13 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
     
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
         raise ARCSIException("Landsat 8 does not provide any image masks, do not use the MASK option.")
+    
+    def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
+        print("Create the valid data mask")
+        inImages = [self.band1File, self.band2File, self.band3File, self.band4File, self.band5File, self.band6File, self.band7File]
+        outputImage = os.path.join(outputPath, outputMaskName)
+        rsgislib.imageutils.genValidMask(inimages=inImages, outimage=outputImage, format=outFormat, nodata=0.0)
+        return outputImage
     
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")

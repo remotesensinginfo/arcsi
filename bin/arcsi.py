@@ -189,6 +189,7 @@ class ARCSI (object):
         
         startTime = time.time()
         arcsiUtils = ARCSIUtils()
+        rsgisUtils = rsgislib.RSGISPyUtils()
         # Create list to store products to be calculated and those actually calculated.
         prodsToCalc = dict()
         prodsCalculated = dict()
@@ -261,6 +262,7 @@ class ARCSI (object):
             prodsToCalc["THERMAL"] = False
             prodsToCalc["SATURATE"] = False
             prodsToCalc["TOPOSHADOW"] = False
+            prodsToCalc["FOOTPRINT"] = False
             
             # Make a copy of the dictionary to store calculated products.
             prodsCalculated = copy.copy(prodsToCalc)
@@ -312,6 +314,8 @@ class ARCSI (object):
                 elif prod == 'TOPOSHADOW':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOPOSHADOW"] = True
+                elif prod == 'FOOTPRINT':
+                    prodsToCalc["FOOTPRINT"] = True
                    
             if prodsToCalc["DOSAOT"] and prodsToCalc["DDVAOT"]:
                 raise ARCSIException("You cannot specify both the DOSAOT and DDVAOT products, you must choose one or the other.")
@@ -384,12 +388,27 @@ class ARCSI (object):
             thermalRadImage=""
             thermalBrightImage=""
             maskImage=""
+            validMaskImage=None
             toaImage = ""
             srefImage = ""
             aotFile = ""
             cloudsImage = ""
             outDEMName = ""
             topoShadowImage = ""
+            footprintShpFile = ""
+            
+            # Get the valid image data maskImage
+            outName = outBaseName + "_valid" + arcsiUtils.getFileExtension(outFormat)
+            validMaskImage = sensorClass.generateValidImageDataMask(outFilePath, outName, "KEA")
+            if not validMaskImage is None:
+                rsgislib.rastergis.populateStats(validMaskImage, True, True)
+            
+            if prodsToCalc["FOOTPRINT"]:
+                if validMaskImage is None:
+                    raise ARCSIException("To generate a footprint a valid image mask is required - not supported by this sensor?")
+                outFootprintLyrName = outBaseName + "_footprint"
+                footprintShpFile = sensorClass.generateImageFootprint(validMaskImage, outFilePath, outFootprintLyrName)
+                prodsCalculated["FOOTPRINT"] = True
             
             # Step 5: Convert to Radiance
             if prodsToCalc["RAD"]:
@@ -399,6 +418,17 @@ class ARCSI (object):
                 if prodsToCalc["THERMAL"]:
                     outThermName = outBaseName + "_therm_rad" + arcsiUtils.getFileExtension(outFormat)
                 radianceImage, thermalRadImage = sensorClass.convertImageToRadiance(outFilePath, outName, outThermName, outFormat)
+                if not validMaskImage is None:
+                    print("Masking to valid data area.")
+                    outRadPathName = os.path.join(outFilePath, outBaseName + "_rad_vmsk" + arcsiUtils.getFileExtension(outFormat))
+                    rsgislib.imageutils.maskImage(radianceImage, validMaskImage, outRadPathName, outFormat, rsgislib.imageutils.getRSGISLibDataType(radianceImage), 0.0, 0.0)
+                    rsgisUtils.deleteFileWithBasename(radianceImage)
+                    radianceImage = outRadPathName
+                    if not thermalRadImage == None:
+                        outThermPathName = os.path.join(outFilePath, outBaseName + "_therm_vmsk" + arcsiUtils.getFileExtension(outFormat))
+                        rsgislib.imageutils.maskImage(thermalRadImage, validMaskImage, outThermPathName, outFormat, rsgislib.imageutils.getRSGISLibDataType(thermalRadImage), 0.0, 0.0)
+                        rsgisUtils.deleteFileWithBasename(thermalRadImage)
+                        thermalRadImage = outThermPathName
                 print("Setting Band Names...")
                 sensorClass.setBandNames(radianceImage)
                 if calcStatsPy:
@@ -412,8 +442,13 @@ class ARCSI (object):
             if sensorClass.maskInputImages():
                 # If the image comes with a mask then apply that before moving on.
                 outImgName = outBaseName + "_rad_msk" + arcsiUtils.getFileExtension(outFormat)
+                if not validMaskImage is None:
+                    outImgName = outBaseName + "_rad_vmsk_msk" + arcsiUtils.getFileExtension(outFormat)
                 outMaskName = outBaseName + "_mask" + arcsiUtils.getFileExtension(outFormat)
-                radianceImage, maskImage = sensorClass.applyImageDataMask(inputHeader, radianceImage, outFilePath, outMaskName, outImgName, outFormat)
+                radianceImageTmp, maskImage = sensorClass.applyImageDataMask(inputHeader, radianceImage, outFilePath, outMaskName, outImgName, outFormat)
+                if not radianceImageTmp is radianceImage:
+                    rsgisUtils.deleteFileWithBasename(radianceImage)
+                    radianceImage = radianceImageTmp
                 if not maskImage == None:
                     print("Setting Band Names...")
                     sensorClass.setBandNames(radianceImage)
@@ -679,15 +714,15 @@ class ARCSI (object):
         print("\t-----------------------------------------------------------------------------------------------------")
         print("\tSensor        | Shorthand     | Functions")
         print("\t-----------------------------------------------------------------------------------------------------")
-        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
-        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
-        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
-        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
-        print("\tLandsat 4 TM  | \'ls4tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW")
-        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
-        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW")
-        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW")
-        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW")
+        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT")
+        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT")
+        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT")
+        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT")
+        print("\tLandsat 4 TM  | \'ls4tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT")
+        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT")
+        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT")
+        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT")
+        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT")
         print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
         print("\tWorldView2    | \'wv2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
         print("\tSPOT5         | \'spot5\'     | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
@@ -796,9 +831,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOS and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW', 'FOOTPRINT'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW)''')
+                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT)''')
     # Define the argument for requesting a list of products.
     parser.add_argument("--prodlist", action='store_true', default=False, 
                         help='''List the products which are supported and 

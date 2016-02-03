@@ -53,6 +53,8 @@ from osgeo import ogr
 import os.path
 # Import the RSGISLib Image Calibration Module.
 import rsgislib.imagecalibration
+# Import the RSGISLib Image Utilities Module.
+import rsgislib.imageutils
 # Import the collections module
 import collections
 # Import the py6s module for running 6S from python.
@@ -401,10 +403,15 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         else:
             print("\tThere is no mask to mask this scene...")
             outputImage = inputImage
-            outputMaskImage = None
-            
-        
+            outputMaskImage = None            
         return outputImage, outputMaskImage
+    
+    def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
+        print("Create the valid data mask")
+        inImages = [self.band1File, self.band2File, self.band3File, self.band4File, self.band5File, self.band7File]
+        outputImage = os.path.join(outputPath, outputMaskName)
+        rsgislib.imageutils.genValidMask(inimages=inImages, outimage=outputImage, format=outFormat, nodata=0.0)
+        return outputImage
     
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
