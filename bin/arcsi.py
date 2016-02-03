@@ -182,7 +182,7 @@ class ARCSI (object):
             atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, 
             atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, 
             aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, 
-            demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode):
+            demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor):
         """
         A function contains the main flow of the software
         """
@@ -512,7 +512,7 @@ class ARCSI (object):
             if prodsToCalc["TOA"]:
                 # Execute conversion to top of atmosphere reflectance
                 outName = outBaseName + "_rad_toa" + arcsiUtils.getFileExtension(outFormat)
-                toaImage = sensorClass.convertImageToTOARefl(radianceImage, outFilePath, outName, outFormat)
+                toaImage = sensorClass.convertImageToTOARefl(radianceImage, outFilePath, outName, outFormat, scaleFactor)
                 print("Setting Band Names...")
                 sensorClass.setBandNames(toaImage)
                 if calcStatsPy:
@@ -630,7 +630,7 @@ class ARCSI (object):
                 
                 if (demFile == None):
                     outName = outBaseName + "_rad_sref" + arcsiUtils.getFileExtension(outFormat)
-                    srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
+                    srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor)
                 else:
                     # Calc Min, Max Elevation for region intersecting with the image.
                     statsElev = rsgislib.imagecalc.getImageStatsInEnv(demFile, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
@@ -648,7 +648,7 @@ class ARCSI (object):
                     if (aotFile == None) or (aotFile == ""):
                         print("Build an DEM LUT with AOT == " + str(aotVal) + "...")
                         outName = outBaseName + "_rad_srefdem" + arcsiUtils.getFileExtension(outFormat)
-                        srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev)                    
+                        srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev, scaleFactor)
                     else:
                         print("Build an AOT and DEM LUT...")
                         statsAOT = rsgislib.imagecalc.getImageStatsInEnv(aotFile, 1, -9999, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
@@ -662,7 +662,7 @@ class ARCSI (object):
                         numAOTSteps = math.ceil(aotRange) + 1
                         print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
                         outName = outBaseName + "_rad_srefdemaot" + arcsiUtils.getFileExtension(outFormat)
-                        srefImage = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImage, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT)
+                        srefImage = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImage, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT, scaleFactor)
 
                 print("Setting Band Names...")
                 sensorClass.setBandNames(srefImage)
@@ -936,6 +936,9 @@ if __name__ == '__main__':
                         help='''Specifies the reflectance value to which dark objects
                         are set to during the dark object subtraction. (Default is 20, 
                         which is equivalent to 2 percent reflectance.''')
+    parser.add_argument("--scalefac", type=int, default=1000, 
+                        help='''Specifies the scale factor for the reflectance 
+                        products.''')
     
                         
     # Call the parser to parse the arguments.
@@ -1146,7 +1149,8 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, 
                      args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, 
                      args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, 
-                     args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug)
+                     args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, 
+                     args.scalefac)
 
 
 
