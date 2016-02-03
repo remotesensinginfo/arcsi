@@ -68,7 +68,8 @@ class ARCSIBuildCommands (object):
                      aeroimg, atmosimg, grdrefl, surfacealtitude, 
                      atmosozone, atmoswater, aerowater, 
                      aerodust, aerooceanic, aerosoot, aot, vis, tmpath, 
-                     minaot, maxaot, dem, localdos, dosout, simpledos):
+                     minaot, maxaot, dem, localdos, dosout, simpledos, 
+                     scalefac):
         
         inputDIR = os.path.abspath(inputDIR)
         outputFile = os.path.abspath(outputFile)
@@ -146,6 +147,8 @@ class ARCSIBuildCommands (object):
                 cmd = cmd + " --aerosoot " + str(aerosoot)
             if not dosout == None:
                 cmd = cmd + " --dosout " + str(dosout)
+            if not scalefac == None:
+                cmd = cmd + " --scalefac " + str(scalefac)
             if localdos:
                 cmd = cmd + " --localdos "
             if simpledos:
@@ -201,9 +204,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOSUB and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW', 'FOOTPRINT'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW)''')
+                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, 'FOOTPRINT')''')
                         
     # Define the argument which specifies the standard aersol profile to use.
     parser.add_argument("--aeropro", type=str, choices=['NoAerosols', 'Continental', 
@@ -310,6 +313,10 @@ if __name__ == '__main__':
                         are set to during the dark object subtraction. (Default is 20, 
                         which is equivalent to 2 % reflectance.''')
                         
+    parser.add_argument("--scalefac", type=int, 
+                        help='''Specifies the scale factor for the reflectance 
+                        products.''')
+                        
     # Call the parser to parse the arguments.
     args = parser.parse_args()
     
@@ -345,6 +352,7 @@ if __name__ == '__main__':
                      args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, 
                      args.atmosozone, args.atmoswater, args.aerowater, 
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath, 
-                     args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos)
+                     args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos
+                     args.scalefac)
     
     
