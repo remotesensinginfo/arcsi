@@ -49,10 +49,21 @@ import glob
 import argparse
 # Import the arcsi version number
 from arcsilib import ARCSI_VERSION
+# Import os.walk to navigate directory structure.
+import os
 
 class ARCSIBuildCommands (object):
-        
-    def buildCmds(self, inputDIR, outputFile, headerEnding, noFolders, sensor, inwkt, 
+    
+    def getListOfFiles(self, searchDIR, headerEnding):
+        outFiles = []
+        for dirName, subdirList, fileList in os.walk(searchDIR):
+            for fname in fileList:
+                fname = str(fname)
+                if fname.endswith(headerEnding):
+                    outFiles.append("\"" + os.path.abspath(os.path.join(dirName, fname)) + "\"")
+        return outFiles
+    
+    def buildCmds(self, inputDIR, outputFile, headerEnding, sensor, inwkt, 
                      format, outpath, prods, stats, aeropro, atmospro, 
                      aeroimg, atmosimg, grdrefl, surfacealtitude, 
                      atmosozone, atmoswater, aerowater, 
@@ -62,26 +73,19 @@ class ARCSIBuildCommands (object):
         inputDIR = os.path.abspath(inputDIR)
         outputFile = os.path.abspath(outputFile)
         if not aeroimg == None:
-            aeroimg = os.path.abspath(aeroimg)
+            aeroimg = "\"" + os.path.abspath(aeroimg) + "\""
         if not atmosimg == None:
-            atmosimg = os.path.abspath(atmosimg)
+            atmosimg = "\"" + os.path.abspath(atmosimg) + "\""
         if not dem == None:
-            dem = os.path.abspath(dem)
+            dem = "\"" + os.path.abspath(dem) + "\""
         if not tmpath == None:
-            tmpath = os.path.abspath(tmpath)
+            tmpath = "\"" + os.path.abspath(tmpath) + "\""
         if not outpath == None:
-            outpath = os.path.abspath(outpath)
+            outpath = "\"" + os.path.abspath(outpath) + "\""
         if not inwkt == None:
-            inwkt = os.path.abspath(inwkt)
+            inwkt = "\"" + os.path.abspath(inwkt) + "\""
             
-        headersFilesList = list()
-        searchPath = ""
-        if noFolders:
-            searchPath = os.path.join(inputDIR, "*" + headerEnding)
-        else:
-            searchPath = os.path.join(inputDIR, "*", "*" + headerEnding)
-        print("Search Path: ", searchPath)
-        headersFilesList = glob.glob(searchPath)
+        headersFilesList = self.getListOfFiles(inputDIR, headerEnding)
                 
         prodsStr = ""
         first = True
@@ -173,10 +177,6 @@ if __name__ == '__main__':
                         
     parser.add_argument("-e", "--header", type=str, required=True, 
                         help='''The extension / unquie file ending for the input header files.''')
-    
-    parser.add_argument("--nofolders", action='store_true', default=False, 
-                        help='''Specifies whether that the the commands should only look for files
-                                within the specified input directory and not go down the directory tree.''')
                                                            
     # Define the argument for specifying the sensor.
     parser.add_argument("-s", "--sensor", choices=['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm',
@@ -259,7 +259,7 @@ if __name__ == '__main__':
                         to 1 although all do not been to be specified).''')  
                                               
     # Define the argument which specifies the ground reflectance.
-    parser.add_argument("--grdrefl", type=str, default="GreenVegetation", choices=['GreenVegetation',  
+    parser.add_argument("--grdrefl", type=str, choices=['GreenVegetation',  
     'ClearWater', 'Sand', 'LakeWater', 'BRDFHapke'], help='''Specify the ground reflectance used for the 
                                                 6S model. (GreenVegetation, ClearWater, Sand, LakeWater, BRDFHapke).''')
                                                 
@@ -305,7 +305,7 @@ if __name__ == '__main__':
                         help='''Specifies that a simple (basic) DOS should be applied
                         rather than the more complex variable global/local DOS methods.''')
                         
-    parser.add_argument("--dosout", type=float, default=20, 
+    parser.add_argument("--dosout", type=float, 
                         help='''Specifies the reflectance value to which dark objects
                         are set to during the dark object subtraction. (Default is 20, 
                         which is equivalent to 2 % reflectance.''')
@@ -340,7 +340,7 @@ if __name__ == '__main__':
     
     arcsiObj = ARCSIBuildCommands()
     
-    arcsiObj.buildCmds(args.input, args.output, args.header, args.nofolders, args.sensor, args.inwkt, 
+    arcsiObj.buildCmds(args.input, args.output, args.header, args.sensor, args.inwkt, 
                      args.format, args.outpath, args.prods, args.stats, args.aeropro, args.atmospro, 
                      args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, 
                      args.atmosozone, args.atmoswater, args.aerowater, 

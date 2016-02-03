@@ -65,6 +65,10 @@ import rsgislib.elevation
 import rsgislib.imagefilter
 #Import the OSGEO GDAL module
 import osgeo.gdal as gdal
+# Import the osgeo ogr library
+from osgeo import ogr
+# Import the osgeo osr library
+from osgeo import osr
 # Import the ARCSI utilities class
 from .arcsiutils import ARCSIUtils
 # Import OS path module for manipulating the file system 
@@ -277,6 +281,131 @@ class ARCSIAbstractSensor (object):
     
     @abstractmethod
     def generateImageSaturationMask(self, outputPath, outputName, outFormat): pass
+    
+    def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
+        return None
+        
+    def generateImageFootprint(self, validMaskImage, outputPath, outputName):
+        print("Creating Vector Footprint...")
+        rsgislib.rastergis.spatialExtent(clumps=validMaskImage, minXX='MinXX', minXY='MinXY', maxXX='MaxXX', maxXY='MaxXY', minYX='MinYX', minYY='MinYY', maxYX='MaxYX', maxYY='MaxYY', ratband=1)
+        ratDataset = gdal.Open(validMaskImage)
+
+        minXXVals = rat.readColumn(ratDataset, 'MinXX')
+        minXYVals = rat.readColumn(ratDataset, 'MinXY')
+        maxXXVals = rat.readColumn(ratDataset, 'MaxXX')
+        maxXYVals = rat.readColumn(ratDataset, 'MaxXY')
+        minYXVals = rat.readColumn(ratDataset, 'MinYX')
+        minYYVals = rat.readColumn(ratDataset, 'MinYY')
+        maxYXVals = rat.readColumn(ratDataset, 'MaxYX')
+        maxYYVals = rat.readColumn(ratDataset, 'MaxYY')
+
+        ## Remove First Row which is no data...    
+        dataMask = numpy.ones_like(minXXVals, dtype=numpy.int16)
+        dataMask[0] = 0
+        minXXVals = minXXVals[dataMask == 1]
+        minXYVals = minXYVals[dataMask == 1]
+        maxXXVals = maxXXVals[dataMask == 1]
+        maxXYVals = maxXYVals[dataMask == 1]
+        minYXVals = minYXVals[dataMask == 1]
+        minYYVals = minYYVals[dataMask == 1]
+        maxYXVals = maxYXVals[dataMask == 1]
+        maxYYVals = maxYYVals[dataMask == 1]
+    
+        ## Remove any features which are all zero (i.e., polygon not present...)
+        minXXValsSub = minXXVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+        minXYValsSub = minXYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+        maxXXValsSub = maxXXVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+        maxXYValsSub = maxXYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+        minYXValsSub = minYXVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+        minYYValsSub = minYYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+        maxYXValsSub = maxYXVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+        maxYYValsSub = maxYYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+        
+        numFeats = minXXValsSub.shape[0]
+        
+        outShpLayerNamePath = os.path.join(outputPath, outputName)
+        driver = ogr.GetDriverByName("ESRI Shapefile")
+        if os.path.exists(outShpLayerNamePath+".shp"):
+            driver.DeleteDataSource(outShpLayerNamePath+".shp")
+        outDatasource = driver.CreateDataSource(outShpLayerNamePath+ ".shp")
+        raster_srs = osr.SpatialReference()
+        raster_srs.ImportFromWkt(ratDataset.GetProjectionRef())
+        outLayer = outDatasource.CreateLayer(outShpLayerNamePath, srs=raster_srs) #ratDataset.GetProjection()
+        
+        fieldYearDefn = ogr.FieldDefn('Year', ogr.OFTInteger) 
+        fieldYearDefn.SetWidth(6) 
+        outLayer.CreateField(fieldYearDefn)
+        
+        fieldMonthDefn = ogr.FieldDefn('Month', ogr.OFTInteger) 
+        fieldMonthDefn.SetWidth(6) 
+        outLayer.CreateField(fieldMonthDefn)
+        
+        fieldDayDefn = ogr.FieldDefn('Day', ogr.OFTInteger) 
+        fieldDayDefn.SetWidth(6) 
+        outLayer.CreateField(fieldDayDefn)
+        
+        fieldBaseNameDefn = ogr.FieldDefn('BaseName', ogr.OFTString) 
+        fieldBaseNameDefn.SetWidth(254) 
+        outLayer.CreateField(fieldBaseNameDefn)
+        
+        fieldSolZenDefn = ogr.FieldDefn('SolZen', ogr.OFTReal) 
+        fieldSolZenDefn.SetWidth(10) 
+        fieldSolZenDefn.SetPrecision(6)
+        outLayer.CreateField(fieldSolZenDefn)
+        
+        fieldSolAziDefn = ogr.FieldDefn('SolAzi', ogr.OFTReal) 
+        fieldSolAziDefn.SetWidth(10) 
+        fieldSolAziDefn.SetPrecision(6)
+        outLayer.CreateField(fieldSolAziDefn)
+        
+        fieldSenZenDefn = ogr.FieldDefn('SenZen', ogr.OFTReal) 
+        fieldSenZenDefn.SetWidth(10) 
+        fieldSenZenDefn.SetPrecision(6)
+        outLayer.CreateField(fieldSenZenDefn)
+        
+        fieldSenAziDefn = ogr.FieldDefn('SenAzi', ogr.OFTReal) 
+        fieldSenAziDefn.SetWidth(10) 
+        fieldSenAziDefn.SetPrecision(6)
+        outLayer.CreateField(fieldSenAziDefn)
+        
+        fieldCenLatDefn = ogr.FieldDefn('CenLat', ogr.OFTReal) 
+        fieldCenLatDefn.SetWidth(10) 
+        fieldCenLatDefn.SetPrecision(6)
+        outLayer.CreateField(fieldCenLatDefn)
+        
+        fieldCenLonDefn = ogr.FieldDefn('CenLon', ogr.OFTReal) 
+        fieldCenLonDefn.SetWidth(10) 
+        fieldCenLonDefn.SetPrecision(6)
+        outLayer.CreateField(fieldCenLonDefn)
+                
+        print("Create and Add Polygons...")
+        for i in range(numFeats):
+            wktStr = "POLYGON((" + str(minXXValsSub[i]) + " " + str(minXYValsSub[i]) + ", " + str(maxYXValsSub[i]) + " " + str(maxYYValsSub[i]) + ", " + str(maxXXValsSub[i]) + " " + str(maxXYValsSub[i]) + ", " + str(minYXValsSub[i]) + " " + str(minYYValsSub[i]) + ", " + str(minXXValsSub[i]) + " " + str(minXYValsSub[i]) + "))"
+            #print(str(i) + ": " + wktStr)
+            poly = ogr.CreateGeometryFromWkt(wktStr)
+            feat = ogr.Feature( outLayer.GetLayerDefn())
+            feat.SetGeometry(poly)
+            #print(
+            feat.SetField("Year", self.acquisitionTime.year)
+            feat.SetField("Month", self.acquisitionTime.month)
+            feat.SetField("Day", self.acquisitionTime.day)
+            feat.SetField("BaseName", self.generateOutputBaseName())
+            feat.SetField("SolZen", self.solarZenith)
+            feat.SetField("SolAzi", self.solarAzimuth)
+            feat.SetField("SenZen", self.senorZenith)
+            feat.SetField("SenAzi", self.senorAzimuth)
+            feat.SetField("CenLat", self.latCentre)
+            feat.SetField("CenLon", self.lonCentre)
+            
+            if outLayer.CreateFeature(feat) != 0:
+                print(str(i) + ": " + wktStr)
+                print("Failed to create feature in shapefile.\n")
+                sys.exit( 1 )
+            feat.Destroy()
+        
+        outDatasource.Destroy()
+        ratDataset = None
+        
     
     def generateTopoDirectShadowMask(self,  inputDEMImage, outputPath, outputName, outFormat, tmpPath):
         try:
