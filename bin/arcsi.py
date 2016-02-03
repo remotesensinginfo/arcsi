@@ -593,7 +593,7 @@ class ARCSI (object):
                     aotVal = self.convertVisabilityToAOD(visVal)
                 
                 if not (aotVal == None):
-                    print("AOT Value: " + str(aotVal))
+                    print("AOT Value: {}".format(aotVal))
                 
                 if (demFile == None):
                     outName = outBaseName + "_rad_sref" + arcsiUtils.getFileExtension(outFormat)
@@ -643,9 +643,9 @@ class ARCSI (object):
             
                 
         except ARCSIException as e:
-            print("Error: " + str(e), file=sys.stderr)
+            print("Error: {}".format(e), file=sys.stderr)
         except Exception as e:
-            print("Error: " + str(e), file=sys.stderr)
+            print("Error: {}".format(e), file=sys.stderr)
         finally:
             failedProdsList = []
             # Check all requested products have been created
@@ -984,6 +984,7 @@ if __name__ == '__main__':
                 needDEM = True
             elif prod == 'DOSAOTSGL':
                 needAODMinMax = True
+                needTmp = True
                 needDEM = True
             elif prod == 'TOPOSHADOW':
                 needTmp = True
@@ -1027,7 +1028,7 @@ if __name__ == '__main__':
         if needTmp and args.tmpath == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_TMP_PATH")
             if envVar == None:
-                print("Error: If the DDVAOT or DOS or CLOUDS or TOPOSHADOW product is set then a tempory path needs to be provided.\n")
+                print("Error: If the DDVAOT, DOS, DOSAOTSGL, CLOUDS or TOPOSHADOW product is set then a tempory path needs to be provided.\n")
                 parser.print_help()
                 sys.exit()
             else:
