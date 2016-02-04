@@ -73,6 +73,26 @@ class ARCSIExtractData (object):
         except Exception as e:
             print('IOError Occurred: ' + str(e))
             
+    def untargzFile(self, filename, outDIR, noFolders):
+        tarcommand = 'tar -xvzf '
+        command = ''
+        try:
+            processingDIR = ""
+            if noFolders:
+                processingDIR = outDIR
+            else:
+                processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+            if not os.path.exists(processingDIR):
+                os.makedirs(processingDIR)
+            os.chdir(processingDIR)
+            print("Extracting: ", filename)
+            print("Output to: ", processingDIR)
+            command = tarcommand + filename
+            os.system(command)
+                
+        except Exception as e:
+            print('IOError Occurred: ' + str(e))
+            
             
     def untarFiles(self, filelist, outDIR, noFolders):
         tarcommand = 'tar -xvf '
@@ -93,18 +113,102 @@ class ARCSIExtractData (object):
         except Exception as e:
             print('IOError Occurred: ' + str(e))
             
+    def untarFile(self, filename, outDIR, noFolders):
+        tarcommand = 'tar -xvf '
+        command = ''
+        try:
+            processingDIR = ""
+            if noFolders:
+                processingDIR = outDIR
+            else:
+                processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+            if not os.path.exists(processingDIR):
+                os.makedirs(processingDIR)
+            os.chdir(processingDIR)
+            print(filename)
+            command = tarcommand + filename
+            os.system(command)
+        except Exception as e:
+            print('IOError Occurred: ' + str(e))
+            
+    def unZipFiles(self, filelist, outDIR, noFolders):
+        zipcommand = 'unzip '
+        command = ''
+        try:
+            processingDIR = ""
+            for filename in filelist:
+                if noFolders:
+                    processingDIR = outDIR
+                else:
+                    processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+                if not os.path.exists(processingDIR):
+                    os.makedirs(processingDIR)
+                os.chdir(processingDIR)
+                print(filename)
+                command = zipcommand + filename
+                os.system(command)
+        except Exception as e:
+            print('IOError Occurred: ' + str(e))
+            
+    def unZipFile(self, filename, outDIR, noFolders):
+        zipcommand = 'unzip '
+        command = ''
+        try:
+            processingDIR = ""
+            if noFolders:
+                processingDIR = outDIR
+            else:
+                processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+            if not os.path.exists(processingDIR):
+                os.makedirs(processingDIR)
+            os.chdir(processingDIR)
+            print(filename)
+            command = zipcommand + filename
+            os.system(command)
+        except Exception as e:
+            print('IOError Occurred: ' + str(e))
+            
     
-    def run(self, inputDIR, outputDIR, noFolders):
+    def run4DIR(self, inputDIR, outputDIR, noFolders):
         inputDIR = os.path.abspath(inputDIR)
         outputDIR = os.path.abspath(outputDIR)
         
         # First, do the tar.gz files.
         inputFileListTarGz = glob.glob(os.path.join(inputDIR, "*.tar.gz"))
         self.untargzFiles(inputFileListTarGz, outputDIR, noFolders)
+        inputFileListTarGz = glob.glob(os.path.join(inputDIR, "*.tgz"))
+        self.untargzFiles(inputFileListTarGz, outputDIR, noFolders)
+        inputFileListTarGz = glob.glob(os.path.join(inputDIR, "*.TAR.GZ"))
+        self.untargzFiles(inputFileListTarGz, outputDIR, noFolders)
+        inputFileListTarGz = glob.glob(os.path.join(inputDIR, "*.TGZ"))
+        self.untargzFiles(inputFileListTarGz, outputDIR, noFolders)
         
         # Second, do the tar files.
         inputFileListTar = glob.glob(os.path.join(inputDIR, "*.tar"))
         self.untarFiles(inputFileListTar, outputDIR, noFolders)
+        inputFileListTar = glob.glob(os.path.join(inputDIR, "*.TAR"))
+        self.untarFiles(inputFileListTar, outputDIR, noFolders)
+        
+        # Third, do the tar files.
+        inputFileListZip = glob.glob(os.path.join(inputDIR, "*.zip"))
+        self.unZipFiles(inputFileListZip, outputDIR, noFolders)
+        inputFileListZip = glob.glob(os.path.join(inputDIR, "*.ZIP"))
+        self.unZipFiles(inputFileListZip, outputDIR, noFolders)
+        
+    def run4File(self, inputFile, outputDIR, noFolders):
+        inputFile = os.path.abspath(inputFile)
+        outputDIR = os.path.abspath(outputDIR)
+        
+        fileExt = os.path.basename(inputFile).split(".", 1)[-1].lower()
+                    
+        if (fileExt == 'tar.gz') or (fileExt == 'tgz'):
+            self.untargzFile(inputFile, outputDIR, noFolders)
+        
+        if fileExt == 'tar':    
+            self.untarFile(inputFile, outputDIR, noFolders)
+        
+        if fileExt == 'zip':    
+            self.unZipFile(inputFile, outputDIR, noFolders)
         
 
 if __name__ == '__main__':
@@ -119,10 +223,13 @@ if __name__ == '__main__':
                                               individual directories per image''')
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
-    # Define the argument for specifying the input spectral response file.
+    # Define the argument for specifying the input directory to be processed.
     parser.add_argument("-i", "--input", type=str, 
-                        help='''Input directory contains archives (tar and/or tar.gz).''')
-    # Define the argument for specifying input seperator.
+                        help='''Input directory contains archives (tar, tar.gz, and/or zip).''')
+    # Define the argument for specifying the input file to be processed 
+    parser.add_argument("-f", "--file", type=str, 
+                        help='''Input file contains archive (tar, tar.gz, and/or zip).''')
+    # Define the argument for specifying the output directory.
     parser.add_argument("-o", "--output", type=str,
                         help='''The output directory to which all output files are to be written.''')
     parser.add_argument("--nofolders", action='store_true', default=False, 
@@ -131,8 +238,8 @@ if __name__ == '__main__':
     # Call the parser to parse the arguments.
     args = parser.parse_args()
     
-    if args.input == None:
-        print("An input directory was not specified.")
+    if (args.input == None) & (args.file == None):
+        print("An input directory or file must be specified.")
         parser.print_help()
         sys.exit()
     
@@ -143,4 +250,8 @@ if __name__ == '__main__':
     
     arcsiObj = ARCSIExtractData()
     
-    arcsiObj.run(args.input, args.output, args.nofolders)
+    if not args.input == None:
+        arcsiObj.run4DIR(args.input, args.output, args.nofolders)
+    
+    if not args.file == None: 
+        arcsiObj.run4File(args.file, args.output, args.nofolders)

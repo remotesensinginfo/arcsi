@@ -36,11 +36,11 @@ from distutils.core import setup
 import os
 
 setup(name='ARCSI', 
-    version='0.13.2', 
+    version='0.13.13', 
     description='Atmospheric and Radiometic Correction of Satellite Imagery',
     author='Pete Bunting',
     author_email='pfb@aber.ac.uk',
-    scripts=['bin/arcsi.py', 'bin/arcsisolarirradiance.py', 'bin/arcsispecresponsefuncs.py', 'bin/arcsiextractdata.py', 'bin/arcsibuildcmdslist.py', 'bin/arcsisortlandsat.py', 'bin/arcsiextractroistats.py', 'bin/arcsiplotextractedstats.py', 'bin/arcsisensitivity.py'],
+    scripts=['bin/arcsi.py', 'bin/arcsisolarirradiance.py', 'bin/arcsispecresponsefuncs.py', 'bin/arcsiextractdata.py', 'bin/arcsibuildcmdslist.py', 'bin/arcsisortlandsat.py', 'bin/arcsiextractroistats.py', 'bin/arcsiplotextractedstats.py', 'bin/arcsisensitivity.py', 'bin/arcsibuildextractfilecmds.py'],
     packages=['arcsilib'],
     package_dir={'arcsilib': 'arcsilib'},
     data_files=[(os.path.join('share','arcsi'),
@@ -57,4 +57,5 @@ setup(name='ARCSI',
           'Programming Language :: Python :: 3',
           'Programming Language :: Python :: 3.2',
           'Programming Language :: Python :: 3.3',
-          'Programming Language :: Python :: 3.4'])
+          'Programming Language :: Python :: 3.4',
+          'Programming Language :: Python :: 3.5'])
