@@ -317,8 +317,8 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
 
             for band_num in bands_list:
                 try:
-                    metaRadMinList[band_num] = float(headerParams["RADIANCE_MIN_BAND_{}".format(band_num)])
-                    metaRadMaxList[band_num] = float(headerParams["RADIANCE_MAX_BAND_{}".format(band_num)])
+                    metaRadMinList[band_num] = float(headerParams["RADIANCE_MINIMUM_BAND_{}".format(band_num)])
+                    metaRadMaxList[band_num] = float(headerParams["RADIANCE_MAXIMUM_BAND_{}".format(band_num)])
                 except KeyError:
                     if band_num == "6_VCID_1":
                         metaRadMinList[band_num] = float(headerParams["LMIN_BAND61"])
