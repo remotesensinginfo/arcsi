@@ -62,6 +62,8 @@ import argparse
 from arcsilib.arcsiexception import ARCSIException
 # Import the shutil python module.
 import shutil
+#
+import os.path
 # Import the arcsi version number
 from arcsilib import ARCSI_VERSION
 
@@ -75,8 +77,32 @@ class ARCSISortLandsatData (object):
                 os.makedirs(os.path.join(outputDIR, "Inputs"))
                 os.makedirs(os.path.join(outputDIR, "Outputs"))
                 os.makedirs(os.path.join(outputDIR, "tmp"))
+    
+    
+    def moveFile(self, cFileLoc, outFileDIR, userInteract):
+        ## CHECK IF FILE EXISTS AT outFileDIR
+        ## IF EXISTS and userInteract == True THEN ask users which to use (show file sizes)
+        ## ELSE (i.e., userInteract == False) THEN don't overwrite and leave orignal file where it is.
+        fileName = os.path.basename(cFileLoc)
+        if os.path.exists(os.path.join(outFileDIR,fileName)):
+            if userInteract:
+                print("1) ", cFileLoc) # DUPLICATE
+                print("\t File Size: " + str((os.path.getsize(cFileLoc)/1024)/1024))
+                print("2) ", os.path.join(outFileDIR,fileName)) # ORIGINAL
+                print("\t File Size: " + str((os.path.getsize(os.path.join(outFileDIR,fileName))/1024)/1024))
+                # Print File 
+                Answer = input("Press 1 to move NEW file or 2 to keep ORIGINAL.\n")
+                if Answer == '1': # Move New
+                    os.remove(os.path.join(outFileDIR,fileName))
+                    shutil.move(cFileLoc, outFileDIR)
+                else:
+                    pass
+            else:
+                print("DUPLICATE IGNORING: ", cFileLoc)
+        else:
+            shutil.move(cFileLoc, outFileDIR)
         
-    def run(self, inputDir, outputDir, noDIRStruct):
+    def run(self, inputDir, outputDir, noDIRStruct, userInteract):
         inputDir = os.path.abspath(inputDir)
         outputDir = os.path.abspath(outputDir)
         
@@ -85,7 +111,16 @@ class ARCSISortLandsatData (object):
         if not os.path.isdir(outputDir):
             raise ARCSIException("The output directory specified does not exist!")
         
-        inputFiles = os.listdir(inputDir)
+        #inputFiles = os.listdir(inputDir)
+        
+        inputFiles = []
+        
+        # Navigate the directory tree
+        for dirName, sudirList, fileList in os.walk(inputDir):
+            # Append target file to list f files using the absolute filepath
+            for fname in fileList:
+                filename = os.path.join(dirName, fname)
+                inputFiles.append(filename)
         
         createdLM1DIR = False
         createdLM2DIR = False
@@ -96,23 +131,33 @@ class ARCSISortLandsatData (object):
         createdLS5DIR = False
         createdLS7DIR = False
         createdLS8DIR = False
+        createdLS05DIR = False
+        createdLS07DIR = False
         outputFileDIR = ""
         
         for file in inputFiles:
-            filePrefix = file[:3]
-            if filePrefix == 'LM1':
+            #print(file)
+            basefilename = os.path.basename(file)
+            #print(basefilename)
+            filePrefix3 = basefilename[:3]
+            filePrefix4 = basefilename[:4]
+            #print(filePrefix)
+            if '.DS_Store' in file:
+                print('Skipping .DS_Store file')
+                pass
+            elif filePrefix3 == 'LM1':
                 outputFileDIR = os.path.join(outputDir, "LM1")
                 if (not createdLM1DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
                     createdLM1DIR = True
                 # Move file...
-                inFile = os.path.join(inputDir, file)
+                inFile = file
                 if not noDIRStruct:
                     outputFileDIR = os.path.join(outputFileDIR, "RAW")
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
-                shutil.move(inFile, outputFileDIR)
-            elif filePrefix == 'LM2':
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LM2':
                 outputFileDIR = os.path.join(outputDir, "LM2")
                 if (not createdLM2DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -123,8 +168,8 @@ class ARCSISortLandsatData (object):
                     outputFileDIR = os.path.join(outputFileDIR, "RAW")
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
-                shutil.move(inFile, outputFileDIR)
-            elif filePrefix == 'LM3':
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LM3':
                 outputFileDIR = os.path.join(outputDir, "LM3")
                 if (not createdLM3DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -135,8 +180,8 @@ class ARCSISortLandsatData (object):
                     outputFileDIR = os.path.join(outputFileDIR, "RAW")
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
-                shutil.move(inFile, outputFileDIR)
-            elif filePrefix == 'LM4':
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LM4':
                 outputFileDIR = os.path.join(outputDir, "LM4")
                 if (not createdLM4DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -147,8 +192,8 @@ class ARCSISortLandsatData (object):
                     outputFileDIR = os.path.join(outputFileDIR, "RAW")
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
-                shutil.move(inFile, outputFileDIR)
-            elif filePrefix == 'LM5':
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LM5':
                 outputFileDIR = os.path.join(outputDir, "LM5")
                 if (not createdLM5DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -159,8 +204,8 @@ class ARCSISortLandsatData (object):
                     outputFileDIR = os.path.join(outputFileDIR, "RAW")
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
-                shutil.move(inFile, outputFileDIR)
-            elif filePrefix == 'LT4':
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LT4':
                 outputFileDIR = os.path.join(outputDir, "LS4")
                 if (not createdLS4DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -171,8 +216,8 @@ class ARCSISortLandsatData (object):
                     outputFileDIR = os.path.join(outputFileDIR, "RAW")
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
-                shutil.move(inFile, outputFileDIR)
-            elif filePrefix == 'LT5':
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LT5' or filePrefix4 == 'LS05':
                 outputFileDIR = os.path.join(outputDir, "LS5")
                 if (not createdLS5DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -183,8 +228,8 @@ class ARCSISortLandsatData (object):
                     outputFileDIR = os.path.join(outputFileDIR, "RAW")
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
-                shutil.move(inFile, outputFileDIR)
-            elif filePrefix == 'LE7':
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LE7' or filePrefix4 == 'LS07':
                 outputFileDIR = os.path.join(outputDir, "LS7")
                 if (not createdLS7DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -195,8 +240,8 @@ class ARCSISortLandsatData (object):
                     outputFileDIR = os.path.join(outputFileDIR, "RAW")
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
-                shutil.move(inFile, outputFileDIR)
-            elif filePrefix == 'LC8':
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LC8':
                 outputFileDIR = os.path.join(outputDir, "LS8")
                 if (not createdLS8DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -207,10 +252,10 @@ class ARCSISortLandsatData (object):
                     outputFileDIR = os.path.join(outputFileDIR, "RAW")
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
-                shutil.move(inFile, outputFileDIR)
+                self.moveFile(inFile, outputFileDIR, userInteract)
             else:
                 print("Sensor was not recognised for file: " + file)
-        
+
 
 if __name__ == '__main__':
     """
@@ -235,6 +280,8 @@ if __name__ == '__main__':
                         help='''The output directory to which the output structure will be written.''')
     parser.add_argument("--nodirstruct", action='store_true', default=False, 
                         help='''Specifies that a directory structure should not be built when the new folders are created.''')
+    parser.add_argument("--userinteract", action='store_true', default=False, 
+                        help='''Specifies whether the user should be promoted for decision if two files of same name exist.''')
     # Call the parser to parse the arguments.
     args = parser.parse_args()
     
@@ -250,7 +297,7 @@ if __name__ == '__main__':
     
     arcsiObj = ARCSISortLandsatData()
     try:
-        arcsiObj.run(args.input, args.output, args.nodirstruct)
+        arcsiObj.run(args.input, args.output, args.nodirstruct, args.userinteract)
     except ARCSIException as e:
         print("Error: " + str(e))
     except Exception as e:
