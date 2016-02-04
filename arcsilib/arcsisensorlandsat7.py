@@ -316,25 +316,19 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             metaRadMaxList = {}
 
             for band_num in bands_list:
-                # Try getting values using all names known to be used
                 try:
                     metaRadMinList[band_num] = float(headerParams["RADIANCE_MINIMUM_BAND_{}".format(band_num)])
                     metaRadMaxList[band_num] = float(headerParams["RADIANCE_MAXIMUM_BAND_{}".format(band_num)])
                 except KeyError:
-                    try:
-                        if band_num == "6_VCID_1":
-                            metaRadMinList[band_num] = float(headerParams["LMIN_BAND61"])
-                            metaRadMaxList[band_num] = float(headerParams["LMAX_BAND61"])
-                        elif band_num == "6_VCID_2":
-                            metaRadMinList[band_num] = float(headerParams["LMIN_BAND62"])
-                            metaRadMaxList[band_num] = float(headerParams["LMAX_BAND62"])
-                        else:
-                            metaRadMinList[band_num] = float(headerParams["LMIN_BAND{}".format(band_num)])
-                            metaRadMaxList[band_num] = float(headerParams["LMAX_BAND{}".format(band_num)])
-                    except KeyError:
-                        metaRadMinList[band_num] = float(headerParams["RADIANCE_MINIMUM_BAND_{}".format(band_num)])
-                        metaRadMaxList[band_num] = float(headerParams["RADIANCE_MAXIMUM_BAND_{}".format(band_num)])
-                # If none of these work an exception will be raised.
+                    if band_num == "6_VCID_1":
+                        metaRadMinList[band_num] = float(headerParams["LMIN_BAND61"])
+                        metaRadMaxList[band_num] = float(headerParams["LMAX_BAND61"])
+                    elif band_num == "6_VCID_2":
+                        metaRadMinList[band_num] = float(headerParams["LMIN_BAND62"])
+                        metaRadMaxList[band_num] = float(headerParams["LMAX_BAND62"])
+                    else:
+                        metaRadMinList[band_num] = float(headerParams["LMIN_BAND{}".format(band_num)])
+                        metaRadMaxList[band_num] = float(headerParams["LMAX_BAND{}".format(band_num)])
 
             self.b1MinRad = metaRadMinList["1"]
             self.b1MaxRad = metaRadMaxList["1"]
