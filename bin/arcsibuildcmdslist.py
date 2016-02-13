@@ -369,7 +369,7 @@ if __name__ == '__main__':
                      args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, 
                      args.atmosozone, args.atmoswater, args.aerowater, 
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath, 
-                     args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos
+                     args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos,
                      args.scalefac, args.outwkt, args.projabbv, args.interp)
     
     
