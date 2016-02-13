@@ -42,6 +42,8 @@ Module that contains the ARSCI Main class.
 from __future__ import print_function
 # Import the system library
 import sys
+# Import the subprocess module
+import subprocess
 # Import the OS python module
 import os
 # Import the python Argument parser
@@ -180,11 +182,11 @@ class ARCSI (object):
             
     
     def run(self, inputHeader, inputImage, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, 
-            productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, 
-            atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, 
-            atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, 
-            aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, 
-            demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor):
+            outWKTFile, projAbbv, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, 
+            aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,  
+            atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal,  
+            aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, 
+            demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor):
         """
         A function contains the main flow of the software
         """
@@ -200,7 +202,7 @@ class ARCSI (object):
             wktStr = None
             if inWKTFile != None:
                 wktStr = arcsiUtils.readTextFile(inWKTFile)
-            
+                        
             # Step 1: Get the Sensor specific class from factory
             sensorClass = self.sensorClassFactory(sensorStr, debugMode, inputImage)
             
@@ -248,8 +250,10 @@ class ARCSI (object):
                 print("")
             
             # Step 3: Get Output Image Base Name.
-            if outBaseName == None:
+            if outBaseName is None:
                 outBaseName = sensorClass.generateOutputBaseName()
+                if not projAbbv is None:
+                    outBaseNameProj = outBaseName + "_" + str(projAbbv)
             print("Image Base Name: " + outBaseName + "\n")
             
             # Step 4: Find the products which are to be generated.
@@ -404,14 +408,48 @@ class ARCSI (object):
             validMaskImage = sensorClass.generateValidImageDataMask(outFilePath, outName, "KEA")
             if not validMaskImage is None:
                 rsgislib.rastergis.populateStats(validMaskImage, True, True)
+            print("")
             
+            if (not outWKTFile is None) and (not validMaskImage is None):
+                outName = outBaseNameProj + "_valid" + arcsiUtils.getFileExtension(outFormat)
+                outValdMaskImagePath = os.path.join(outFilePath, outName)
+                validImgDS = gdal.Open(validMaskImage, gdal.GA_ReadOnly)
+                if validImgDS is None:
+                    raise ARCSIException('Could not open the Valid Image Mask ' + validMaskImage)
+                geoTransform = validImgDS.GetGeoTransform()
+                if geoTransform is None:
+                    raise ARCSIException('Could read the geotransform from the Valid Image Mask ' + validMaskImage)
+                xPxlRes = geoTransform[1]
+                yPxlRes = geoTransform[5]
+                validImgDS = None
+                cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Byte -wt Float32 ' \
+                    + '-r near -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
+                    + validMaskImage + ' ' + outValdMaskImagePath 
+                print(cmd)
+                try:
+                    subprocess.call(cmd, shell=True)
+                except OSError as e:
+                    raise ARCSIException('Could not re-projection valid image mask: ' + cmd)
+                if not os.path.exists(outValdMaskImagePath): 
+                    raise ARCSIException('Reprojected valid image mask is not present: ' + outValdMaskImagePath)
+                else:
+                    rsgislib.rastergis.populateStats(outValdMaskImagePath, True, True)
+                    rsgisUtils.deleteFileWithBasename(validMaskImage)
+                    validMaskImage = outValdMaskImagePath
+                print("")
+                
             if prodsToCalc["FOOTPRINT"]:
                 if validMaskImage is None:
                     raise ARCSIException("To generate a footprint a valid image mask is required - not supported by this sensor?")
-                outFootprintLyrName = outBaseName + "_footprint"
+                outFootprintLyrName = ''
+                if not outWKTFile is None:
+                    outFootprintLyrName = outBaseNameProj + "_footprint"
+                else:
+                    outFootprintLyrName = outBaseName + "_footprint"
                 footprintShpFile = sensorClass.generateImageFootprint(validMaskImage, outFilePath, outFootprintLyrName)
                 prodsCalculated["FOOTPRINT"] = True
-            
+                print("")
+                
             # Step 5: Convert to Radiance
             if prodsToCalc["RAD"]:
                 # Execute conversion to radiance
@@ -420,6 +458,41 @@ class ARCSI (object):
                 if prodsToCalc["THERMAL"]:
                     outThermName = outBaseName + "_therm_rad" + arcsiUtils.getFileExtension(outFormat)
                 radianceImage, thermalRadImage = sensorClass.convertImageToRadiance(outFilePath, outName, outThermName, outFormat)
+                if not outWKTFile is None:
+                    if not radianceImage is None:
+                        outName = outBaseNameProj + "_rad" + arcsiUtils.getFileExtension(outFormat)
+                        outRadImagePath = os.path.join(outFilePath, outName)
+                        cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Float32 -wt Float32 ' \
+                        + '-r ' + interpAlgor + ' -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
+                        + radianceImage + ' ' + outRadImagePath 
+                        print(cmd)
+                        try:
+                            subprocess.call(cmd, shell=True)
+                        except OSError as e:
+                            raise ARCSIException('Could not re-projection radiance image: ' + cmd)
+                        if not os.path.exists(outRadImagePath): 
+                            raise ARCSIException('Reprojected radiance image is not present: ' + outRadImagePath)
+                        else:
+                            rsgisUtils.deleteFileWithBasename(radianceImage)
+                            radianceImage = outRadImagePath
+                    if not thermalRadImage is None:
+                        outName = outBaseNameProj + "_therm_rad" + arcsiUtils.getFileExtension(outFormat)
+                        outThermRadImagePath = os.path.join(outFilePath, outName)
+                        cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Float32 -wt Float32 ' \
+                        + '-r ' + interpAlgor + ' -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
+                        + thermalRadImage + ' ' + outThermRadImagePath 
+                        #print(cmd)
+                        try:
+                            subprocess.call(cmd, shell=True)
+                        except OSError as e:
+                            raise ARCSIException('Could not re-projection thermal radiance image: ' + cmd)
+                        if not os.path.exists(outThermRadImagePath): 
+                            raise ARCSIException('Reprojected thermal radiance image is not present: ' + outThermRadImagePath)
+                        else:
+                            rsgisUtils.deleteFileWithBasename(thermalRadImage)
+                            thermalRadImage = outThermRadImagePath
+                    outBaseName = outBaseNameProj
+                    
                 if not validMaskImage is None:
                     print("Masking to valid data area.")
                     outRadPathName = os.path.join(outFilePath, outBaseName + "_rad_vmsk" + arcsiUtils.getFileExtension(outFormat))
@@ -812,10 +885,15 @@ if __name__ == '__main__':
     # Define the argument for requesting a list of the available environment variables.
     parser.add_argument("--envvars", action='store_true', default=False, 
                         help='''List the available environmental variables for ARCSI.''')
-    # Define the argument for specifying the WKT projection file 
-    # for the intput file.
+    # Define the argument for specifying the WKT projection file for the input file.
     parser.add_argument("--inwkt", type=str, 
-                        help='''Specify the WKT projection of the input image''')
+                        help='''Specify the WKT projection of the input image with projection defined with WKT file.''')
+    # Define the argument for specifying the WKT projection file for the outputs.                    
+    parser.add_argument("--outwkt", type=str, 
+                        help='''Transform the outputs to the projection defined with WKT file.''')
+    # Define the argument for string added to the output files names indicating the projection.
+    parser.add_argument("--projabbv", type=str, 
+                        help='''Abbreviation or acronym for the project which will added to the file name.''')
     # Define the argument for specifying the image file format.
     parser.add_argument("-f", "--format", type=str, 
                         help='''Specify the image output format (GDAL name).''')
@@ -941,6 +1019,10 @@ if __name__ == '__main__':
     parser.add_argument("--scalefac", type=int, default=1000, 
                         help='''Specifies the scale factor for the reflectance 
                         products.''')
+    parser.add_argument("--interp", type=str, default="cubic", 
+                        choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos'], 
+                        help='''Specifies interpolation algorithm when reprojecting the imagery
+                                (Note. the options are those in gdalwarp).''')
     
                         
     # Call the parser to parse the arguments.
@@ -999,7 +1081,13 @@ if __name__ == '__main__':
             print("ERROR: Output Path exists but is not a directory...\n")
             parser.print_help()
             sys.exit()
-                    
+        
+        if (args.outwkt != None) & (not os.path.exists(args.outwkt)):
+            print("Error: The output WKT file does not exist.\n")
+            sys.exit()
+        elif (args.outwkt != None) & (args.projabbv == None):
+            print("WARNING: It is recommended that a projection abbreviation or acronym is provided (--projabbv)...")
+                 
         needAOD = False
         needAODMinMax = False
         needTmp = False
@@ -1111,6 +1199,24 @@ if __name__ == '__main__':
                 args.atmosimg = arcsilib.DEFAULT_ARCSI_ATMOSIMG_PATH
 
 
+        if args.atmosimg == None:
+            envVar = arcsiUtils.getEnvironmentVariable("ARCSI_ATMOSIMG_PATH")
+            if not envVar == None:
+                args.atmosimg = envVar
+                print("Taking atmosphere profile image path from environment variable.")
+                
+        if args.outwkt == None:
+            envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUTPUT_WKT")
+            if not envVar == None:
+                args.outwkt = envVar
+                print("Taking output WKT from environment variable.")
+        
+        if args.projabbv == None:
+            envVar = arcsiUtils.getEnvironmentVariable("ARCSI_PROJ_ABBV")
+            if not envVar == None:
+                args.projabbv = envVar
+                print("Taking projection abbreviation from environment variable.")
+        
         atmosOZoneWaterSpecified = False
         if (not args.atmosozone == None) and (args.atmoswater == None):
             print("Error: If the atmospheric ozone is defined then the atmospheric water needs to be specfied --atmoswater.\n")
@@ -1152,13 +1258,13 @@ if __name__ == '__main__':
                 print("Not using simple DOS method due to environment variable.")
         
         arcsiObj.run(args.inputheader, args.imagefile, args.sensor, args.inwkt, args.format, args.outpath, 
-                     args.outbasename, args.prods, args.stats, args.aeropro, args.atmospro, 
-                     args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, 
+                     args.outbasename, args.outwkt, args.projabbv, args.prods, args.stats, args.aeropro,  
+                     args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, 
                      args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, 
                      args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, 
                      args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, 
                      args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, 
-                     args.scalefac)
+                     args.scalefac, args.interp)
 
 
 
