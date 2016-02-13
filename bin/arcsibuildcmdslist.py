@@ -69,7 +69,7 @@ class ARCSIBuildCommands (object):
                      atmosozone, atmoswater, aerowater, 
                      aerodust, aerooceanic, aerosoot, aot, vis, tmpath, 
                      minaot, maxaot, dem, localdos, dosout, simpledos, 
-                     scalefac):
+                     scalefac, outwkt, projabbv, interp):
         
         inputDIR = os.path.abspath(inputDIR)
         outputFile = os.path.abspath(outputFile)
@@ -149,6 +149,12 @@ class ARCSIBuildCommands (object):
                 cmd = cmd + " --dosout " + str(dosout)
             if not scalefac == None:
                 cmd = cmd + " --scalefac " + str(scalefac)
+            if not outwkt == None:
+                cmd = cmd + " --outwkt " + str(outwkt)
+            if not projabbv == None:
+                cmd = cmd + " --projabbv " + str(projabbv)
+            if not interp == None:
+                cmd = cmd + " --interp " + str(interp)
             if localdos:
                 cmd = cmd + " --localdos "
             if simpledos:
@@ -316,6 +322,17 @@ if __name__ == '__main__':
     parser.add_argument("--scalefac", type=int, 
                         help='''Specifies the scale factor for the reflectance 
                         products.''')
+
+    parser.add_argument("--outwkt", type=str, 
+                        help='''Transform the outputs to the projection defined with WKT file.''')
+
+    parser.add_argument("--projabbv", type=str, 
+                        help='''Abbreviation or acronym for the project which will added to the file name.''')
+                        
+    parser.add_argument("--interp", type=str, 
+                        choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos'], 
+                        help='''Specifies interpolation algorithm when reprojecting the imagery
+                                (Note. the options are those in gdalwarp).''')
                         
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -353,6 +370,6 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, args.aerowater, 
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath, 
                      args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos
-                     args.scalefac)
+                     args.scalefac, args.outwkt, args.projabbv, args.interp)
     
     
