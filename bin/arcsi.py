@@ -423,7 +423,7 @@ class ARCSI (object):
                 yPxlRes = geoTransform[5]
                 validImgDS = None
                 cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Byte -wt Float32 ' \
-                    + '-r near -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
+                    + '-r near -tap -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
                     + validMaskImage + ' ' + outValdMaskImagePath 
                 print(cmd)
                 try:
@@ -463,7 +463,7 @@ class ARCSI (object):
                         outName = outBaseNameProj + "_rad" + arcsiUtils.getFileExtension(outFormat)
                         outRadImagePath = os.path.join(outFilePath, outName)
                         cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Float32 -wt Float32 ' \
-                        + '-r ' + interpAlgor + ' -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
+                        + '-r ' + interpAlgor + ' -tap -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
                         + radianceImage + ' ' + outRadImagePath 
                         print(cmd)
                         try:
@@ -1082,11 +1082,12 @@ if __name__ == '__main__':
             parser.print_help()
             sys.exit()
         
-        if (args.outwkt != None) & (not os.path.exists(args.outwkt)):
-            print("Error: The output WKT file does not exist.\n")
-            sys.exit()
-        elif (args.outwkt != None) & (args.projabbv == None):
-            print("WARNING: It is recommended that a projection abbreviation or acronym is provided (--projabbv)...")
+        if not args.outwkt is None:
+            if not os.path.exists(args.outwkt):
+                print("Error: The output WKT file does not exist.\n")
+                sys.exit()
+            elif args.projabbv == None:
+                print("WARNING: It is recommended that a projection abbreviation or acronym is provided (--projabbv)...")
                  
         needAOD = False
         needAODMinMax = False
