@@ -137,6 +137,8 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         try:
             if not self.userSpInputImage is None:
                 raise ARCSIException("Landsat sensor cannot accept a user specified image file - only the images in the header file will be used.")
+            
+            arcsiUtils = ARCSIUtils()
                 
             print("Reading header file")
             hFile = open(inputHeader, 'r')
@@ -175,8 +177,8 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             secsTime = acTime[2].split('.')
             self.acquisitionTime = datetime.datetime(int(acData[0]), int(acData[1]), int(acData[2]), int(acTime[0]), int(acTime[1]), int(secsTime[0]))
             
-            self.solarZenith = 90-float(headerParams["SUN_ELEVATION"])
-            self.solarAzimuth = float(headerParams["SUN_AZIMUTH"])
+            self.solarZenith = 90-arcsiUtils.str2Float(headerParams["SUN_ELEVATION"])
+            self.solarAzimuth = arcsiUtils.str2Float(headerParams["SUN_AZIMUTH"])
             
             # Get the geographic lat/long corners of the image.
             geoCorners = ARCSILandsatMetaUtils.getGeographicCorners(headerParams)
@@ -274,24 +276,24 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 self.band6bFile = os.path.join(filesDIR,headerParams["BAND62_FILE_NAME"])
            
             bands_list = ["1","2","3","4","5","6_VCID_1","6_VCID_2","7","8"]
-
+                        
             metaQCalMinList = {}
             metaQCalMaxList = {}
 
             for band_num in bands_list:
                 try:
-                    metaQCalMinList[band_num] = float(headerParams["QUANTIZE_CAL_MIN_BAND_{}".format(band_num)])
-                    metaQCalMaxList[band_num] = float(headerParams["QUANTIZE_CAL_MAX_BAND_{}".format(band_num)])
+                    metaQCalMinList[band_num] = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MIN_BAND_{}".format(band_num)], 1.0)
+                    metaQCalMaxList[band_num] = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MAX_BAND_{}".format(band_num)], 255.0)
                 except KeyError:
                     if band_num == "6_VCID_1":
-                        metaQCalMinList[band_num] = float(headerParams["QCALMIN_BAND61"])
-                        metaQCalMaxList[band_num] = float(headerParams["QCALMAX_BAND61"])
+                        metaQCalMinList[band_num] = arcsiUtils.str2Float(headerParams["QCALMIN_BAND61"], 1.0)
+                        metaQCalMaxList[band_num] = arcsiUtils.str2Float(headerParams["QCALMAX_BAND61"], 255.0)
                     elif band_num == "6_VCID_2":
-                        metaQCalMinList[band_num] = float(headerParams["QCALMIN_BAND62"])
-                        metaQCalMaxList[band_num] = float(headerParams["QCALMAX_BAND62"])
+                        metaQCalMinList[band_num] = arcsiUtils.str2Float(headerParams["QCALMIN_BAND62"], 1.0)
+                        metaQCalMaxList[band_num] = arcsiUtils.str2Float(headerParams["QCALMAX_BAND62"], 255.0)
                     else:
-                        metaQCalMinList[band_num] = float(headerParams["QCALMIN_BAND{}".format(band_num)])
-                        metaQCalMaxList[band_num] = float(headerParams["QCALMAX_BAND{}".format(band_num)])
+                        metaQCalMinList[band_num] = arcsiUtils.str2Float(headerParams["QCALMIN_BAND{}".format(band_num)], 1.0)
+                        metaQCalMaxList[band_num] = arcsiUtils.str2Float(headerParams["QCALMAX_BAND{}".format(band_num)], 255.0)
 
             self.b1CalMin = metaQCalMinList["1"]
             self.b1CalMax = metaQCalMaxList["1"]
@@ -311,24 +313,29 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             self.b7CalMax = metaQCalMaxList["7"]
             self.b8CalMin = metaQCalMinList["8"]
             self.b8CalMax = metaQCalMaxList["8"] 
-
+            
+            lMin = [-6.200, -6.400, -5.000, -5.100, -1.000, 0.000, 3.200, -0.350, -4.700]
+            lMax = [191.600, 196.500, 152.900, 241.100, 31.060, 17.040, 12.650, 10.800, 243.100]
+            
             metaRadMinList = {}
             metaRadMaxList = {}
 
-            for band_num in bands_list:
+            #for band_num in bands_list:
+            for i in range(0,9):
+                band_num = bands_list[i]
                 try:
-                    metaRadMinList[band_num] = float(headerParams["RADIANCE_MINIMUM_BAND_{}".format(band_num)])
-                    metaRadMaxList[band_num] = float(headerParams["RADIANCE_MAXIMUM_BAND_{}".format(band_num)])
+                    metaRadMinList[band_num] = arcsiUtils.str2Float(headerParams["RADIANCE_MINIMUM_BAND_{}".format(band_num)], lMin[i])
+                    metaRadMaxList[band_num] = arcsiUtils.str2Float(headerParams["RADIANCE_MAXIMUM_BAND_{}".format(band_num)], lMax[i])
                 except KeyError:
                     if band_num == "6_VCID_1":
-                        metaRadMinList[band_num] = float(headerParams["LMIN_BAND61"])
-                        metaRadMaxList[band_num] = float(headerParams["LMAX_BAND61"])
+                        metaRadMinList[band_num] = arcsiUtils.str2Float(headerParams["LMIN_BAND61"], lMin[i])
+                        metaRadMaxList[band_num] = arcsiUtils.str2Float(headerParams["LMAX_BAND61"], lMax[i])
                     elif band_num == "6_VCID_2":
-                        metaRadMinList[band_num] = float(headerParams["LMIN_BAND62"])
-                        metaRadMaxList[band_num] = float(headerParams["LMAX_BAND62"])
+                        metaRadMinList[band_num] = arcsiUtils.str2Float(headerParams["LMIN_BAND62"], lMin[i])
+                        metaRadMaxList[band_num] = arcsiUtils.str2Float(headerParams["LMAX_BAND62"], lMax[i])
                     else:
-                        metaRadMinList[band_num] = float(headerParams["LMIN_BAND{}".format(band_num)])
-                        metaRadMaxList[band_num] = float(headerParams["LMAX_BAND{}".format(band_num)])
+                        metaRadMinList[band_num] = arcsiUtils.str2Float(headerParams["LMIN_BAND{}".format(band_num)], lMin[i])
+                        metaRadMaxList[band_num] = arcsiUtils.str2Float(headerParams["LMAX_BAND{}".format(band_num)], lMax[i])
 
             self.b1MinRad = metaRadMinList["1"]
             self.b1MaxRad = metaRadMaxList["1"]
