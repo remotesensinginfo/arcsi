@@ -264,7 +264,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         outname = self.defaultGenBaseOutFileName()
         return outname
     
-    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
+    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("SPOT5 does not provide any image masks, do not use the MASK option.")
         
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):

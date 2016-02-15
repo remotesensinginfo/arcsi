@@ -231,7 +231,7 @@ class ARCSILandsat3MSSSensor (ARCSIAbstractSensor):
         outname = outname + str("_") + rowpath
         return outname
     
-    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
+    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("Landsat 3 does not provide any image masks, do not use the MASK option.")
     
     def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):

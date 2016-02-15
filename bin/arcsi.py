@@ -494,7 +494,7 @@ class ARCSI (object):
                     outBaseName = outBaseNameProj
                     
                 if not validMaskImage is None:
-                    print("Masking to valid data area.")
+                    print("Masking to valid data area.")                    	
                     outRadPathName = os.path.join(outFilePath, outBaseName + "_rad_vmsk" + arcsiUtils.getFileExtension(outFormat))
                     rsgislib.imageutils.maskImage(radianceImage, validMaskImage, outRadPathName, outFormat, rsgislib.imageutils.getRSGISLibDataType(radianceImage), 0.0, 0.0)
                     rsgisUtils.deleteFileWithBasename(radianceImage)
@@ -520,7 +520,7 @@ class ARCSI (object):
                 if not validMaskImage is None:
                     outImgName = outBaseName + "_rad_vmsk_msk" + arcsiUtils.getFileExtension(outFormat)
                 outMaskName = outBaseName + "_mask" + arcsiUtils.getFileExtension(outFormat)
-                radianceImageTmp, maskImage = sensorClass.applyImageDataMask(inputHeader, radianceImage, outFilePath, outMaskName, outImgName, outFormat)
+                radianceImageTmp, maskImage = sensorClass.applyImageDataMask(inputHeader, radianceImage, outFilePath, outMaskName, outImgName, outFormat, outWKTFile)
                 if not radianceImageTmp is radianceImage:
                     rsgisUtils.deleteFileWithBasename(radianceImage)
                     radianceImage = radianceImageTmp

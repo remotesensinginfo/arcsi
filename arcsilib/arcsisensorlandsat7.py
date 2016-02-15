@@ -71,6 +71,8 @@ from scipy.optimize import minimize
 import numpy
 # Import the glob module
 import glob
+# Import the subprocess module
+import subprocess
 
 class ARCSILandsat7Sensor (ARCSIAbstractSensor):
     """
@@ -374,8 +376,8 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
     def maskInputImages(self):
         return True
         
-    def applyImageDataMask(self, inputHeader, inputImage, outputPath, outputMaskName, outputImgName, outFormat):
-        print("Masking Input Image File")
+    def applyImageDataMask(self, inputHeader, inputImage, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
+        print("Apply Input Image Mask to Input Image File")
         outputImage = os.path.join(outputPath, outputImgName)
         outputMaskImage = os.path.join(outputPath, outputMaskName)
         #print(outputImage)
@@ -387,7 +389,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             maskList = glob.glob(os.path.join(maskDIR, "*.TIF.gz"))
             if len(maskList) > 0:
                for file in maskList:
-                    os.system("gzip -d " + file)
+                    subprocess.call("gzip -d " + file)
 
             maskList = glob.glob(os.path.join(maskDIR, "*.TIF"))
             if not len(maskList) > 0:
@@ -405,7 +407,36 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             
             #print(stackImageMasks)
             #rsgislib.imageutils.stackImageBands(stackImageMasks, bandImgIDs, outputMaskImage, None, 0, outFormat, rsgislib.TYPE_8UINT)
-            rsgislib.imagecalc.bandMath(outputMaskImage, "GM_B1*GM_B2*GM_B3*GM_B4*GM_B5*GM_B7", outFormat, rsgislib.TYPE_8UINT, stackImageMasks)
+            outputMaskImageInit = outputMaskImage
+            if not outWKTFile is None:
+                outputMaskImageInit = os.path.join(outputPath, "InitMask_arcsi_" + outputMaskName)
+                
+            rsgislib.imagecalc.bandMath(outputMaskImageInit, "GM_B1*GM_B2*GM_B3*GM_B4*GM_B5*GM_B7", outFormat, rsgislib.TYPE_8UINT, stackImageMasks)
+            if not outWKTFile is None:
+                refImgDS = gdal.Open(inputImage, gdal.GA_ReadOnly)
+                if refImgDS is None:
+                    raise ARCSIException('Could not open the input image: ' + inputImage)
+                geoTransform = refImgDS.GetGeoTransform()
+                if geoTransform is None:
+                    raise ARCSIException('Could read the geotransform from the input image: ' + inputImage)
+                xPxlRes = geoTransform[1]
+                yPxlRes = geoTransform[5]
+                refImgDS = None
+                cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Byte -wt Float32 ' \
+                    + '-r near -tap -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
+                    + outputMaskImageInit + ' ' + outputMaskImage 
+                print(cmd)
+                try:
+                    subprocess.call(cmd, shell=True)
+                except OSError as e:
+                    raise ARCSIException('Could not re-projection image mask: ' + cmd)
+                if not os.path.exists(outputMaskImage): 
+                    raise ARCSIException('Reprojected image mask is not present: ' + outputMaskImage)
+                else:
+                    rsgisUtils = rsgislib.RSGISPyUtils()
+                    rsgisUtils.deleteFileWithBasename(outputMaskImageInit)
+            else:
+                outputMaskImage = outputMaskImageInit             
             rsgislib.imageutils.maskImage(inputImage, outputMaskImage, outputImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 0)
         else:
             print("\tThere is no mask to mask this scene...")
