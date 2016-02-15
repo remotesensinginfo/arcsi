@@ -423,7 +423,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 yPxlRes = geoTransform[5]
                 refImgDS = None
                 cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Byte -wt Float32 ' \
-                    + '-r near -tap -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
+                    + '-r near -tap -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
                     + outputMaskImageInit + ' ' + outputMaskImage 
                 print(cmd)
                 try:

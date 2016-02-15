@@ -423,7 +423,7 @@ class ARCSI (object):
                 yPxlRes = geoTransform[5]
                 validImgDS = None
                 cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Byte -wt Float32 ' \
-                    + '-r near -tap -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
+                    + '-r near -tap -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
                     + validMaskImage + ' ' + outValdMaskImagePath 
                 print(cmd)
                 try:
@@ -458,12 +458,32 @@ class ARCSI (object):
                 if prodsToCalc["THERMAL"]:
                     outThermName = outBaseName + "_therm_rad" + arcsiUtils.getFileExtension(outFormat)
                 radianceImage, thermalRadImage = sensorClass.convertImageToRadiance(outFilePath, outName, outThermName, outFormat)
+                
+                if sensorClass.maskInputImages():
+                    # If the image comes with a mask then apply that before moving on.
+                    outImgName = outBaseName + "_rad_msk" + arcsiUtils.getFileExtension(outFormat)
+                    outMaskName = outBaseName + "_mask" + arcsiUtils.getFileExtension(outFormat)
+                    radianceImageTmp, maskImage = sensorClass.applyImageDataMask(inputHeader, radianceImage, outFilePath, outMaskName, outImgName, outFormat, None)
+                    if not radianceImageTmp is radianceImage:
+                        rsgisUtils.deleteFileWithBasename(radianceImage)
+                        radianceImage = radianceImageTmp
+                    if not maskImage == None:
+                        print("Setting Band Names...")
+                        sensorClass.setBandNames(radianceImage)
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
+                            rsgislib.rastergis.populateStats(maskImage, True, True)
+                
                 if not outWKTFile is None:
                     if not radianceImage is None:
                         outName = outBaseNameProj + "_rad" + arcsiUtils.getFileExtension(outFormat)
+                        if sensorClass.maskInputImages():
+                            outName = outBaseNameProj + "_rad_msk" + arcsiUtils.getFileExtension(outFormat)
+                        
                         outRadImagePath = os.path.join(outFilePath, outName)
                         cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Float32 -wt Float32 ' \
-                        + '-r ' + interpAlgor + ' -tap -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
+                        + '-r ' + interpAlgor + ' -tap -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
                         + radianceImage + ' ' + outRadImagePath 
                         print(cmd)
                         try:
@@ -479,7 +499,7 @@ class ARCSI (object):
                         outName = outBaseNameProj + "_therm_rad" + arcsiUtils.getFileExtension(outFormat)
                         outThermRadImagePath = os.path.join(outFilePath, outName)
                         cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Float32 -wt Float32 ' \
-                        + '-r ' + interpAlgor + ' -srcnodata 0 -dstnodata 0 -multi -of ' + outFormat + ' -overwrite ' \
+                        + '-r ' + interpAlgor + ' -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
                         + thermalRadImage + ' ' + outThermRadImagePath 
                         #print(cmd)
                         try:
@@ -494,8 +514,10 @@ class ARCSI (object):
                     outBaseName = outBaseNameProj
                     
                 if not validMaskImage is None:
-                    print("Masking to valid data area.")                    	
+                    print("Masking to valid data area.")                        
                     outRadPathName = os.path.join(outFilePath, outBaseName + "_rad_vmsk" + arcsiUtils.getFileExtension(outFormat))
+                    if sensorClass.maskInputImages():
+                        outRadPathName = os.path.join(outFilePath, outBaseName + "_rad_msk_vmsk" + arcsiUtils.getFileExtension(outFormat))
                     rsgislib.imageutils.maskImage(radianceImage, validMaskImage, outRadPathName, outFormat, rsgislib.imageutils.getRSGISLibDataType(radianceImage), 0.0, 0.0)
                     rsgisUtils.deleteFileWithBasename(radianceImage)
                     radianceImage = outRadPathName
@@ -513,26 +535,7 @@ class ARCSI (object):
                         rsgislib.imageutils.popImageStats(thermalRadImage, True, 0.0, True)
                 prodsCalculated["RAD"] = True
                 print("")
-            
-            if sensorClass.maskInputImages():
-                # If the image comes with a mask then apply that before moving on.
-                outImgName = outBaseName + "_rad_msk" + arcsiUtils.getFileExtension(outFormat)
-                if not validMaskImage is None:
-                    outImgName = outBaseName + "_rad_vmsk_msk" + arcsiUtils.getFileExtension(outFormat)
-                outMaskName = outBaseName + "_mask" + arcsiUtils.getFileExtension(outFormat)
-                radianceImageTmp, maskImage = sensorClass.applyImageDataMask(inputHeader, radianceImage, outFilePath, outMaskName, outImgName, outFormat, outWKTFile)
-                if not radianceImageTmp is radianceImage:
-                    rsgisUtils.deleteFileWithBasename(radianceImage)
-                    radianceImage = radianceImageTmp
-                if not maskImage == None:
-                    print("Setting Band Names...")
-                    sensorClass.setBandNames(radianceImage)
-                    if calcStatsPy:
-                        print("Calculating Statistics...")
-                        rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
-                        rsgislib.rastergis.populateStats(maskImage, True, True)
-                    print("")
-            
+                        
             # Create and reproject the DEM file if not specified.
             if (not (demFile == None)) and (outDEMName == ""):
                 # Interpolate image to output refl image resolution and convert projection to the same as the output image.
