@@ -274,7 +274,7 @@ class ARCSIAbstractSensor (object):
         return False
     
     @abstractmethod
-    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat): pass
+    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile): pass
     
     @abstractmethod
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat): pass

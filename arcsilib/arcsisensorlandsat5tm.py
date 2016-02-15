@@ -324,7 +324,7 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
     def hasThermal(self):
         return True
     
-    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat):
+    def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("Landsat 5 TM does not provide any image masks, do not use the MASK option.")
     
     def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
