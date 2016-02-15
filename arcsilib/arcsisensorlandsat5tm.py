@@ -126,6 +126,8 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
         try:
             if not self.userSpInputImage is None:
                 raise ARCSIException("Landsat sensor cannot accept a user specified image file - only the images in the header file will be used.")
+            
+            arcsiUtils = ARCSIUtils()
                 
             print("Reading header file")
             hFile = open(inputHeader, 'r')
@@ -165,8 +167,8 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             secsTime = acTime[2].split('.')
             self.acquisitionTime = datetime.datetime(int(acData[0]), int(acData[1]), int(acData[2]), int(acTime[0]), int(acTime[1]), int(secsTime[0]))
             
-            self.solarZenith = 90-float(headerParams["SUN_ELEVATION"])
-            self.solarAzimuth = float(headerParams["SUN_AZIMUTH"])
+            self.solarZenith = 90-arcsiUtils.str2Float(headerParams["SUN_ELEVATION"])
+            self.solarAzimuth = arcsiUtils.str2Float(headerParams["SUN_AZIMUTH"])
             
             # Get the geographic lat/long corners of the image.
             geoCorners = ARCSILandsatMetaUtils.getGeographicCorners(headerParams)
@@ -258,11 +260,11 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
 
             for i in range(1,8):
                 try:
-                    metaQCalMinList.append(float(headerParams["QUANTIZE_CAL_MIN_BAND_{}".format(i)]))
-                    metaQCalMaxList.append(float(headerParams["QUANTIZE_CAL_MAX_BAND_{}".format(i)]))
+                    metaQCalMinList.append(arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MIN_BAND_{}".format(i)], 1.0))
+                    metaQCalMaxList.append(arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MAX_BAND_{}".format(i)], 255.0))
                 except KeyError:
-                    metaQCalMinList.append(float(headerParams["QCALMIN_BAND{}".format(i)]))
-                    metaQCalMaxList.append(float(headerParams["QCALMAX_BAND{}".format(i)])) 
+                    metaQCalMinList.append(arcsiUtils.str2Float(headerParams["QCALMIN_BAND{}".format(i)], 1.0))
+                    metaQCalMaxList.append(arcsiUtils.str2Float(headerParams["QCALMAX_BAND{}".format(i)], 255.0)) 
 
             self.b1CalMin = metaQCalMinList[0]
             self.b1CalMax = metaQCalMaxList[0]
@@ -279,16 +281,18 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             self.b7CalMin = metaQCalMinList[6]
             self.b7CalMax = metaQCalMaxList[6] 
 
+            
+            lMin = [-1.520, -2.840, -1.170, -1.510, -0.370, 1.238, -0.150]
+            lMax = [193.000, 365.000, 264.000, 221.000, 30.200, 15.303, 16.500]
             metaRadMinList = []
             metaRadMaxList = []
-
             for i in range(1,8):
                 try:
-                    metaRadMinList.append(float(headerParams["RADIANCE_MINIMUM_BAND_{}".format(i)]))
-                    metaRadMaxList.append(float(headerParams["RADIANCE_MAXIMUM_BAND_{}".format(i)]))
+                    metaRadMinList.append(arcsiUtils.str2Float(headerParams["RADIANCE_MINIMUM_BAND_{}".format(i)], lMin[i-1]))
+                    metaRadMaxList.append(arcsiUtils.str2Float(headerParams["RADIANCE_MAXIMUM_BAND_{}".format(i)], lMax[i-1]))
                 except KeyError:
-                    metaRadMinList.append(float(headerParams["LMIN_BAND{}".format(i)]))
-                    metaRadMaxList.append(float(headerParams["LMAX_BAND{}".format(i)]))
+                    metaRadMinList.append(arcsiUtils.str2Float(headerParams["LMIN_BAND{}".format(i)], lMin[i-1]))
+                    metaRadMaxList.append(arcsiUtils.str2Float(headerParams["LMAX_BAND{}".format(i)], lMax[i-1]))
 
             self.b1MinRad = metaRadMinList[0]
             self.b1MaxRad = metaRadMaxList[0]

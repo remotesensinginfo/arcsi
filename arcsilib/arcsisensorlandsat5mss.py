@@ -106,6 +106,8 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         try:
             if not self.userSpInputImage is None:
                 raise ARCSIException("Landsat sensor cannot accept a user specified image file - only the images in the header file will be used.")
+            
+            arcsiUtils = ARCSIUtils()
                 
             print("Reading header file")
             hFile = open(inputHeader, 'r')
@@ -139,28 +141,28 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
             secsTime = acTime[2].split('.')
             self.acquisitionTime = datetime.datetime(int(acData[0]), int(acData[1]), int(acData[2]), int(acTime[0]), int(acTime[1]), int(secsTime[0]))
             
-            self.solarZenith = 90-float(headerParams["SUN_ELEVATION"])
-            self.solarAzimuth = float(headerParams["SUN_AZIMUTH"])
+            self.solarZenith = 90-arcsiUtils.str2Float(headerParams["SUN_ELEVATION"])
+            self.solarAzimuth = arcsiUtils.str2Float(headerParams["SUN_AZIMUTH"])
             
             # Get the geographic lat/long corners of the image.
-            self.latTL = float(headerParams["CORNER_UL_LAT_PRODUCT"])
-            self.lonTL = float(headerParams["CORNER_UL_LON_PRODUCT"])
-            self.latTR = float(headerParams["CORNER_UR_LAT_PRODUCT"])
-            self.lonTR = float(headerParams["CORNER_UR_LON_PRODUCT"])
-            self.latBL = float(headerParams["CORNER_LL_LAT_PRODUCT"])
-            self.lonBL = float(headerParams["CORNER_LL_LON_PRODUCT"])
-            self.latBR = float(headerParams["CORNER_LR_LAT_PRODUCT"])
-            self.lonBR = float(headerParams["CORNER_LR_LON_PRODUCT"])
+            self.latTL = arcsiUtils.str2Float(headerParams["CORNER_UL_LAT_PRODUCT"])
+            self.lonTL = arcsiUtils.str2Float(headerParams["CORNER_UL_LON_PRODUCT"])
+            self.latTR = arcsiUtils.str2Float(headerParams["CORNER_UR_LAT_PRODUCT"])
+            self.lonTR = arcsiUtils.str2Float(headerParams["CORNER_UR_LON_PRODUCT"])
+            self.latBL = arcsiUtils.str2Float(headerParams["CORNER_LL_LAT_PRODUCT"])
+            self.lonBL = arcsiUtils.str2Float(headerParams["CORNER_LL_LON_PRODUCT"])
+            self.latBR = arcsiUtils.str2Float(headerParams["CORNER_LR_LAT_PRODUCT"])
+            self.lonBR = arcsiUtils.str2Float(headerParams["CORNER_LR_LON_PRODUCT"])
             
             # Get the projected X/Y corners of the image
-            self.xTL = float(headerParams["CORNER_UL_PROJECTION_X_PRODUCT"])
-            self.yTL = float(headerParams["CORNER_UL_PROJECTION_Y_PRODUCT"])
-            self.xTR = float(headerParams["CORNER_UR_PROJECTION_X_PRODUCT"])
-            self.yTR = float(headerParams["CORNER_UR_PROJECTION_Y_PRODUCT"])
-            self.xBL = float(headerParams["CORNER_LL_PROJECTION_X_PRODUCT"])
-            self.yBL = float(headerParams["CORNER_LL_PROJECTION_Y_PRODUCT"])
-            self.xBR = float(headerParams["CORNER_LR_PROJECTION_X_PRODUCT"])
-            self.yBR = float(headerParams["CORNER_LR_PROJECTION_Y_PRODUCT"])
+            self.xTL = arcsiUtils.str2Float(headerParams["CORNER_UL_PROJECTION_X_PRODUCT"])
+            self.yTL = arcsiUtils.str2Float(headerParams["CORNER_UL_PROJECTION_Y_PRODUCT"])
+            self.xTR = arcsiUtils.str2Float(headerParams["CORNER_UR_PROJECTION_X_PRODUCT"])
+            self.yTR = arcsiUtils.str2Float(headerParams["CORNER_UR_PROJECTION_Y_PRODUCT"])
+            self.xBL = arcsiUtils.str2Float(headerParams["CORNER_LL_PROJECTION_X_PRODUCT"])
+            self.yBL = arcsiUtils.str2Float(headerParams["CORNER_LL_PROJECTION_Y_PRODUCT"])
+            self.xBR = arcsiUtils.str2Float(headerParams["CORNER_LR_PROJECTION_X_PRODUCT"])
+            self.yBR = arcsiUtils.str2Float(headerParams["CORNER_LR_PROJECTION_Y_PRODUCT"])
             
             # Get projection
             inProj = osr.SpatialReference()
@@ -203,23 +205,23 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
             self.band3File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_3"])
             self.band4File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_4"])
             
-            self.b1CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_1"])
-            self.b1CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_1"])
-            self.b2CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_2"])
-            self.b2CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_2"])
-            self.b3CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_3"])
-            self.b3CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_3"])
-            self.b4CalMin = float(headerParams["QUANTIZE_CAL_MIN_BAND_4"])
-            self.b4CalMax = float(headerParams["QUANTIZE_CAL_MAX_BAND_4"])
+            self.b1CalMin = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MIN_BAND_1"], 1.0)
+            self.b1CalMax = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MAX_BAND_1"], 255.0)
+            self.b2CalMin = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MIN_BAND_2"], 1.0)
+            self.b2CalMax = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MAX_BAND_2"], 255.0)
+            self.b3CalMin = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MIN_BAND_3"], 1.0)
+            self.b3CalMax = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MAX_BAND_3"], 255.0)
+            self.b4CalMin = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MIN_BAND_4"], 1.0)
+            self.b4CalMax = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MAX_BAND_4"], 255.0)
             
-            self.b1MinRad = float(headerParams["RADIANCE_MINIMUM_BAND_1"])
-            self.b1MaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_1"])
-            self.b2MinRad = float(headerParams["RADIANCE_MINIMUM_BAND_2"])
-            self.b2MaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_2"])
-            self.b3MinRad = float(headerParams["RADIANCE_MINIMUM_BAND_3"])
-            self.b3MaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_3"])
-            self.b4MinRad = float(headerParams["RADIANCE_MINIMUM_BAND_4"])
-            self.b4MaxRad = float(headerParams["RADIANCE_MAXIMUM_BAND_4"])
+            self.b1MinRad = arcsiUtils.str2Float(headerParams["RADIANCE_MINIMUM_BAND_1"], 2.500)
+            self.b1MaxRad = arcsiUtils.str2Float(headerParams["RADIANCE_MAXIMUM_BAND_1"], 220.800)
+            self.b2MinRad = arcsiUtils.str2Float(headerParams["RADIANCE_MINIMUM_BAND_2"], 2.700)
+            self.b2MaxRad = arcsiUtils.str2Float(headerParams["RADIANCE_MAXIMUM_BAND_2"], 163.600)
+            self.b3MinRad = arcsiUtils.str2Float(headerParams["RADIANCE_MINIMUM_BAND_3"], 4.700)
+            self.b3MaxRad = arcsiUtils.str2Float(headerParams["RADIANCE_MAXIMUM_BAND_3"], 140.300)
+            self.b4MinRad = arcsiUtils.str2Float(headerParams["RADIANCE_MINIMUM_BAND_4"], 2.900)
+            self.b4MaxRad = arcsiUtils.str2Float(headerParams["RADIANCE_MAXIMUM_BAND_4"], 117.500)
             
         except Exception as e:
             raise e

@@ -163,7 +163,43 @@ class ARCSIUtils (object):
                 
         srcDS = None
         destDS = None
-
+    
+    def isNumber(self, strVal):
+        try:
+            float(strVal) # for int, long and float
+        except ValueError:
+            try:
+                complex(strVal) # for complex
+            except ValueError:
+                return False
+        return True
+    
+    
+    def str2Float(self, strVal, errVal=None):
+        strVal = str(strVal).strip()
+        #print("IN: " + strVal)
+        outFloat = 0.0
+        try:
+            outFloat = float(strVal)
+        except ValueError:
+            if not errVal is None:
+                outFloat = float(errVal)
+            else:
+                raise ARCSIException("could not convert string to float: \'" + strVal + '\'.')
+        #print("Out: " + str(outFloat))
+        return outFloat
+        
+    def str2Int(self, strVal, errVal=None):
+        strVal = str(strVal).strip()
+        outInt = 0
+        if strVal.isnumeric():
+            outInt = int(strVal)
+        elif not errVal is None:
+            outInt = int(errVal)
+        else:
+            raise ARCSIException("could not convert string to int: \'" + strVal + '\'.')
+        return outInt
+    
 class ARCSILandsatMetaUtils(object):
     """
     A class with common functions for parsing Landsat
