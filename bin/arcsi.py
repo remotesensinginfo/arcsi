@@ -389,21 +389,21 @@ class ARCSI (object):
                 else:
                     raise ARCSIException("The specified ground reflectance is unknown.")
             
-            validMaskImage = ""
-            validMaskImageProj = ""
+            validMaskImage=None
+            validMaskImageProj=""
             radianceImage=""
             saturateImage=""
+            saturateImageProj=""
             thermalRadImage=""
             thermalBrightImage=""
             maskImage=""
-            validMaskImage=None
-            toaImage = ""
-            srefImage = ""
-            aotFile = ""
-            cloudsImage = ""
-            outDEMName = ""
-            topoShadowImage = ""
-            footprintShpFile = ""
+            toaImage=""
+            srefImage=""
+            aotFile=""
+            cloudsImage=""
+            outDEMName=""
+            topoShadowImage=""
+            footprintShpFile=""
             
             # Get the valid image data maskImage
             outName = outBaseName + "_valid" + arcsiUtils.getFileExtension(outFormat)
@@ -449,6 +449,33 @@ class ARCSI (object):
                     outFootprintLyrName = outBaseName + "_footprint"
                     footprintShpFile = sensorClass.generateImageFootprint(validMaskImage, outFilePath, outFootprintLyrName)
                 prodsCalculated["FOOTPRINT"] = True
+                print("")
+            
+            if prodsToCalc["SATURATE"]:
+                # Execute generation of the saturation image
+                outName = outBaseName + "_sat" + arcsiUtils.getFileExtension(outFormat)
+                saturateImage = sensorClass.generateImageSaturationMask(outFilePath, outName, outFormat)
+                
+                if not outWKTFile is None:
+                    outNameProj = outBaseNameProj + "_sat" + arcsiUtils.getFileExtension(outFormat)
+                    saturateImageProj = os.path.join(outFilePath, outNameProj)
+                    cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Byte ' \
+                    + '-r near -tap -of ' + outFormat + ' -overwrite ' \
+                    + saturateImage + ' ' + saturateImageProj 
+                    print(cmd)
+                    try:
+                        subprocess.call(cmd, shell=True)
+                    except OSError as e:
+                        raise ARCSIException('Could not re-projection saturated image mask: ' + cmd)
+                    if not os.path.exists(saturateImageProj): 
+                        raise ARCSIException('Reprojected saturated image mask is not present: ' + saturateImageProj)
+                    else:
+                        rsgisUtils.deleteFileWithBasename(saturateImage)
+                        saturateImage = saturateImageProj
+                if calcStatsPy:
+                    print("Calculating Statistics...")
+                    rsgislib.imageutils.popImageStats(saturateImage, usenodataval=False, nodataval=0, calcpyramids=True)
+                prodsCalculated["SATURATE"] = True
                 print("")
                 
             # Step 5: Convert to Radiance
@@ -563,17 +590,7 @@ class ARCSI (object):
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)  
                 print("")
-            
-            if prodsToCalc["SATURATE"]:
-                # Execute generation of the saturation image
-                outName = outBaseName + "_sat" + arcsiUtils.getFileExtension(outFormat)
-                saturateImage = sensorClass.generateImageSaturationMask(outFilePath, outName, outFormat)
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.rastergis.populateStats(saturateImage, True, True)
-                prodsCalculated["SATURATE"] = True
-                print("")
-                
+                            
             if prodsToCalc["TOPOSHADOW"]:
                 # Execute generation of the saturation image
                 outName = outBaseName + "_toposhad" + arcsiUtils.getFileExtension(outFormat)
@@ -635,7 +652,6 @@ class ARCSI (object):
                 prodsCalculated["CLOUDS"] = True
                 print("")
             
-            
             # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
             if prodsToCalc["DOS"]:
                 print("Convert to reflectance using dark object subtraction.")
@@ -654,7 +670,6 @@ class ARCSI (object):
                     print("")
                 prodsCalculated["DOS"] = True
             
-                       
             # Step 9: Use image to estimate AOD values
             if prodsToCalc["DOSAOTSGL"]:
                 aotVal = sensorClass.estimateSingleAOTFromDOS(radianceImage, toaImage, outDEMName, tmpPath, outBaseName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl)
@@ -692,7 +707,6 @@ class ARCSI (object):
             # Step 10: Convert to Surface Reflectance using 6S Standard Models
             if prodsToCalc["SREF"]:
                 # Execute conversion to surface reflectance by applying 6S using a 'standard' modelled atmosphere.
-                
                 if (prodsToCalc["DDVAOT"] or prodsToCalc["DOSAOT"]) and (not aotFile == ""):
                     imgDS = gdal.Open(aotFile, gdal.GA_ReadOnly )
                     imgBand = imgDS.GetRasterBand(1)
