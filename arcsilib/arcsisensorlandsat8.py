@@ -77,6 +77,8 @@ import osgeo.gdal as gdal
 from scipy.optimize import minimize
 # Import the numpy library
 import numpy
+# Import JSON module
+import json
 
 class ARCSILandsat8Sensor (ARCSIAbstractSensor):
     """
@@ -166,6 +168,15 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         self.k1ConstB11 = 0.0
         self.k2ConstB10 = 0.0
         self.k2ConstB11 = 0.0
+        
+        self.sensorID = ""
+        self.spacecraftID = ""
+        self.cloudCover = 0.0
+        self.cloudCoverLand = 0.0
+        self.earthSunDistance = 0.0
+        self.gridCellSizePan = 0.0
+        self.gridCellSizeRefl = 0.0
+        self.gridCellSizeTherm = 0.0
     
     def extractHeaderParameters(self, inputHeader, wktStr):
         """
@@ -194,6 +205,9 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
                 self.sensor = "LS8"
             else:
                 raise ARCSIException("Do no recognise the spacecraft and sensor or combination.")
+            
+            self.sensorID = headerParams["SENSOR_ID"]
+            self.spacecraftID = headerParams["SPACECRAFT_ID"]
             
             # Get row/path
             self.row = int(headerParams["WRS_ROW"])
@@ -327,7 +341,20 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             self.b10CalMin = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MIN_BAND_10"])
             self.b10CalMax = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MAX_BAND_10"])
             self.b11CalMin = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MIN_BAND_11"])
-            self.b11CalMax = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MAX_BAND_11"])            
+            self.b11CalMax = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MAX_BAND_11"])
+            
+            if "CLOUD_COVER" in headerParams:
+                self.cloudCover = arcsiUtils.str2Float(headerParams["CLOUD_COVER"], 0.0)
+            if "CLOUD_COVER_LAND" in headerParams:
+                self.cloudCoverLand = arcsiUtils.str2Float(headerParams["CLOUD_COVER_LAND"], 0.0)
+            if "EARTH_SUN_DISTANCE" in headerParams:
+                self.earthSunDistance = arcsiUtils.str2Float(headerParams["EARTH_SUN_DISTANCE"], 0.0)
+            if "GRID_CELL_SIZE_REFLECTIVE" in headerParams:
+                self.gridCellSizeRefl = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_REFLECTIVE"], 60.0)
+            if "GRID_CELL_SIZE_THERMAL" in headerParams:
+                self.gridCellSizeTherm = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_THERMAL"], 30.0)
+            if "GRID_CELL_SIZE_PANCHROMATIC" in headerParams:
+                self.gridCellSizePan = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_PANCHROMATIC"], 15.0)
             
         except Exception as e:
             raise e
@@ -340,6 +367,30 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         outname = self.defaultGenBaseOutFileName()
         outname = outname + str("_") + rowpath
         return outname
+    
+    def generateMetaDataFile(self, outputPath, outputFileName, productsStr, validMaskImage="", footprintCalc=False):
+        """
+        Generate file metadata.
+        """
+        outJSONFilePath = os.path.join(outputPath, outputFileName)
+        jsonData = self.getJSONDictDefaultMetaData(productsStr, validMaskImage, footprintCalc)
+        sensorInfo = jsonData['SensorInfo']
+        sensorInfo['Row'] = self.row
+        sensorInfo['Path'] = self.path
+        sensorInfo['SensorID'] = self.sensorID
+        sensorInfo['SpacecraftID'] = self.spacecraftID
+        acqDict = jsonData['AcquasitionInfo']
+        acqDict['EarthSunDistance'] = self.earthSunDistance
+        imgInfo = dict()
+        imgInfo['CloudCover'] = self.cloudCover
+        imgInfo['CloudCoverLand'] = self.cloudCoverLand
+        imgInfo['CellSizePan'] = self.gridCellSizePan
+        imgInfo['CellSizeRefl'] = self.gridCellSizeRefl
+        imgInfo['CellSizeTherm'] = self.gridCellSizeTherm
+        jsonData['ImageInfo'] = imgInfo
+        
+        with open(outJSONFilePath, 'w') as outfile:
+            json.dump(jsonData, outfile, sort_keys=True,indent=4, separators=(',', ': '), ensure_ascii=False)
     
     def hasThermal(self):
         return True

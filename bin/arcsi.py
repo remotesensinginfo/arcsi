@@ -269,6 +269,7 @@ class ARCSI (object):
             prodsToCalc["SATURATE"] = False
             prodsToCalc["TOPOSHADOW"] = False
             prodsToCalc["FOOTPRINT"] = False
+            prodsToCalc["METADATA"] = False
             
             # Make a copy of the dictionary to store calculated products.
             prodsCalculated = copy.copy(prodsToCalc)
@@ -322,6 +323,8 @@ class ARCSI (object):
                     prodsToCalc["TOPOSHADOW"] = True
                 elif prod == 'FOOTPRINT':
                     prodsToCalc["FOOTPRINT"] = True
+                elif prod == 'METADATA':
+                    prodsToCalc["METADATA"] = True
                    
             if prodsToCalc["DOSAOT"] and prodsToCalc["DDVAOT"]:
                 raise ARCSIException("You cannot specify both the DOSAOT and DDVAOT products, you must choose one or the other.")
@@ -404,6 +407,7 @@ class ARCSI (object):
             outDEMName=""
             topoShadowImage=""
             footprintShpFile=""
+            metaDataFile=""
             
             # Get the valid image data maskImage
             outName = outBaseName + "_valid" + arcsiUtils.getFileExtension(outFormat)
@@ -773,7 +777,19 @@ class ARCSI (object):
                 prodsCalculated["SREF"] = True
                 print("")
                     
-            
+            if prodsToCalc["METADATA"]:
+                print("Exporting Meta-data file")
+                outName = outBaseName + "_meta.json"
+                
+                validMaskImagePath = ""
+                if not validMaskImage is None:
+                    if not outWKTFile is None:
+                        validMaskImagePath = validMaskImageProj
+                    else:
+                        validMaskImagePath = validMaskImage
+                sensorClass.generateMetaDataFile(outFilePath, outName, productsStr, validMaskImagePath, prodsToCalc["FOOTPRINT"])
+                prodsCalculated["METADATA"] = True
+                print("")
                 
         except ARCSIException as e:
             print("Error: {}".format(e), file=sys.stderr)
@@ -802,7 +818,7 @@ class ARCSI (object):
             else:
                 seconds = round(elapsedTime,2)
                 
-            print("\nProcessing took " + str(hours) + "h " + str(minutes) + "m " + str(seconds) + "s. Thank you for using ARCSI.")        
+            print("Processing took " + str(hours) + "h " + str(minutes) + "m " + str(seconds) + "s. Thank you for using ARCSI.\n\n")        
         
     def listSensors(self):
         """
@@ -814,18 +830,18 @@ class ARCSI (object):
         print("\t-----------------------------------------------------------------------------------------------------")
         print("\tSensor        | Shorthand     | Functions")
         print("\t-----------------------------------------------------------------------------------------------------")
-        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT")
-        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT")
-        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT")
-        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT")
-        print("\tLandsat 4 TM  | \'ls4tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT")
-        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT")
-        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT")
-        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT")
-        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT")
-        print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
-        print("\tWorldView2    | \'wv2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
-        print("\tSPOT5         | \'spot5\'     | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW")
+        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 4 TM  | \'ls4tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, METADATA")
+        print("\tWorldView2    | \'wv2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, METADATA")
+        print("\tSPOT5         | \'spot5\'     | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, METADATA")
         print("\t-----------------------------------------------------------------------------------------------------")
         
     def listProductDescription(self, product):
@@ -936,9 +952,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOS and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW', 'FOOTPRINT'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW', 'FOOTPRINT', 'METADATA'],
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT)''')
+                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA)''')
     # Define the argument for requesting a list of products.
     parser.add_argument("--prodlist", action='store_true', default=False, 
                         help='''List the products which are supported and 
