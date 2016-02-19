@@ -65,6 +65,8 @@ import numpy
 import osgeo.gdal as gdal
 # Import the RIOS RAT module
 from rios import rat
+# Import JSON module
+import json
 
 class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
     """
@@ -98,6 +100,13 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
         self.b6MaxRad = 0.0
         self.b7MinRad = 0.0
         self.b7MaxRad = 0.0
+        
+        self.sensorID = ""
+        self.spacecraftID = ""
+        self.cloudCover = 0.0
+        self.cloudCoverLand = 0.0
+        self.earthSunDistance = 0.0
+        self.gridCellSizeRefl = 0.0
     
     def extractHeaderParameters(self, inputHeader, wktStr):
         """
@@ -126,6 +135,9 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
                 self.sensor = "LS2MSS"
             else:
                 raise ARCSIException("Do no recognise the spacecraft and sensor or combination.")
+            
+            self.sensorID = headerParams["SENSOR_ID"]
+            self.spacecraftID = headerParams["SPACECRAFT_ID"]
             
             # Get row/path
             self.row = int(headerParams["WRS_ROW"])
@@ -219,6 +231,15 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
             self.b7MinRad = arcsiUtils.str2Float(headerParams["RADIANCE_MINIMUM_BAND_7"], 3.900)
             self.b7MaxRad = arcsiUtils.str2Float(headerParams["RADIANCE_MAXIMUM_BAND_7"], 125.800)
             
+            if "CLOUD_COVER" in headerParams:
+                self.cloudCover = arcsiUtils.str2Float(headerParams["CLOUD_COVER"], 0.0)
+            if "CLOUD_COVER_LAND" in headerParams:
+                self.cloudCoverLand = arcsiUtils.str2Float(headerParams["CLOUD_COVER_LAND"], 0.0)
+            if "EARTH_SUN_DISTANCE" in headerParams:
+                self.earthSunDistance = arcsiUtils.str2Float(headerParams["EARTH_SUN_DISTANCE"], 0.0)
+            if "GRID_CELL_SIZE_REFLECTIVE" in headerParams:
+                self.gridCellSizeRefl = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_REFLECTIVE"], 60.0)
+            
         except Exception as e:
             raise e
         
@@ -230,6 +251,28 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
         outname = self.defaultGenBaseOutFileName()
         outname = outname + str("_") + rowpath
         return outname
+    
+    def generateMetaDataFile(self, outputPath, outputFileName, productsStr, validMaskImage="", footprintCalc=False):
+        """
+        Generate file metadata.
+        """
+        outJSONFilePath = os.path.join(outputPath, outputFileName)
+        jsonData = self.getJSONDictDefaultMetaData(productsStr, validMaskImage, footprintCalc)
+        sensorInfo = jsonData['SensorInfo']
+        sensorInfo['Row'] = self.row
+        sensorInfo['Path'] = self.path
+        sensorInfo['SensorID'] = self.sensorID
+        sensorInfo['SpacecraftID'] = self.spacecraftID
+        acqDict = jsonData['AcquasitionInfo']
+        acqDict['EarthSunDistance'] = self.earthSunDistance
+        imgInfo = dict()
+        imgInfo['CloudCover'] = self.cloudCover
+        imgInfo['CloudCoverLand'] = self.cloudCoverLand
+        imgInfo['CellSizeRefl'] = self.gridCellSizeRefl
+        jsonData['ImageInfo'] = imgInfo
+        
+        with open(outJSONFilePath, 'w') as outfile:
+            json.dump(jsonData, outfile, sort_keys=True,indent=4, separators=(',', ': '), ensure_ascii=False)
     
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("Landsat 2 does not provide any image masks, do not use the MASK option.")

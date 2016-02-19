@@ -85,6 +85,8 @@ from rios.imagewriter import ImageWriter
 import scipy.interpolate.rbf
 # Import scipy interpolation library
 import scipy.interpolate 
+# Import JSON module
+import json
 
 class ARCSIAbstractSensor (object):
     """
@@ -263,10 +265,147 @@ class ARCSIAbstractSensor (object):
         
     def generateOutputBaseName(self):
         """
-        Provides a default implementation.
+        Provides a default implementation for generating file name.
         """
         return self.defaultGenBaseOutFileName()
     
+    def getJSONDictDefaultMetaData(self, productsStr, validMaskImage="", footprintCalc=False):
+        filesDict = dict()
+        filesDict['FileBaseName'] = self.generateOutputBaseName()
+        
+        sensorDict = dict()
+        sensorDict['ARCSISensorName'] = self.sensor
+        
+        acqDict = dict()
+        acqDateDict = dict()
+        acqDateDict['Year'] = self.acquisitionTime.year
+        acqDateDict['Month'] = self.acquisitionTime.month
+        acqDateDict['Day'] = self.acquisitionTime.day
+        acqDict['Date'] = acqDateDict
+        acqTimeDict = dict()
+        acqTimeDict['Hour'] = self.acquisitionTime.hour
+        acqTimeDict['Minute'] = self.acquisitionTime.minute
+        acqTimeDict['Second'] = self.acquisitionTime.second
+        acqDict['Time'] = acqTimeDict
+        acqDict['SolarZenith'] = self.solarZenith
+        acqDict['SolarAzimuth'] = self.solarAzimuth
+        acqDict['SenorZenith'] = self.senorZenith
+        acqDict['SenorAzimuth'] = self.senorAzimuth
+        
+        locDict = dict()
+        locGeogDict = dict()
+        locGeogDict['CentreLon'] = self.lonCentre
+        locGeogDict['CentreLat'] = self.latCentre
+        locGeogBBOXDict = dict()
+        locGeogBBOXDict['TLLat'] = self.latTL
+        locGeogBBOXDict['TLLon'] = self.lonTL
+        locGeogBBOXDict['TRLat'] = self.latTR
+        locGeogBBOXDict['TRLon'] = self.lonTR
+        locGeogBBOXDict['BLLat'] = self.latBL
+        locGeogBBOXDict['BLLon'] = self.lonBL
+        locGeogBBOXDict['BRLat'] = self.latBR
+        locGeogBBOXDict['BRLon'] = self.lonBR
+        locGeogDict['BBOX'] = locGeogBBOXDict
+        locDict['Geographical'] = locGeogDict
+        
+        locProjDict = dict()
+        if not validMaskImage is "":
+            if not footprintCalc:
+                rsgislib.rastergis.spatialExtent(clumps=validMaskImage, minXX='MinXX', minXY='MinXY', maxXX='MaxXX', maxXY='MaxXY', minYX='MinYX', minYY='MinYY', maxYX='MaxYX', maxYY='MaxYY', ratband=1)
+            
+            ratDataset = gdal.Open(validMaskImage)
+            minXXVals = rat.readColumn(ratDataset, 'MinXX')
+            minXYVals = rat.readColumn(ratDataset, 'MinXY')
+            maxXXVals = rat.readColumn(ratDataset, 'MaxXX')
+            maxXYVals = rat.readColumn(ratDataset, 'MaxXY')
+            minYXVals = rat.readColumn(ratDataset, 'MinYX')
+            minYYVals = rat.readColumn(ratDataset, 'MinYY')
+            maxYXVals = rat.readColumn(ratDataset, 'MaxYX')
+            maxYYVals = rat.readColumn(ratDataset, 'MaxYY')
+            ratDataset = None
+            
+            ## Remove First Row which is no data...    
+            dataMask = numpy.ones_like(minXXVals, dtype=numpy.int16)
+            dataMask[0] = 0
+            minXXVals = minXXVals[dataMask == 1]
+            minXYVals = minXYVals[dataMask == 1]
+            maxXXVals = maxXXVals[dataMask == 1]
+            maxXYVals = maxXYVals[dataMask == 1]
+            minYXVals = minYXVals[dataMask == 1]
+            minYYVals = minYYVals[dataMask == 1]
+            maxYXVals = maxYXVals[dataMask == 1]
+            maxYYVals = maxYYVals[dataMask == 1]
+
+            ## Remove any features which are all zero (i.e., polygon not present...)
+            minXXValsSub = minXXVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+            minXYValsSub = minXYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+            maxXXValsSub = maxXXVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+            maxXYValsSub = maxXYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+            minYXValsSub = minYXVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+            minYYValsSub = minYYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+            maxYXValsSub = maxYXVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+            maxYYValsSub = maxYYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
+    
+            numFeats = minXXValsSub.shape[0]
+            
+            if numFeats == 1:
+                locProjBBOXDict = dict()
+                locProjBBOXDict['TLX'] = minXXValsSub[0]
+                locProjBBOXDict['TLY'] = maxYYValsSub[0]
+                locProjBBOXDict['TRX'] = maxXXValsSub[0]
+                locProjBBOXDict['TRY'] = maxYYValsSub[0]
+                locProjBBOXDict['BLX'] = minXXValsSub[0]
+                locProjBBOXDict['BLY'] = minYYValsSub[0]
+                locProjBBOXDict['BRX'] = maxXXValsSub[0]
+                locProjBBOXDict['BRY'] = minYYValsSub[0]
+                locProjDict['BBOX'] = locProjBBOXDict
+                locProjDict['CentreX'] = minXXValsSub[0] + ((maxXXValsSub[0] - minXXValsSub[0])/2)
+                locProjDict['CentreY'] = minYYValsSub[0] + ((maxYYValsSub[0] - minYYValsSub[0])/2)
+                
+                locProjVPolyDict = dict()
+                locProjVPolyDict['MinXX'] = minXXValsSub[0]
+                locProjVPolyDict['MinXY'] = minXYValsSub[0]
+                locProjVPolyDict['MaxYX'] = maxYXValsSub[0]
+                locProjVPolyDict['MaxYY'] = maxYYValsSub[0]
+                locProjVPolyDict['MaxXX'] = maxXXValsSub[0]
+                locProjVPolyDict['MaxXY'] = maxXYValsSub[0]
+                locProjVPolyDict['MinYX'] = minYXValsSub[0]
+                locProjVPolyDict['MinYY'] = minYYValsSub[0]
+                locProjDict['VPOLY'] = locProjVPolyDict
+        else:        
+            locProjDict['CentreX'] = self.xCentre
+            locProjDict['CentreY'] = self.yCentre 
+            locProjBBOXDict = dict()
+            locProjBBOXDict['TLX'] = self.xTL
+            locProjBBOXDict['TLY'] = self.yTL
+            locProjBBOXDict['TRX'] = self.xTR
+            locProjBBOXDict['TRY'] = self.yTR
+            locProjBBOXDict['BLX'] = self.xBL
+            locProjBBOXDict['BLY'] = self.yBL
+            locProjBBOXDict['BRX'] = self.xBR
+            locProjBBOXDict['BRY'] = self.yBR
+            locProjDict['BBOX'] = locProjBBOXDict        
+        locDict['Projected'] = locProjDict
+                
+        jsonBlock = dict()
+        jsonBlock['FileInfo'] = filesDict
+        jsonBlock['SensorInfo'] = sensorDict
+        jsonBlock['AcquasitionInfo'] = acqDict
+        jsonBlock['LocationInfo'] = locDict
+        jsonBlock['ARCSIProducts'] = productsStr
+        
+        return jsonBlock
+       
+        
+    def generateMetaDataFile(self, outputPath, outputFileName, productsStr, validMaskImage="", footprintCalc=False):
+        """
+        Provides a default implementation for generating file metadata.
+        """
+        outJSONFilePath = os.path.join(outputPath, outputFileName)
+        jsonData = self.getJSONDictDefaultMetaData(productsStr, validMaskImage, footprintCalc)
+        with open(outJSONFilePath, 'w') as outfile:
+            json.dump(jsonData, outfile, sort_keys=True,indent=4, separators=(',', ': '), ensure_ascii=False)
+        
     def maskInputImages(self):
         return False
         
@@ -405,7 +544,6 @@ class ARCSIAbstractSensor (object):
         
         outDatasource.Destroy()
         ratDataset = None
-        
     
     def generateTopoDirectShadowMask(self,  inputDEMImage, outputPath, outputName, outFormat, tmpPath):
         try:
