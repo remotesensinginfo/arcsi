@@ -440,7 +440,8 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             maskList = glob.glob(os.path.join(maskDIR, "*.TIF.gz"))
             if len(maskList) > 0:
                for file in maskList:
-                    subprocess.call("gzip -d " + file)
+                    cmd = "gzip -d " + file
+                    subprocess.call(cmd, shell=True)
 
             maskList = glob.glob(os.path.join(maskDIR, "*.TIF"))
             if not len(maskList) > 0:
