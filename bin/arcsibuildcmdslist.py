@@ -51,6 +51,8 @@ import argparse
 from arcsilib import ARCSI_VERSION
 # Import os.walk to navigate directory structure.
 import os
+# Import the ARCSI utilities class
+from arcsilib.arcsiutils import ARCSIUtils
 
 class ARCSIBuildCommands (object):
     
@@ -63,7 +65,7 @@ class ARCSIBuildCommands (object):
                     outFiles.append("\"" + os.path.abspath(os.path.join(dirName, fname)) + "\"")
         return outFiles
     
-    def buildCmds(self, inputDIR, outputFile, headerEnding, sensor, inwkt, 
+    def buildCmds(self, inputPath, inputIsDIR, outputFile, headerEnding, sensor, inwkt, 
                      format, outpath, prods, stats, aeropro, atmospro, 
                      aeroimg, atmosimg, grdrefl, surfacealtitude, 
                      atmosozone, atmoswater, aerowater, 
@@ -71,7 +73,7 @@ class ARCSIBuildCommands (object):
                      minaot, maxaot, dem, localdos, dosout, simpledos, 
                      scalefac, outwkt, projabbv, interp):
         
-        inputDIR = os.path.abspath(inputDIR)
+        inputPath = os.path.abspath(inputPath)
         outputFile = os.path.abspath(outputFile)
         if not aeroimg == None:
             aeroimg = "\"" + os.path.abspath(aeroimg) + "\""
@@ -85,9 +87,14 @@ class ARCSIBuildCommands (object):
             outpath = "\"" + os.path.abspath(outpath) + "\""
         if not inwkt == None:
             inwkt = "\"" + os.path.abspath(inwkt) + "\""
-            
-        headersFilesList = self.getListOfFiles(inputDIR, headerEnding)
-                
+        
+        headersFilesList = []
+        if inputIsDIR:
+            headersFilesList = self.getListOfFiles(inputPath, headerEnding)
+        else:
+            arcsiUtils = ARCSIUtils()
+            headersFilesList = arcsiUtils.readTextFile2List(inputPath)
+        
         prodsStr = ""
         first = True
         for prod in prods:
@@ -179,16 +186,16 @@ if __name__ == '__main__':
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     
     parser.add_argument("-i", "--input", type=str, required=True, 
-                        help='''Input directory containing the data to be processed''')
+                        help='''Input directory containing the data to be processed or text file listing paths to header files (don't set --header if text file)''')
 
     parser.add_argument("-o", "--output", type=str, required=True, 
                         help='''Output text file (shell script) with the list of commands.''')
                         
-    parser.add_argument("-e", "--header", type=str, required=True, 
+    parser.add_argument("-e", "--header", type=str, required=False, 
                         help='''The extension / unquie file ending for the input header files.''')
                                                            
     # Define the argument for specifying the sensor.
-    parser.add_argument("-s", "--sensor", choices=['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm',
+    parser.add_argument("-s", "--sensor", required=True, choices=['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm',
                                                    'ls5mss', 'ls5tm', 'ls7', 
                                                    'ls8', 'rapideye', 'wv2', 'spot5'],  
                         help='''Specify the sensor being processed.''')
@@ -210,7 +217,7 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOSUB and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW', 'FOOTPRINT', 'METADATA'],
+    parser.add_argument("-p", "--prods", type=str, required=True, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW', 'FOOTPRINT', 'METADATA'],
                         help='''Specify the output products which are to be
                         calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA)''')
                         
@@ -337,34 +344,17 @@ if __name__ == '__main__':
     # Call the parser to parse the arguments.
     args = parser.parse_args()
     
-    if args.input == None:
-        print("An input directory was not specified.")
-        parser.print_help()
-        sys.exit()
-        
-    if args.output == None:
-        print("An output file name and path was not specified.")
-        parser.print_help()
-        sys.exit()
-        
+    inputIsDIR = True
     if args.header == None:
-        print("The unique file name ending of the header files was not specified.")
-        parser.print_help()
-        sys.exit()
-    
-    if args.sensor == None:
-        print("The sensor needs to be specified.")
-        parser.print_help()
-        sys.exit()
-        
-    if args.prods == None:
-        print("The list of produced to be generated must be specified.")
-        parser.print_help()
-        sys.exit()
+        print("Header ending not specified therefore expecting input to be a text file listing header files.")
+        inputIsDIR = False
+        if not os.path.isfile(args.input):
+            print("Error: Input is expected to be a file but is not, please check.")
+            sys.exit()
     
     arcsiObj = ARCSIBuildCommands()
     
-    arcsiObj.buildCmds(args.input, args.output, args.header, args.sensor, args.inwkt, 
+    arcsiObj.buildCmds(args.input, inputIsDIR, args.output, args.header, args.sensor, args.inwkt, 
                      args.format, args.outpath, args.prods, args.stats, args.aeropro, args.atmospro, 
                      args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, 
                      args.atmosozone, args.atmoswater, args.aerowater, 

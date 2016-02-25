@@ -108,10 +108,15 @@ class ARCSIBuildFileNameLUT (object):
         
         fileDict = dict()
         sensorFact = ARCSISensorFactory()
+        duplicate = False
         for fileHdr in hdrList:
+            duplicate = False
             sensorClass = sensorFact.getSensorClassFromName(sensorStr, False, None)
             sensorClass.extractHeaderParameters(fileHdr, "")
             outBaseName = sensorClass.generateOutputBaseName()
+            
+            if outBaseName in fileDict:
+                duplicate = True
             
             fileHdr = fileHdr.replace(inputDIR, "")
             if (fileHdr[0] == '/') or (fileHdr[0] == '\\'):
@@ -122,7 +127,12 @@ class ARCSIBuildFileNameLUT (object):
                     if fileHdr.count(baseArchName) > 0:
                         tmpList['Archive'] = os.path.basename(archLUT[baseArchName])
                         break
-            fileDict[outBaseName] = tmpList
+            if not duplicate:
+                fileDict[outBaseName] = tmpList
+            else:
+                if not 'Duplicates' in fileDict[outBaseName]:
+                    fileDict[outBaseName]['Duplicates'] = []
+                fileDict[outBaseName]['Duplicates'].append(tmpList)
             
         with open(outputFile, 'w') as outfile:
             json.dump(fileDict, outfile, sort_keys=True, indent=4, separators=(',', ': '), ensure_ascii=False)

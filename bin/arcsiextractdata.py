@@ -300,13 +300,11 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     if (args.input == None) & (args.file == None):
-        print("An input directory or file must be specified.")
-        parser.print_help()
+        print("Error: An input directory or file must be specified.")
         sys.exit()
     
     if args.output == None:
-        print("An output directory was not specified.")
-        parser.print_help()
+        print("Error: An output directory was not specified.")
         sys.exit()
     
     arcsiObj = ARCSIExtractData()
