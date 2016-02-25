@@ -114,11 +114,13 @@ class ARCSIBuildFileNameLUT (object):
             outBaseName = sensorClass.generateOutputBaseName()
             
             fileHdr = fileHdr.replace(inputDIR, "")
-            tmpList = [fileHdr]
+            if (fileHdr[0] == '/') or (fileHdr[0] == '\\'):
+                fileHdr = fileHdr[1:]
+            tmpList = {"Header" : fileHdr}
             if not archivesDIR is None:
                 for baseArchName in archLUT:
                     if fileHdr.count(baseArchName) > 0:
-                        tmpList.append( os.path.basename(archLUT[baseArchName]))
+                        tmpList['Archive'] = os.path.basename(archLUT[baseArchName])
                         break
             fileDict[outBaseName] = tmpList
             
