@@ -56,22 +56,12 @@ import copy
 import arcsilib
 # Import the ARCSI exception class
 from arcsilib.arcsiexception import ARCSIException
+# Import the ARCSI sensor factory class
+from arcsilib.arcsiutils import ARCSISensorFactory
 # Import the ARCSI utilities class
 from arcsilib.arcsiutils import ARCSIUtils
 # Import the sensor classes
 from arcsilib.arcsisensor import ARCSIAbstractSensor
-from arcsilib.arcsisensorlandsat7 import ARCSILandsat7Sensor
-from arcsilib.arcsisensorlandsat5tm import ARCSILandsat5TMSensor
-from arcsilib.arcsisensorlandsat4tm import ARCSILandsat4TMSensor
-from arcsilib.arcsisensorlandsat5mss import ARCSILandsat5MSSSensor
-from arcsilib.arcsisensorlandsat4mss import ARCSILandsat4MSSSensor
-from arcsilib.arcsisensorlandsat3mss import ARCSILandsat3MSSSensor
-from arcsilib.arcsisensorlandsat2mss import ARCSILandsat2MSSSensor
-from arcsilib.arcsisensorlandsat1mss import ARCSILandsat1MSSSensor
-from arcsilib.arcsisensorlandsat8 import ARCSILandsat8Sensor
-from arcsilib.arcsisensorrapideye import ARCSIRapidEyeSensor
-from arcsilib.arcsisensorworldview2 import ARCSIWorldView2Sensor
-from arcsilib.arcsisensorspot5 import ARCSISPOT5Sensor
 # Import the image utilities module from rsgislib
 import rsgislib.imageutils
 # Import the image calculations module from rsgislib
@@ -101,40 +91,6 @@ class ARCSI (object):
     """
     The \'main\' class which executes the whole ARCSI package.
     """
-    
-    def sensorClassFactory(self, sensor, debugMode, inputImage):
-        sensorClass = None
-        if sensor == 'ls7':
-            sensorClass = ARCSILandsat7Sensor(debugMode, inputImage)
-        elif sensor == 'ls5tm':
-            sensorClass = ARCSILandsat5TMSensor(debugMode, inputImage)
-        elif sensor == 'ls4tm':
-            sensorClass = ARCSILandsat4TMSensor(debugMode, inputImage)
-        elif sensor == 'ls5mss':
-            sensorClass = ARCSILandsat5MSSSensor(debugMode, inputImage)
-        elif sensor == 'ls4mss':
-            sensorClass = ARCSILandsat4MSSSensor(debugMode, inputImage)
-        elif sensor == 'ls3':
-            sensorClass = ARCSILandsat3MSSSensor(debugMode, inputImage)
-        elif sensor == 'ls2':
-            sensorClass = ARCSILandsat2MSSSensor(debugMode, inputImage)
-        elif sensor == 'ls1':
-            sensorClass = ARCSILandsat1MSSSensor(debugMode, inputImage)
-        elif sensor == 'ls8':
-            sensorClass = ARCSILandsat8Sensor(debugMode, inputImage)
-        elif sensor == 'rapideye':
-            sensorClass = ARCSIRapidEyeSensor(debugMode, inputImage)
-        elif sensor == 'wv2':
-            sensorClass = ARCSIWorldView2Sensor(debugMode, inputImage)
-        elif sensor == 'spot5':
-            sensorClass = ARCSISPOT5Sensor(debugMode, inputImage)
-        else:
-            raise ARCSIException("Could not get a class representing the sensor specified from the factory.")
-        
-        if sensorClass == None:
-            raise ARCSIException("Something has gone wrong sensorClass is None!")
-
-        return sensorClass
         
     def convertVisabilityToAOD(self, vis):
         return (3.9449/vis)+0.08498
@@ -204,7 +160,8 @@ class ARCSI (object):
                 wktStr = arcsiUtils.readTextFile(inWKTFile)
                         
             # Step 1: Get the Sensor specific class from factory
-            sensorClass = self.sensorClassFactory(sensorStr, debugMode, inputImage)
+            sensorFact = ARCSISensorFactory()
+            sensorClass = sensorFact.getSensorClassFromName(sensorStr, debugMode, inputImage)
             
             # Step 2: Read header parameters
             sensorClass.extractHeaderParameters(inputHeader, wktStr)

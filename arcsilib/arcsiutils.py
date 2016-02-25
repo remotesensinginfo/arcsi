@@ -174,7 +174,6 @@ class ARCSIUtils (object):
                 return False
         return True
     
-    
     def str2Float(self, strVal, errVal=None):
         strVal = str(strVal).strip()
         #print("IN: " + strVal)
@@ -300,4 +299,54 @@ class ARCSILandsatMetaUtils(object):
                         raise
 
         return metaFilenames
+
+
+class ARCSISensorFactory(object):
+
+    def getSensorClassFromName(self, sensor, debugMode, inputImage):
+        sensorClass = None
+        if sensor == 'ls7':
+            from arcsilib.arcsisensorlandsat7 import ARCSILandsat7Sensor
+            sensorClass = ARCSILandsat7Sensor(debugMode, inputImage)
+        elif sensor == 'ls5tm':
+            from arcsilib.arcsisensorlandsat5tm import ARCSILandsat5TMSensor
+            sensorClass = ARCSILandsat5TMSensor(debugMode, inputImage)
+        elif sensor == 'ls4tm':
+            from arcsilib.arcsisensorlandsat4tm import ARCSILandsat4TMSensor
+            sensorClass = ARCSILandsat4TMSensor(debugMode, inputImage)
+        elif sensor == 'ls5mss':
+            from arcsilib.arcsisensorlandsat5mss import ARCSILandsat5MSSSensor
+            sensorClass = ARCSILandsat5MSSSensor(debugMode, inputImage)
+        elif sensor == 'ls4mss':
+            from arcsilib.arcsisensorlandsat4mss import ARCSILandsat4MSSSensor
+            sensorClass = ARCSILandsat4MSSSensor(debugMode, inputImage)
+        elif sensor == 'ls3':
+            from arcsilib.arcsisensorlandsat3mss import ARCSILandsat3MSSSensor
+            sensorClass = ARCSILandsat3MSSSensor(debugMode, inputImage)
+        elif sensor == 'ls2':
+            from arcsilib.arcsisensorlandsat2mss import ARCSILandsat2MSSSensor
+            sensorClass = ARCSILandsat2MSSSensor(debugMode, inputImage)
+        elif sensor == 'ls1':
+            from arcsilib.arcsisensorlandsat1mss import ARCSILandsat1MSSSensor
+            sensorClass = ARCSILandsat1MSSSensor(debugMode, inputImage)
+        elif sensor == 'ls8':
+            from arcsilib.arcsisensorlandsat8 import ARCSILandsat8Sensor
+            sensorClass = ARCSILandsat8Sensor(debugMode, inputImage)
+        elif sensor == 'rapideye':
+            from arcsilib.arcsisensorrapideye import ARCSIRapidEyeSensor
+            sensorClass = ARCSIRapidEyeSensor(debugMode, inputImage)
+        elif sensor == 'wv2':
+            from arcsilib.arcsisensorworldview2 import ARCSIWorldView2Sensor
+            sensorClass = ARCSIWorldView2Sensor(debugMode, inputImage)
+        elif sensor == 'spot5':
+            from arcsilib.arcsisensorspot5 import ARCSISPOT5Sensor
+            sensorClass = ARCSISPOT5Sensor(debugMode, inputImage)
+        else:
+            raise ARCSIException("Could not get a class representing the sensor specified from the factory.")
+        
+        if sensorClass == None:
+            raise ARCSIException("Something has gone wrong sensorClass is None!")
+
+        return sensorClass
+
 
