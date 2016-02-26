@@ -53,7 +53,23 @@ import json
 # Import shutil module
 import shutil
 
-class ARCSIBuildFileNameLUT (object):
+class ARCSIRemoveDuplicates (object):
+    
+    def findBaseDIR(self, filePath):
+        baseName = os.path.dirname(filePath)
+        found = False
+        while not found:
+            baseNameTmp = os.path.dirname(baseName)
+            if baseNameTmp == baseName:
+                found = True
+                break
+            elif (baseNameTmp == "") or (baseNameTmp == "/"):
+                found = True
+                break
+            else:
+                baseName = baseNameTmp
+        return baseName
+    
     
     def sortDuplicateFiles(self, lutFile, headersDIR, archivesDIR, cpArchives2DIR):
         headersDIR = os.path.abspath(headersDIR)
@@ -78,7 +94,7 @@ class ARCSIBuildFileNameLUT (object):
                             print("Moving: " + archFile)
                             shutil.move(archFile, archOutFile)
                     if not headersDIR is None:
-                        dirName = os.path.dirname(dup['Header'])
+                        dirName = self.findBaseDIR(dup['Header'])
                         fullPath2Del = os.path.join(headersDIR, dirName)
                         if os.path.exists(fullPath2Del):
                             print("Deleting: " + fullPath2Del)
@@ -121,7 +137,7 @@ if __name__ == '__main__':
             print("If archives directory is specified then the output directory to which the duplicate archives will be moved must be specified.")
             sys.exit()
             
-    arcsiObj = ARCSIBuildFileNameLUT()
+    arcsiObj = ARCSIRemoveDuplicates()
     arcsiObj.sortDuplicateFiles(args.lut, args.workingdir, args.archivedir, args.dirout)
     
     
