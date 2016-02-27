@@ -496,6 +496,28 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             outputMaskImage = None            
         return outputImage, outputMaskImage
     
+    def expectedImageDataPresent(self):
+        imageDataPresent = True
+        
+        if not os.path.exists(self.band1File):
+            imageDataPresent = False
+        if not os.path.exists(self.band2File):
+            imageDataPresent = False
+        if not os.path.exists(self.band3File):
+            imageDataPresent = False
+        if not os.path.exists(self.band4File):
+            imageDataPresent = False
+        if not os.path.exists(self.band5File):
+            imageDataPresent = False
+        if not os.path.exists(self.band6aFile):
+            imageDataPresent = False
+        if not os.path.exists(self.band6bFile):
+            imageDataPresent = False
+        if not os.path.exists(self.band7File):
+            imageDataPresent = False
+        
+        return imageDataPresent
+    
     def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
         print("Create the valid data mask")
         inImages = [self.band1File, self.band2File, self.band3File, self.band4File, self.band5File, self.band7File]

@@ -86,6 +86,10 @@ from arcsilib import ARCSI_SUPPORT_EMAIL
 from arcsilib import ARCSI_WEBSITE
 # Import the arcsi copyright names
 from arcsilib import ARCSI_COPYRIGHT_NAMES
+# Import the list of sensors arcsi supports
+from arcsilib import ARCSI_SENSORS_LIST
+# Import the list of products arcsi supports
+from arcsilib import ARCSI_PRODUCTS_LIST
 
 class ARCSI (object):
     """
@@ -166,6 +170,11 @@ class ARCSI (object):
             # Step 2: Read header parameters
             sensorClass.extractHeaderParameters(inputHeader, wktStr)
             print("")
+            
+            if not sensorClass.expectedImageDataPresent():
+            	raise Exception("Not all the expected input images are present as listed in the header file.")
+            else:
+            	print("Input imagery as listed in header file is present.\n")
             
             # Step 3: If aerosol and atmosphere images are specified then sample them to find
             #         the aerosol and atmosphere generic model to use for conversion to SREF
@@ -872,9 +881,7 @@ if __name__ == '__main__':
     parser.add_argument("--imagefile", type=str, 
                         help='''Specify the input image file, overriding the image header.''')
     # Define the argument for specifying the sensor.
-    parser.add_argument("-s", "--sensor", choices=['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm',
-                                                   'ls5mss', 'ls5tm', 'ls7', 
-                                                   'ls8', 'rapideye', 'wv2', 'spot5'],  
+    parser.add_argument("-s", "--sensor", choices=ARCSI_SENSORS_LIST,  
                         help='''Specify the sensor being processed.''')
     # Define the argument for requesting a list of the supported sensors.
     parser.add_argument("--sensorlist", action='store_true', default=False, 
@@ -909,9 +916,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOS and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW', 'FOOTPRINT', 'METADATA'],
+    parser.add_argument("-p", "--prods", type=str, nargs='+', choices=ARCSI_PRODUCTS_LIST,
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA)''')
+                        calculated, as a comma separated list.''')
     # Define the argument for requesting a list of products.
     parser.add_argument("--prodlist", action='store_true', default=False, 
                         help='''List the products which are supported and 

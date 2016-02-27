@@ -277,6 +277,20 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         
         with open(outJSONFilePath, 'w') as outfile:
             json.dump(jsonData, outfile, sort_keys=True,indent=4, separators=(',', ': '), ensure_ascii=False)
+    
+    def expectedImageDataPresent(self):
+        imageDataPresent = True
+        
+        if not os.path.exists(self.band1File):
+            imageDataPresent = False
+        if not os.path.exists(self.band2File):
+            imageDataPresent = False
+        if not os.path.exists(self.band3File):
+            imageDataPresent = False
+        if not os.path.exists(self.band4File):
+            imageDataPresent = False
+        
+        return imageDataPresent
      
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("Landsat 5 MSS does not provide any image masks, do not use the MASK option.")

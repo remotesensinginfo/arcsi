@@ -41,6 +41,16 @@ from abc import ABCMeta, abstractmethod
 import datetime
 # Import the ARCSI exception class
 from .arcsiexception import ARCSIException
+# Import the arcsi version number
+from arcsilib import ARCSI_VERSION
+# Import the arcsi copyright year
+from arcsilib import ARCSI_COPYRIGHT_YEAR
+# Import the arcsi support email
+from arcsilib import ARCSI_SUPPORT_EMAIL
+# Import the arcsi website
+from arcsilib import ARCSI_WEBSITE
+# Import the arcsi copyright names
+from arcsilib import ARCSI_COPYRIGHT_NAMES
 # Import the python collections library
 import collections
 # Import the python system library
@@ -270,6 +280,25 @@ class ARCSIAbstractSensor (object):
         return self.defaultGenBaseOutFileName()
     
     def getJSONDictDefaultMetaData(self, productsStr, validMaskImage="", footprintCalc=False):
+        softwareDict = dict()
+        softwareDict['Name'] = 'ARCSI'
+        softwareDict['URL'] = ARCSI_WEBSITE
+        softwareDict['Version'] = ARCSI_VERSION
+       
+        productsDict = dict()
+        productsDict['ARCSIProducts'] = productsStr
+        nowDateTime = datetime.datetime.today()
+        processDateDict = dict()
+        processDateDict['Year'] = nowDateTime.year
+        processDateDict['Month'] = nowDateTime.month
+        processDateDict['Day'] = nowDateTime.day
+        productsDict['ProcessDate'] = processDateDict
+        processTimeDict = dict()
+        processTimeDict['Hour'] = nowDateTime.hour
+        processTimeDict['Minute'] = nowDateTime.minute
+        processTimeDict['Second'] = nowDateTime.second
+        productsDict['ProcessTime'] = processTimeDict
+        
         filesDict = dict()
         filesDict['FileBaseName'] = self.generateOutputBaseName()
         
@@ -392,7 +421,8 @@ class ARCSIAbstractSensor (object):
         jsonBlock['SensorInfo'] = sensorDict
         jsonBlock['AcquasitionInfo'] = acqDict
         jsonBlock['LocationInfo'] = locDict
-        jsonBlock['ARCSIProducts'] = productsStr
+        jsonBlock['ProductsInfo'] = productsDict
+        jsonBlock['SoftwareInfo'] = softwareDict
         
         return jsonBlock
        
@@ -405,6 +435,9 @@ class ARCSIAbstractSensor (object):
         jsonData = self.getJSONDictDefaultMetaData(productsStr, validMaskImage, footprintCalc)
         with open(outJSONFilePath, 'w') as outfile:
             json.dump(jsonData, outfile, sort_keys=True,indent=4, separators=(',', ': '), ensure_ascii=False)
+    
+    @abstractmethod
+    def expectedImageDataPresent(self): pass
         
     def maskInputImages(self):
         return False

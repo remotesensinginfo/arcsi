@@ -54,6 +54,8 @@ import os
 from arcsilib.arcsiutils import ARCSISensorFactory
 # Import JSON module
 import json
+# Import the list of sensors arcsi supports
+from arcsilib import ARCSI_SENSORS_LIST
 
 class ARCSIBuildFileNameLUT (object):
     
@@ -159,9 +161,7 @@ if __name__ == '__main__':
     parser.add_argument("-e", "--header", type=str, required=True, 
                         help='''The extension / unquie file ending for the input header files.''')
     
-    parser.add_argument("-s", "--sensor", required=True, choices=['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm',
-                                                   'ls5mss', 'ls5tm', 'ls7', 
-                                                   'ls8', 'rapideye', 'wv2', 'spot5'],  
+    parser.add_argument("-s", "--sensor", required=True, choices=ARCSI_SENSORS_LIST,  
                         help='''Specify the sensor being processed.''')
                         
     parser.add_argument("-a", "--archives", type=str, 

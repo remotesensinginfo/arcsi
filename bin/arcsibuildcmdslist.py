@@ -53,6 +53,10 @@ from arcsilib import ARCSI_VERSION
 import os
 # Import the ARCSI utilities class
 from arcsilib.arcsiutils import ARCSIUtils
+# Import the list of sensors arcsi supports
+from arcsilib import ARCSI_SENSORS_LIST
+# Import the list of products arcsi supports
+from arcsilib import ARCSI_PRODUCTS_LIST
 
 class ARCSIBuildCommands (object):
     
@@ -195,9 +199,7 @@ if __name__ == '__main__':
                         help='''The extension / unquie file ending for the input header files.''')
                                                            
     # Define the argument for specifying the sensor.
-    parser.add_argument("-s", "--sensor", required=True, choices=['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm',
-                                                   'ls5mss', 'ls5tm', 'ls7', 
-                                                   'ls8', 'rapideye', 'wv2', 'spot5'],  
+    parser.add_argument("-s", "--sensor", required=True, choices=ARCSI_SENSORS_LIST,  
                         help='''Specify the sensor being processed.''')
                         
     # Define the argument for specifying the WKT projection file 
@@ -217,9 +219,9 @@ if __name__ == '__main__':
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOSUB and CLOUDS).''')
     
     # Define the argument which specifies the products which are to be generated.
-    parser.add_argument("-p", "--prods", type=str, required=True, nargs='+', choices=['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW', 'FOOTPRINT', 'METADATA'],
+    parser.add_argument("-p", "--prods", type=str, required=True, nargs='+', choices=ARCSI_PRODUCTS_LIST,
                         help='''Specify the output products which are to be
-                        calculated, as a comma separated list. (RAD, SATURATE, TOA, CLOUDS, DDVAOT, DOSAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA)''')
+                        calculated, as a comma separated list.''')
                         
     # Define the argument which specifies the standard aersol profile to use.
     parser.add_argument("--aeropro", type=str, choices=['NoAerosols', 'Continental', 
