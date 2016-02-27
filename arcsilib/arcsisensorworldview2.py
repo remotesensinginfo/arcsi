@@ -259,6 +259,14 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
         outname = self.defaultGenBaseOutFileName()
         return outname
     
+    def expectedImageDataPresent(self):
+        imageDataPresent = True
+        
+        if not os.path.exists(self.fileName):
+            imageDataPresent = False
+        
+        return imageDataPresent
+    
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("WorldView2 does not provide any image masks, do not use the MASK option.")
         

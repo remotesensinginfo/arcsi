@@ -309,6 +309,26 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
         
         with open(outJSONFilePath, 'w') as outfile:
             json.dump(jsonData, outfile, sort_keys=True,indent=4, separators=(',', ': '), ensure_ascii=False)
+    
+    def expectedImageDataPresent(self):
+        imageDataPresent = True
+        
+        if not os.path.exists(self.band1File):
+            imageDataPresent = False
+        if not os.path.exists(self.band2File):
+            imageDataPresent = False
+        if not os.path.exists(self.band3File):
+            imageDataPresent = False
+        if not os.path.exists(self.band4File):
+            imageDataPresent = False
+        if not os.path.exists(self.band5File):
+            imageDataPresent = False
+        if not os.path.exists(self.band6File):
+            imageDataPresent = False
+        if not os.path.exists(self.band7File):
+            imageDataPresent = False
+        
+        return imageDataPresent
         
     def hasThermal(self):
         return True
