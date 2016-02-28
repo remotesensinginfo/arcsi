@@ -49,7 +49,8 @@ import glob
 import argparse
 # Import the arcsi version number
 from arcsilib import ARCSI_VERSION
-
+# Import the ARCSI utilities class
+from arcsilib.arcsiutils import ARCSIUtils
 
 class ARCSIExtractData (object):
     
@@ -167,11 +168,7 @@ class ARCSIExtractData (object):
             os.system(command)
         except Exception as e:
             print('IOError Occurred: ' + str(e))
-     
-     
-     
-     
-     
+          
     def untarbzFiles(self, filelist, outDIR, noFolders):
         tarcommand = 'tar -xvjf '
         command = ''
@@ -270,6 +267,12 @@ class ARCSIExtractData (object):
             
         if fileExt == 'tar.bz2':    
             self.untarbzFile(inputFile, outputDIR, noFolders)
+    
+    def run4List(self, inputListFile, outputDIR, noFolders):
+        arcsiUtils = ARCSIUtils()
+        archsList = arcsiUtils.readTextFile2List(inputListFile)
+        for archFile in archsList:
+            self.run4File(archFile, outputDIR, noFolders)
         
 
 if __name__ == '__main__':
@@ -290,6 +293,9 @@ if __name__ == '__main__':
     # Define the argument for specifying the input file to be processed 
     parser.add_argument("-f", "--file", type=str, 
                         help='''Input file contains archive (tar, tar.gz, tar.bz, tar.bz2 and/or zip).''')
+    # Define the argument for specifying a list of input files to be processed 
+    parser.add_argument("-l", "--list", type=str, 
+                        help='''Input file contains archive (tar, tar.gz, tar.bz, tar.bz2 and/or zip).''')
     # Define the argument for specifying the output directory.
     parser.add_argument("-o", "--output", type=str,
                         help='''The output directory to which all output files are to be written.''')
@@ -299,8 +305,8 @@ if __name__ == '__main__':
     # Call the parser to parse the arguments.
     args = parser.parse_args()
     
-    if (args.input == None) & (args.file == None):
-        print("Error: An input directory or file must be specified.")
+    if (args.input == None) & (args.file == None) & (args.list == None):
+        print("Error: An input directory, list as a text file or single archive file must be specified.")
         sys.exit()
     
     if args.output == None:
@@ -314,3 +320,8 @@ if __name__ == '__main__':
     
     if not args.file == None: 
         arcsiObj.run4File(args.file, args.output, args.nofolders)
+        
+    if not args.list == None: 
+        arcsiObj.run4List(args.list, args.output, args.nofolders)
+        
+        
