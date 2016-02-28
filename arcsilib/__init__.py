@@ -23,6 +23,7 @@ ARCSI_WEBSITE = "http://www.rsgislib.org/arcsi"
 
 ARCSI_SENSORS_LIST = ['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm', 'ls5mss', 'ls5tm', 'ls7', 'ls8', 'rapideye', 'wv2', 'spot5']
 ARCSI_PRODUCTS_LIST = ['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'THERMAL', 'TOPOSHADOW', 'FOOTPRINT', 'METADATA']
+ARCSI_ARCHIVE_EXE_LIST = [".tar.gz", ".tgz", ".TAR.GZ", ".TGZ",  ".tar", ".TAR",  ".zip", ".ZIP", ".tar.bz", ".TAR.BZ", ".tar.bz2", ".TAR.BZ2"]
 
 # Get install prefix
 install_prefix = __file__[:__file__.find('lib')]

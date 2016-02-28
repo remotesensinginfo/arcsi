@@ -56,6 +56,8 @@ from arcsilib.arcsiutils import ARCSISensorFactory
 import json
 # Import the list of sensors arcsi supports
 from arcsilib import ARCSI_SENSORS_LIST
+# Import the list of archive file extensions arcsi supports
+from arcsilib import ARCSI_ARCHIVE_EXE_LIST
 
 class ARCSIBuildFileNameLUT (object):
     
@@ -68,34 +70,11 @@ class ARCSIBuildFileNameLUT (object):
                     outFiles.append(os.path.abspath(os.path.join(dirName, fname)))
         return outFiles
     
-    
     def getListOfArchives(self, dirPath):
         archPaths = []
-        fileList = glob.glob(os.path.join(dirPath, "*.tar.gz"))
-        archPaths.extend(fileList)
-        fileList = glob.glob(os.path.join(dirPath, "*.tgz"))
-        archPaths.extend(fileList)
-        fileList = glob.glob(os.path.join(dirPath, "*.TAR.GZ"))
-        archPaths.extend(fileList)
-        fileList = glob.glob(os.path.join(dirPath, "*.TGZ"))
-        archPaths.extend(fileList)
-        fileList = glob.glob(os.path.join(dirPath, "*.tar"))
-        archPaths.extend(fileList)
-        fileList = glob.glob(os.path.join(dirPath, "*.TAR"))
-        archPaths.extend(fileList)
-        fileList = glob.glob(os.path.join(dirPath, "*.zip"))
-        archPaths.extend(fileList)
-        fileList = glob.glob(os.path.join(dirPath, "*.ZIP"))
-        archPaths.extend(fileList)
-        fileList = glob.glob(os.path.join(dirPath, "*.tar.bz"))
-        archPaths.extend(fileList)
-        fileList = glob.glob(os.path.join(dirPath, "*.TAR.BZ"))
-        archPaths.extend(fileList)
-        fileList = glob.glob(os.path.join(dirPath, "*.tar.bz2"))
-        archPaths.extend(fileList)
-        fileList = glob.glob(os.path.join(dirPath, "*.TAR.BZ2"))
-        archPaths.extend(fileList)
-        
+        for exe in ARCSI_ARCHIVE_EXE_LIST:
+            fileList = glob.glob(os.path.join(dirPath, "*" + exe))
+            archPaths.extend(fileList)
         return archPaths
     
     def buildLookUp(self, inputDIR, headerEnding, outputFile, sensorStr, archivesDIR=None):
