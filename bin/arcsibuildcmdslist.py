@@ -91,6 +91,8 @@ class ARCSIBuildCommands (object):
             outpath = "\"" + os.path.abspath(outpath) + "\""
         if not inwkt == None:
             inwkt = "\"" + os.path.abspath(inwkt) + "\""
+        if not outwkt == None:
+            outwkt = "\"" + os.path.abspath(outwkt) + "\""
         
         headersFilesList = []
         if inputIsDIR:
@@ -111,7 +113,7 @@ class ARCSIBuildCommands (object):
         outFile = open(outputFile, 'w+')
         for hFile in headersFilesList:
             print("Processing :", hFile)
-            cmd = "arcsi.py -s " + sensor + " -p " + prodsStr + " -i " + hFile
+            cmd = "arcsi.py -s " + sensor + " -p " + prodsStr + " -i \"" + hFile + "\""
             if not outpath == None:
                 cmd = cmd + " --outpath " + outpath
             if stats:
