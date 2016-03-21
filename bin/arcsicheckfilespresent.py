@@ -53,8 +53,6 @@ from arcsilib import ARCSI_VERSION
 import os
 # Import the ARCSI sensor factory class
 from arcsilib.arcsiutils import ARCSISensorFactory
-# Import JSON module
-import json
 # Import the list of sensors arcsi supports
 from arcsilib import ARCSI_SENSORS_LIST
 # Import shutil module
