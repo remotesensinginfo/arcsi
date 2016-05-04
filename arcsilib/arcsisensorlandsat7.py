@@ -385,6 +385,8 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             if "GRID_CELL_SIZE_PANCHROMATIC" in headerParams:
                 self.gridCellSizePan = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_PANCHROMATIC"], 15.0)
             
+            self.hasImageDataMask = True
+            
         except Exception as e:
             raise e
         
@@ -425,7 +427,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         return True
     
     def maskInputImages(self):
-        return True
+        return self.hasImageDataMask
         
     def applyImageDataMask(self, inputHeader, inputImage, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         print("Apply Input Image Mask to Input Image File")
@@ -493,7 +495,8 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         else:
             print("\tThere is no mask to mask this scene...")
             outputImage = inputImage
-            outputMaskImage = None            
+            outputMaskImage = None
+            self.hasImageDataMask = False
         return outputImage, outputMaskImage
     
     def expectedImageDataPresent(self):
