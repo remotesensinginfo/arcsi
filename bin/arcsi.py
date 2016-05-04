@@ -475,14 +475,14 @@ class ARCSI (object):
                 if not validMaskImage is None:
                     print("Masking to valid data area.")                        
                     outRadPathName = os.path.join(outFilePath, outBaseName + "_rad_vmsk" + arcsiUtils.getFileExtension(outFormat))
-                    if sensorClass.maskInputImages():
+                    if sensorClass.maskInputImages() & (not maskImage is None):
                         outRadPathName = os.path.join(outFilePath, outBaseName + "_rad_msk_vmsk" + arcsiUtils.getFileExtension(outFormat))
-                    rsgislib.imageutils.maskImage(radianceImage, validMaskImage, outRadPathName, outFormat, rsgislib.imageutils.getRSGISLibDataType(radianceImage), 0.0, 0.0)
+                    rsgislib.imageutils.maskImage(radianceImage, validMaskImage, outRadPathName, outFormat, rsgisUtils.getRSGISLibDataTypeFromImg(radianceImage), 0.0, 0.0)
                     rsgisUtils.deleteFileWithBasename(radianceImage)
                     radianceImage = outRadPathName
                     if not thermalRadImage == None:
                         outThermPathName = os.path.join(outFilePath, outBaseName + "_therm_vmsk" + arcsiUtils.getFileExtension(outFormat))
-                        rsgislib.imageutils.maskImage(thermalRadImage, validMaskImage, outThermPathName, outFormat, rsgislib.imageutils.getRSGISLibDataType(thermalRadImage), 0.0, 0.0)
+                        rsgislib.imageutils.maskImage(thermalRadImage, validMaskImage, outThermPathName, outFormat, rsgisUtils.getRSGISLibDataTypeFromImg(thermalRadImage), 0.0, 0.0)
                         rsgisUtils.deleteFileWithBasename(thermalRadImage)
                         thermalRadImage = outThermPathName
                     if not outWKTFile is None:
@@ -494,7 +494,7 @@ class ARCSI (object):
                         outName = outBaseNameProj + "_rad" + arcsiUtils.getFileExtension(outFormat)
                         if not validMaskImage is None:
                                 outName = outBaseNameProj + "_rad_vmsk" + arcsiUtils.getFileExtension(outFormat)
-                        if sensorClass.maskInputImages():
+                        if sensorClass.maskInputImages() & (not maskImage is None):
                             outName = outBaseNameProj + "_rad_msk" + arcsiUtils.getFileExtension(outFormat)
                             if not validMaskImage is None:
                                 outName = outBaseNameProj + "_rad_msk_vmsk" + arcsiUtils.getFileExtension(outFormat)
