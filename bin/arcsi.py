@@ -375,6 +375,10 @@ class ARCSI (object):
             footprintShpFile=""
             metaDataFile=""
             
+            # Check Input image(s) is valid before proceeding. 
+            print('Checking Input Images are valid')
+            sensorClass.checkInputImageValid()
+            
             # Get the valid image data maskImage
             outName = outBaseName + "_valid" + arcsiUtils.getFileExtension(outFormat)
             validMaskImage = sensorClass.generateValidImageDataMask(outFilePath, outName, "KEA")
@@ -756,6 +760,9 @@ class ARCSI (object):
                 sensorClass.generateMetaDataFile(outFilePath, outName, productsStr, validMaskImagePath, prodsToCalc["FOOTPRINT"])
                 prodsCalculated["METADATA"] = True
                 print("")
+            
+            print('Clean up anything left over...')
+            sensorClass.cleanFollowProcessing()
                 
         except ARCSIException as e:
             print("Error: {}".format(e), file=sys.stderr)

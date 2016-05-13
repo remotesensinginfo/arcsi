@@ -241,8 +241,8 @@ class ARCSILandsat1MSSSensor (ARCSIAbstractSensor):
                 self.gridCellSizeRefl = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_REFLECTIVE"], 60.0)
             
         except Exception as e:
-            raise e
-        
+            raise e        
+            
     def generateOutputBaseName(self):
         """
         Provides an implementation for the landsat sensor
