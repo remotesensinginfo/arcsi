@@ -261,6 +261,10 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def extractHeaderParameters(self, inputHeader, wktStr): pass
     
+    def checkInputImageValid(self):
+        if not self.expectedImageDataPresent():
+            raise ARCSIException("Not all of the image(s) are present.")
+    
     def defaultGenBaseOutFileName(self):
         """
         A function to generate a generic standard file
@@ -426,7 +430,6 @@ class ARCSIAbstractSensor (object):
         
         return jsonBlock
        
-        
     def generateMetaDataFile(self, outputPath, outputFileName, productsStr, validMaskImage="", footprintCalc=False):
         """
         Provides a default implementation for generating file metadata.
@@ -1214,5 +1217,7 @@ class ARCSIAbstractSensor (object):
         writer.close(calcStats=True)
         print("Interpolating Image - Complete")
 
-    
+    def cleanFollowProcessing(self):
+        print("")
+        
 
