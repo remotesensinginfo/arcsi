@@ -274,7 +274,10 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
     
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("SPOT5 does not provide any image masks, do not use the MASK option.")
-        
+    
+    def mosaicImageTiles(self):
+        raise ARCSIException("Image data does not need mosaicking")
+    
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
         outputImage = os.path.join(outputPath, outputReflName)
