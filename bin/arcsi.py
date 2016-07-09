@@ -379,6 +379,10 @@ class ARCSI (object):
             print('Checking Input Images are valid')
             sensorClass.checkInputImageValid()
             
+            if sensorClass.imgNeedMosaicking():
+            	print("Mosacking Input Image Tiles.")
+            	sensorClass.mosaicImageTiles()
+            
             # Get the valid image data maskImage
             outName = outBaseName + "_valid" + arcsiUtils.getFileExtension(outFormat)
             validMaskImage = sensorClass.generateValidImageDataMask(outFilePath, outName, "KEA")

@@ -444,7 +444,13 @@ class ARCSIAbstractSensor (object):
         
     def maskInputImages(self):
         return False
-        
+    
+    def imgNeedMosaicking(self):
+        return False
+    
+    @abstractmethod
+    def mosaicImageTiles(self): pass
+    
     def hasThermal(self):
         return False
     

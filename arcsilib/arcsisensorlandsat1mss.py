@@ -291,6 +291,9 @@ class ARCSILandsat1MSSSensor (ARCSIAbstractSensor):
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("Landsat 1 does not provide any image masks, do not use the MASK option.")
     
+    def mosaicImageTiles(self):
+        raise ARCSIException("Image data does not need mosaicking")
+    
     def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
         print("Create the valid data mask")
         inImages = [self.band4File, self.band5File, self.band6File, self.band7File]
