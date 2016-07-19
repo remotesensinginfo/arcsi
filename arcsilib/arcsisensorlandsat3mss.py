@@ -313,7 +313,7 @@ class ARCSILandsat3MSSSensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.landsat2Radiance(outputImage, outFormat, bandDefnSeq)
         return outputImage, None
     
-    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
+    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         raise ARCSIException("There are no thermal bands...")
     
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
@@ -343,7 +343,7 @@ class ARCSILandsat3MSSSensor (ARCSIAbstractSensor):
         
         return outputImage
     
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("Cloud Masking Not Implemented for LS3 MSS.")
     
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):

@@ -82,7 +82,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         Understands and parses the WorldView2 xml header file
         """
         try:
-            
+            print("hello world...")
         except Exception as e:
             raise e
         
@@ -121,14 +121,14 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         print("Generate Saturation Image")
         raise ARCSIException("Not Implemented")
     
-    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
+    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         raise ARCSIException("Not Implemented")
     
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         print("Converting to TOA")
         raise ARCSIException("Not Implemented")
     
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("Cloud Masking Not Implemented for Sentinel-2.")    
         
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):

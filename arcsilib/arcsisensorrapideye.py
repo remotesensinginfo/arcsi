@@ -492,7 +492,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         
         return outputImage
     
-    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
+    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         raise ARCSIException("There are no thermal bands...")
     
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
@@ -508,7 +508,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
     
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         print("Generating Cloud Mask")
         try:
             arcsiUtils = ARCSIUtils()
