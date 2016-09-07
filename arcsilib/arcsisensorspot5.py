@@ -317,7 +317,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         
         return outputImage
     
-    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
+    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         raise ARCSIException("There are no thermal bands...")
     
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
@@ -338,7 +338,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         
         return outputImage
     
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("SPOT5 does not have a cloud masking implementation in ARCSI.")   
         
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):

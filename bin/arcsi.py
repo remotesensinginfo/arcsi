@@ -582,7 +582,7 @@ class ARCSI (object):
             if prodsToCalc["THERMAL"]:
                 # Execute calibrate thermal to brightness
                 outName = outBaseName + "_thermal" + arcsiUtils.getFileExtension(outFormat)
-                thermalBrightImage = sensorClass.convertThermalToBrightness(thermalRadImage, outFilePath, outName, outFormat)
+                thermalBrightImage = sensorClass.convertThermalToBrightness(thermalRadImage, outFilePath, outName, outFormat, scaleFactor)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(thermalBrightImage, True, 0.0, True)
@@ -606,7 +606,7 @@ class ARCSI (object):
             if prodsToCalc["CLOUDS"]:
                 # Execute conversion to top of atmosphere reflectance
                 outName = outBaseName + "_clouds" + arcsiUtils.getFileExtension(outFormat)
-                cloudsImage = sensorClass.generateCloudMask(toaImage, saturateImage, thermalBrightImage, outFilePath, outName, outFormat, tmpPath)
+                cloudsImage = sensorClass.generateCloudMask(toaImage, saturateImage, thermalBrightImage, validMaskImage, outFilePath, outName, outFormat, tmpPath, scaleFactor)
                 print("Setting Band Names...")
                 sensorClass.setBandNames(toaImage)
                 if calcStatsPy:

@@ -75,6 +75,8 @@ import glob
 import subprocess
 # Import JSON module
 import json
+# Import the shutil module
+import shutil
 
 class ARCSILandsat7Sensor (ARCSIAbstractSensor):
     """
@@ -575,7 +577,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         
         return outputImage
     
-    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat):
+    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         print("Converting to Thermal Brightness")
         outputThermalImage = os.path.join(outputPath, outputName)
         bandDefnSeq = list()
@@ -583,7 +585,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         lsBand = collections.namedtuple('LSBand', ['bandName', 'bandIndex', 'k1', 'k2'])
         bandDefnSeq.append(lsBand(bandName="ThermalB6a", bandIndex=1, k1=666.09, k2=1282.71))
         bandDefnSeq.append(lsBand(bandName="ThermalB6b", bandIndex=2, k1=666.09, k2=1282.71))
-        rsgislib.imagecalibration.landsatThermalRad2Brightness(inputRadImage, outputThermalImage, outFormat, rsgislib.TYPE_32UINT, 1000, bandDefnSeq)
+        rsgislib.imagecalibration.landsatThermalRad2Brightness(inputRadImage, outputThermalImage, outFormat, rsgislib.TYPE_32INT, scaleFactor, bandDefnSeq)
         return outputThermalImage
     
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
@@ -600,21 +602,27 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
     
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         print("Generate Cloud Mask")
         try:
             arcsiUtils = ARCSIUtils()
             outputImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
             imgExtension = arcsiUtils.getFileExtension(outFormat)        
-            outputTmp1File = os.path.join(tmpPath, tmpBaseName + "_clouds_tmp1" + imgExtension)
-            outputTmp2File = os.path.join(tmpPath, tmpBaseName + "_clouds_tmp2" + imgExtension)
-            rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, outputImage, outputTmp1File, outputTmp2File, outFormat, 1000.0)
+            tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
+            
+            tmpDIRExisted = True
+            if not os.path.exists(tmpBaseDIR):
+                os.makedirs(tmpBaseDIR)
+                tmpDIRExisted = False
+            tmpImgsBase = os.path.join(tmpBaseDIR, tmpBaseName)
+            
+            rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, inValidImage, outputImage, outFormat, math.radians(self.solarAzimuth), math.radians(self.solarZenith), 0.0, 0.0, scaleFactor, tmpImgsBase, imgExtension, 0.7, self.debugMode)
             
             if not self.debugMode:
-                gdalDriver = gdal.GetDriverByName(outFormat)
-                gdalDriver.Delete(outputTmp1File)
-                gdalDriver.Delete(outputTmp2File)        
+                if not tmpDIRExisted:
+                    shutil.rmtree(tmpBaseDIR, ignore_errors=True)
+                       
             return outputImage    
         except Exception as e:
             raise e
