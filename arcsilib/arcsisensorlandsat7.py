@@ -617,7 +617,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 tmpDIRExisted = False
             tmpImgsBase = os.path.join(tmpBaseDIR, tmpBaseName)
             
-            rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, inValidImage, outputImage, outFormat, math.radians(self.solarAzimuth), math.radians(self.solarZenith), 0.0, 0.0, scaleFactor, tmpImgsBase, imgExtension, self.debugMode)
+            rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, inValidImage, outputImage, outFormat, math.radians(self.solarAzimuth), math.radians(self.solarZenith), 0.0, 0.0, scaleFactor, tmpImgsBase, imgExtension, 0.7, self.debugMode)
             
             if not self.debugMode:
                 if not tmpDIRExisted:

@@ -411,16 +411,16 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             imageDataPresent = False
         if not os.path.exists(self.band7File):
             imageDataPresent = False
-        if not os.path.exists(self.band8File):
-            imageDataPresent = False
+        #if not os.path.exists(self.band8File):
+        #    imageDataPresent = False
         if not os.path.exists(self.band9File):
             imageDataPresent = False
         if not os.path.exists(self.band10File):
             imageDataPresent = False
         if not os.path.exists(self.band11File):
             imageDataPresent = False
-        if not os.path.exists(self.bandQAFile):
-            imageDataPresent = False
+        #if not os.path.exists(self.bandQAFile):
+        #    imageDataPresent = False
             
         return imageDataPresent
     
@@ -527,8 +527,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
                 tmpDIRExisted = False
             tmpImgsBase = os.path.join(tmpBaseDIR, tmpBaseName)
             
-            rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, inValidImage, outputImage, outFormat, math.radians(self.solarAzimuth), math.radians(self.solarZenith), 0.0, 0.0, scaleFactor, tmpImgsBase, imgExtension, self.debugMode)
-            
+            rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, inValidImage, outputImage, outFormat, math.radians(self.solarAzimuth), math.radians(self.solarZenith), 0.0, 0.0, scaleFactor, tmpImgsBase, imgExtension, 0.7, self.debugMode)
             if not self.debugMode:
                 if not tmpDIRExisted:
                     shutil.rmtree(tmpBaseDIR, ignore_errors=True)
