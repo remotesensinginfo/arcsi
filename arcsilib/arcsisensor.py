@@ -616,13 +616,13 @@ class ARCSIAbstractSensor (object):
             raise e
         
     @abstractmethod
-    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat): pass
+    def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor): pass
     
     @abstractmethod
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor): pass
     
     @abstractmethod
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, outputPath, outputName, outFormat, tmpPath): pass
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor): pass
     
     @abstractmethod
     def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor): pass
