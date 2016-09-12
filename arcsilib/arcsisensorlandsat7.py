@@ -49,7 +49,7 @@ import datetime
 # Import the GDAL/OGR spatial reference library
 from osgeo import osr
 from osgeo import ogr
-# Import OS path module for manipulating the file system 
+# Import OS path module for manipulating the file system
 import os.path
 # Import the RSGISLib Image Calibration Module.
 import rsgislib.imagecalibration
@@ -97,7 +97,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         self.bandPanFile = ""
         self.row = 0
         self.path = 0
-        
+
         self.b1CalMin = 0
         self.b1CalMax = 0
         self.b2CalMin = 0
@@ -116,7 +116,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         self.b7CalMax = 0
         self.b8CalMin = 0
         self.b8CalMax = 0
-        
+
         self.b1MinRad = 0.0
         self.b1MaxRad = 0.0
         self.b2MinRad = 0.0
@@ -135,7 +135,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         self.b7MaxRad = 0.0
         self.b8MinRad = 0.0
         self.b8MaxRad = 0.0
-        
+
         self.sensorID = ""
         self.spacecraftID = ""
         self.cloudCover = 0.0
@@ -144,7 +144,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         self.gridCellSizePan = 0.0
         self.gridCellSizeRefl = 0.0
         self.gridCellSizeTherm = 0.0
-    
+
     def extractHeaderParameters(self, inputHeader, wktStr):
         """
         Understands and parses the Landsat MTL header files
@@ -152,9 +152,9 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         try:
             if not self.userSpInputImage is None:
                 raise ARCSIException("Landsat sensor cannot accept a user specified image file - only the images in the header file will be used.")
-            
+
             arcsiUtils = ARCSIUtils()
-                
+
             print("Reading header file")
             hFile = open(inputHeader, 'r')
             headerParams = dict()
@@ -172,17 +172,17 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 self.sensor = "LS7"
             else:
                 raise ARCSIException("Do no recognise the spacecraft and sensor or combination.")
-            
+
             self.sensorID = headerParams["SENSOR_ID"]
             self.spacecraftID = headerParams["SPACECRAFT_ID"]
-            
+
             # Get row/path
             try:
                 self.row = int(headerParams["WRS_ROW"])
             except KeyError:
                 self.row = int(headerParams["STARTING_ROW"])
             self.path = int(headerParams["WRS_PATH"])
-            
+
             # Get date and time of the acquisition
             try:
                 acData = headerParams["DATE_ACQUIRED"].split('-')
@@ -194,10 +194,10 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 acTime = headerParams["SCENE_CENTER_SCAN_TIME"].split(':')
             secsTime = acTime[2].split('.')
             self.acquisitionTime = datetime.datetime(int(acData[0]), int(acData[1]), int(acData[2]), int(acTime[0]), int(acTime[1]), int(secsTime[0]))
-            
+
             self.solarZenith = 90-arcsiUtils.str2Float(headerParams["SUN_ELEVATION"])
             self.solarAzimuth = arcsiUtils.str2Float(headerParams["SUN_AZIMUTH"])
-            
+
             # Get the geographic lat/long corners of the image.
             geoCorners = ARCSILandsatMetaUtils.getGeographicCorners(headerParams)
 
@@ -212,7 +212,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
 
             # Get the projected X/Y corners of the image
             projectedCorners = ARCSILandsatMetaUtils.getProjectedCorners(headerParams)
-            
+
             self.xTL = projectedCorners[0]
             self.yTL = projectedCorners[1]
             self.xTR = projectedCorners[2]
@@ -221,7 +221,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             self.yBL = projectedCorners[5]
             self.xBR = projectedCorners[6]
             self.yBR = projectedCorners[7]
-  
+
             # Get projection
             inProj = osr.SpatialReference()
             if (headerParams["MAP_PROJECTION"] == "UTM"):
@@ -249,33 +249,33 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 inProj.ImportFromWkt("PROJCS[\"PS WGS84\", GEOGCS[\"WGS 84\",DATUM[\"WGS_1984\",SPHEROID[\"WGS 84\",6378137,298.257223563, AUTHORITY[\"EPSG\",\"7030\"]],AUTHORITY[\"EPSG\",\"6326\"]],PRIMEM[\"Greenwich\",0],UNIT[\"degree\",0.0174532925199433],AUTHORITY[\"EPSG\",\"4326\"]],PROJECTION[\"Polar_Stereographic\"],PARAMETER[\"latitude_of_origin\",-71],PARAMETER[\"central_meridian\",0],PARAMETER[\"scale_factor\",1],PARAMETER[\"false_easting\",0],PARAMETER[\"false_northing\",0],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]]]")
             else:
                 raise ARCSIException("Expecting Landsat to be projected in UTM or PolarStereographic (PS) with datum=WGS84 and ellipsoid=WGS84.")
-            
+
             # Check image is square!
             if not ((self.xTL == self.xBL) and (self.yTL == self.yTR) and (self.xTR == self.xBR) and (self.yBL == self.yBR)):
                 raise ARCSIException("Image is not square in projected coordinates.")
-            
+
             self.xCentre = self.xTL + ((self.xTR - self.xTL)/2)
             self.yCentre = self.yBR + ((self.yTL - self.yBR)/2)
-            
+
             wgs84latlonProj = osr.SpatialReference()
             wgs84latlonProj.ImportFromEPSG(4326)
-            
+
             wktPt = 'POINT(%s %s)' % (self.xCentre, self.yCentre)
             #print(wktPt)
             point = ogr.CreateGeometryFromWkt(wktPt)
             point.AssignSpatialReference(inProj)
             point.TransformTo(wgs84latlonProj)
             #print(point)
-            
+
             self.latCentre = point.GetY()
             self.lonCentre = point.GetX()
-            
+
             #print("Lat: " + str(self.latCentre) + " Long: " + str(self.lonCentre))
-            
+
             metaFilenames = ARCSILandsatMetaUtils.getBandFilenames(headerParams, 8)
-            
+
             filesDIR = os.path.dirname(inputHeader)
-            
+
             self.band1File = os.path.join(filesDIR, metaFilenames[0])
             self.band2File = os.path.join(filesDIR, metaFilenames[1])
             self.band3File = os.path.join(filesDIR, metaFilenames[2])
@@ -283,7 +283,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             self.band5File = os.path.join(filesDIR, metaFilenames[4])
             self.band7File = os.path.join(filesDIR, metaFilenames[6])
             self.bandPanFile = os.path.join(filesDIR, metaFilenames[7])
-           
+
             try:
                 self.band6aFile = os.path.join(filesDIR,headerParams["FILE_NAME_BAND_6_VCID_1"])
             except KeyError:
@@ -292,9 +292,9 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 self.band6bFile = os.path.join(filesDIR,headerParams["FILE_NAME_BAND_6_VCID_2"])
             except KeyError:
                 self.band6bFile = os.path.join(filesDIR,headerParams["BAND62_FILE_NAME"])
-           
+
             bands_list = ["1","2","3","4","5","6_VCID_1","6_VCID_2","7","8"]
-                        
+
             metaQCalMinList = {}
             metaQCalMaxList = {}
 
@@ -330,11 +330,11 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             self.b7CalMin = metaQCalMinList["7"]
             self.b7CalMax = metaQCalMaxList["7"]
             self.b8CalMin = metaQCalMinList["8"]
-            self.b8CalMax = metaQCalMaxList["8"] 
-            
+            self.b8CalMax = metaQCalMaxList["8"]
+
             lMin = [-6.200, -6.400, -5.000, -5.100, -1.000, 0.000, 3.200, -0.350, -4.700]
             lMax = [191.600, 196.500, 152.900, 241.100, 31.060, 17.040, 12.650, 10.800, 243.100]
-            
+
             metaRadMinList = {}
             metaRadMaxList = {}
 
@@ -372,8 +372,8 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             self.b7MinRad = metaRadMinList["7"]
             self.b7MaxRad = metaRadMaxList["7"]
             self.b8MinRad = metaRadMinList["8"]
-            self.b8MaxRad = metaRadMaxList["8"] 
-            
+            self.b8MaxRad = metaRadMaxList["8"]
+
             if "CLOUD_COVER" in headerParams:
                 self.cloudCover = arcsiUtils.str2Float(headerParams["CLOUD_COVER"], 0.0)
             if "CLOUD_COVER_LAND" in headerParams:
@@ -386,12 +386,12 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 self.gridCellSizeTherm = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_THERMAL"], 30.0)
             if "GRID_CELL_SIZE_PANCHROMATIC" in headerParams:
                 self.gridCellSizePan = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_PANCHROMATIC"], 15.0)
-            
+
             self.hasImageDataMask = True
-            
+
         except Exception as e:
             raise e
-        
+
     def generateOutputBaseName(self):
         """
         Provides an implementation for the landsat sensor
@@ -400,7 +400,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         outname = self.defaultGenBaseOutFileName()
         outname = outname + str("_") + rowpath
         return outname
-    
+
     def generateMetaDataFile(self, outputPath, outputFileName, productsStr, validMaskImage="", footprintCalc=False):
         """
         Generate file metadata.
@@ -421,16 +421,16 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         imgInfo['CellSizeRefl'] = self.gridCellSizeRefl
         imgInfo['CellSizeTherm'] = self.gridCellSizeTherm
         jsonData['ImageInfo'] = imgInfo
-        
+
         with open(outJSONFilePath, 'w') as outfile:
             json.dump(jsonData, outfile, sort_keys=True,indent=4, separators=(',', ': '), ensure_ascii=False)
-    
+
     def hasThermal(self):
         return True
-    
+
     def maskInputImages(self):
         return self.hasImageDataMask
-        
+
     def applyImageDataMask(self, inputHeader, inputImage, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         print("Apply Input Image Mask to Input Image File")
         outputImage = os.path.join(outputPath, outputImgName)
@@ -450,7 +450,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             maskList = glob.glob(os.path.join(maskDIR, "*.TIF"))
             if not len(maskList) > 0:
                 raise Exception("Could not find mask files.")
-            
+
             #print(maskList)
             stackImageMasks = []
             bandImgIDs = ['GM_B1', 'GM_B2', 'GM_B3', 'GM_B4', 'GM_B5', 'GM_B7']
@@ -460,13 +460,13 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                         stackImageMasks.append(rsgislib.imagecalc.BandDefn(bandID, imgMask, 1))
                         #stackImageMasks.append(imgMask)
                         break
-            
+
             #print(stackImageMasks)
             #rsgislib.imageutils.stackImageBands(stackImageMasks, bandImgIDs, outputMaskImage, None, 0, outFormat, rsgislib.TYPE_8UINT)
             outputMaskImageInit = outputMaskImage
             if not outWKTFile is None:
                 outputMaskImageInit = os.path.join(outputPath, "InitMask_arcsi_" + outputMaskName)
-                
+
             rsgislib.imagecalc.bandMath(outputMaskImageInit, "GM_B1*GM_B2*GM_B3*GM_B4*GM_B5*GM_B7", outFormat, rsgislib.TYPE_8UINT, stackImageMasks)
             if not outWKTFile is None:
                 refImgDS = gdal.Open(inputImage, gdal.GA_ReadOnly)
@@ -480,19 +480,19 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 refImgDS = None
                 cmd = 'gdalwarp -t_srs ' + outWKTFile + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Byte -wt Float32 ' \
                     + '-r near -tap -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
-                    + outputMaskImageInit + ' ' + outputMaskImage 
+                    + outputMaskImageInit + ' ' + outputMaskImage
                 print(cmd)
                 try:
                     subprocess.call(cmd, shell=True)
                 except OSError as e:
                     raise ARCSIException('Could not re-projection image mask: ' + cmd)
-                if not os.path.exists(outputMaskImage): 
+                if not os.path.exists(outputMaskImage):
                     raise ARCSIException('Reprojected image mask is not present: ' + outputMaskImage)
                 else:
                     rsgisUtils = rsgislib.RSGISPyUtils()
                     rsgisUtils.deleteFileWithBasename(outputMaskImageInit)
             else:
-                outputMaskImage = outputMaskImageInit             
+                outputMaskImage = outputMaskImageInit
             rsgislib.imageutils.maskImage(inputImage, outputMaskImage, outputImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 0)
         else:
             print("\tThere is no mask to mask this scene...")
@@ -500,10 +500,10 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             outputMaskImage = None
             self.hasImageDataMask = False
         return outputImage, outputMaskImage
-    
+
     def expectedImageDataPresent(self):
         imageDataPresent = True
-        
+
         if not os.path.exists(self.band1File):
             imageDataPresent = False
         if not os.path.exists(self.band2File):
@@ -520,25 +520,25 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             imageDataPresent = False
         if not os.path.exists(self.band7File):
             imageDataPresent = False
-        
+
         return imageDataPresent
-    
+
     def mosaicImageTiles(self):
         raise ARCSIException("Image data does not need mosaicking")
-    
+
     def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
         print("Create the valid data mask")
         inImages = [self.band1File, self.band2File, self.band3File, self.band4File, self.band5File, self.band7File]
         outputImage = os.path.join(outputPath, outputMaskName)
         rsgislib.imageutils.genValidMask(inimages=inImages, outimage=outputImage, format=outFormat, nodata=0.0)
         return outputImage
-    
+
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
         outputReflImage = os.path.join(outputPath, outputReflName)
         outputThermalImage = None
         bandDefnSeq = list()
-        
+
         lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'lMin', 'lMax', 'qCalMin', 'qCalMax'])
         bandDefnSeq.append(lsBand(bandName="Blue", fileName=self.band1File, bandIndex=1, lMin=self.b1MinRad, lMax=self.b1MaxRad, qCalMin=self.b1CalMin, qCalMax=self.b1CalMax))
         bandDefnSeq.append(lsBand(bandName="Green", fileName=self.band2File, bandIndex=1, lMin=self.b2MinRad, lMax=self.b2MaxRad, qCalMin=self.b2CalMin, qCalMax=self.b2CalMax))
@@ -547,7 +547,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         bandDefnSeq.append(lsBand(bandName="SWIR1", fileName=self.band5File, bandIndex=1, lMin=self.b5MinRad, lMax=self.b5MaxRad, qCalMin=self.b5CalMin, qCalMax=self.b5CalMax))
         bandDefnSeq.append(lsBand(bandName="SWIR2", fileName=self.band7File, bandIndex=1, lMin=self.b7MinRad, lMax=self.b7MaxRad, qCalMin=self.b7CalMin, qCalMax=self.b7CalMax))
         rsgislib.imagecalibration.landsat2Radiance(outputReflImage, outFormat, bandDefnSeq)
-        
+
         if not outputThermalName == None:
             outputThermalImage = os.path.join(outputPath, outputThermalName)
             bandDefnSeq = list()
@@ -555,13 +555,13 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             bandDefnSeq.append(lsBand(bandName="ThermalB6a", fileName=self.band6aFile, bandIndex=1, lMin=self.b6aMinRad, lMax=self.b6aMaxRad, qCalMin=self.b6aCalMin, qCalMax=self.b6aCalMax))
             bandDefnSeq.append(lsBand(bandName="ThermalB6b", fileName=self.band6bFile, bandIndex=1, lMin=self.b6bMinRad, lMax=self.b6bMaxRad, qCalMin=self.b6bCalMin, qCalMax=self.b6bCalMax))
             rsgislib.imagecalibration.landsat2Radiance(outputThermalImage, outFormat, bandDefnSeq)
-        
+
         return outputReflImage, outputThermalImage
-    
+
     def generateImageSaturationMask(self, outputPath, outputName, outFormat):
         print("Generate Saturation Image")
         outputImage = os.path.join(outputPath, outputName)
-        
+
         lsBand = collections.namedtuple('LSBand', ['bandName', 'fileName', 'bandIndex', 'satVal'])
         bandDefnSeq = list()
         bandDefnSeq.append(lsBand(bandName="Blue", fileName=self.band1File, bandIndex=1, satVal=self.b1CalMax))
@@ -572,22 +572,22 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         bandDefnSeq.append(lsBand(bandName="SWIR2", fileName=self.band7File, bandIndex=1, satVal=self.b7CalMax))
         bandDefnSeq.append(lsBand(bandName="ThermalB6a", fileName=self.band6aFile, bandIndex=1, satVal=self.b6aCalMax))
         bandDefnSeq.append(lsBand(bandName="ThermalB6b", fileName=self.band6bFile, bandIndex=1, satVal=self.b6bCalMax))
-        
+
         rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
-        
+
         return outputImage
-    
+
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         print("Converting to Thermal Brightness")
         outputThermalImage = os.path.join(outputPath, outputName)
         bandDefnSeq = list()
-        
+
         lsBand = collections.namedtuple('LSBand', ['bandName', 'bandIndex', 'k1', 'k2'])
         bandDefnSeq.append(lsBand(bandName="ThermalB6a", bandIndex=1, k1=666.09, k2=1282.71))
         bandDefnSeq.append(lsBand(bandName="ThermalB6b", bandIndex=2, k1=666.09, k2=1282.71))
         rsgislib.imagecalibration.landsatThermalRad2Brightness(inputRadImage, outputThermalImage, outFormat, rsgislib.TYPE_32INT, scaleFactor, bandDefnSeq)
         return outputThermalImage
-    
+
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         print("Converting to TOA")
         outputImage = os.path.join(outputPath, outputName)
@@ -601,33 +601,33 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         solarIrradianceVals.append(IrrVal(irradiance=84.9))
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
-    
+
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         try:
             arcsiUtils = ARCSIUtils()
             outputImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
-            imgExtension = arcsiUtils.getFileExtension(outFormat)        
+            imgExtension = arcsiUtils.getFileExtension(outFormat)
             tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
-            
+
             tmpDIRExisted = True
             if not os.path.exists(tmpBaseDIR):
                 os.makedirs(tmpBaseDIR)
                 tmpDIRExisted = False
             tmpImgsBase = os.path.join(tmpBaseDIR, tmpBaseName)
-            
-            rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, inValidImage, outputImage, outFormat, math.radians(self.solarAzimuth), math.radians(self.solarZenith), 0.0, 0.0, scaleFactor, tmpImgsBase, imgExtension, 0.7, self.debugMode)
-            
+
+            rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, inputValidImg, outputImage, outFormat, math.radians(self.solarAzimuth), math.radians(self.solarZenith), 0.0, 0.0, scaleFactor, tmpImgsBase, imgExtension, 0.7, self.debugMode)
+
             if not self.debugMode:
                 if not tmpDIRExisted:
                     shutil.rmtree(tmpBaseDIR, ignore_errors=True)
-                       
-            return outputImage    
+
+            return outputImage
         except Exception as e:
             raise e
-    
+
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
-        sixsCoeffs = numpy.zeros((6, 3), dtype=numpy.float32)   
+        sixsCoeffs = numpy.zeros((6, 3), dtype=numpy.float32)
         # Set up 6S model
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
@@ -647,85 +647,85 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         else:
             s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromRadiance(200)
         s.aot550 = aotVal
-        
+
         # Band 1
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_ETM_B1)
         s.run()
         sixsCoeffs[0,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[0,1] = float(s.outputs.values['coef_xb'])
         sixsCoeffs[0,2] = float(s.outputs.values['coef_xc'])
-        
+
         # Band 2
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_ETM_B2)
         s.run()
         sixsCoeffs[1,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[1,1] = float(s.outputs.values['coef_xb'])
         sixsCoeffs[1,2] = float(s.outputs.values['coef_xc'])
-        
+
         # Band 3
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_ETM_B3)
         s.run()
         sixsCoeffs[2,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[2,1] = float(s.outputs.values['coef_xb'])
         sixsCoeffs[2,2] = float(s.outputs.values['coef_xc'])
-        
+
         # Band 4
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_ETM_B4)
         s.run()
         sixsCoeffs[3,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[3,1] = float(s.outputs.values['coef_xb'])
         sixsCoeffs[3,2] = float(s.outputs.values['coef_xc'])
-        
+
         # Band 5
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_ETM_B5)
         s.run()
         sixsCoeffs[4,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[4,1] = float(s.outputs.values['coef_xb'])
         sixsCoeffs[4,2] = float(s.outputs.values['coef_xc'])
-        
+
         # Band 7
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_ETM_B7)
         s.run()
         sixsCoeffs[5,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[5,1] = float(s.outputs.values['coef_xb'])
         sixsCoeffs[5,2] = float(s.outputs.values['coef_xc'])
-        
+
         return sixsCoeffs
-        
+
     def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor):
         print("Converting to Surface Reflectance")
         outputImage = os.path.join(outputPath, outputName)
-        
+
         Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
         imgBandCoeffs = list()
-        
+
         sixsCoeffs = self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
-        
+
         imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
         imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
         imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
         imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
         imgBandCoeffs.append(Band6S(band=5, aX=float(sixsCoeffs[4,0]), bX=float(sixsCoeffs[4,1]), cX=float(sixsCoeffs[4,2])))
         imgBandCoeffs.append(Band6S(band=6, aX=float(sixsCoeffs[5,0]), bX=float(sixsCoeffs[5,1]), cX=float(sixsCoeffs[5,2])))
-        
+
         for band in imgBandCoeffs:
             print(band)
-        
+
         rsgislib.imagecalibration.apply6SCoeffSingleParam(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, imgBandCoeffs)
-        
+
         return outputImage
 
     def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor):
         print("Converting to Surface Reflectance")
-        outputImage = os.path.join(outputPath, outputName)        
-        
-        print("Build an LUT for elevation values.")    
+        outputImage = os.path.join(outputPath, outputName)
+
+        print("Build an LUT for elevation values.")
         elev6SCoeffsLUT = self.buildElevation6SCoeffLUT(aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax)
         print("LUT has been built.")
-        
+
         elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
         Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
-        
+
         elevCoeffs = list()
         for elevLUT in elev6SCoeffsLUT:
             imgBandCoeffs = list()
@@ -737,29 +737,29 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
             imgBandCoeffs.append(Band6S(band=5, aX=float(sixsCoeffs[4,0]), bX=float(sixsCoeffs[4,1]), cX=float(sixsCoeffs[4,2])))
             imgBandCoeffs.append(Band6S(band=6, aX=float(sixsCoeffs[5,0]), bX=float(sixsCoeffs[5,1]), cX=float(sixsCoeffs[5,2])))
-            
+
             elevCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=imgBandCoeffs))
-            
+
         rsgislib.imagecalibration.apply6SCoeffElevLUTParam(inputRadImage, inputDEMFile, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, elevCoeffs)
         return outputImage
-     
+
     def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax, scaleFactor):
         print("Converting to Surface Reflectance")
-        outputImage = os.path.join(outputPath, outputName) 
-    
+        outputImage = os.path.join(outputPath, outputName)
+
         print("Build an LUT for elevation and AOT values.")
         elevAOT6SCoeffsLUT = self.buildElevationAOT6SCoeffLUT(aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax)
-                
+
         elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
         aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
         Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
-        
+
         elevAOTCoeffs = list()
         for elevLUT in elevAOT6SCoeffsLUT:
             elevVal = elevLUT.Elev
             aotLUT = elevLUT.Coeffs
             aot6SCoeffsOut = list()
-            for aotFeat in aotLUT: 
+            for aotFeat in aotLUT:
                 sixsCoeffs = aotFeat.Coeffs
                 aotVal = aotFeat.AOT
                 imgBandCoeffs = list()
@@ -771,16 +771,16 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 imgBandCoeffs.append(Band6S(band=6, aX=float(sixsCoeffs[5,0]), bX=float(sixsCoeffs[5,1]), cX=float(sixsCoeffs[5,2])))
                 aot6SCoeffsOut.append(aotLUTFeat(AOT=float(aotVal), Coeffs=imgBandCoeffs))
             elevAOTCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=aot6SCoeffsOut))
-                        
+
         rsgislib.imagecalibration.apply6SCoeffElevAOTLUTParam(inputRadImage, inputDEMFile, inputAOTImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, elevAOTCoeffs)
-            
+
         return outputImage
 
     def run6SToOptimiseAODValue(self, aotVal, radBlueVal, predBlueVal, aeroProfile, atmosProfile, grdRefl, surfaceAltitude):
         """Used as part of the optimastion for identifying values of AOD"""
         print("Testing AOD Val: ", aotVal,)
         s = Py6S.SixS()
-        
+
         s.atmos_profile = atmosProfile
         s.aero_profile = aeroProfile
         s.ground_reflectance = grdRefl
@@ -795,7 +795,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         s.altitudes.set_sensor_satellite_level()
         s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromRadiance(200)
         s.aot550 = aotVal
-                
+
         # Band 1 (Blue!)
         s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_ETM_B1)
         s.run()
@@ -808,38 +808,38 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         outDist = math.sqrt(math.pow((reflBlueVal - predBlueVal),2))
         print("\taX: ", aX, " bX: ", bX, " cX: ", cX, "     Dist = ", outDist)
         return outDist
-    
+
     def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl):
         try:
             print("Opening: ", inputTOAImage)
             toaDataset = gdal.Open(inputTOAImage, gdal.GA_ReadOnly)
             if toaDataset == None:
                 raise Exception('Could not open the image dataset \'' + inputTOAImage + '\'')
-            
+
             numBands = toaDataset.RasterCount
-            toaDataset = None 
-            
+            toaDataset = None
+
             print("Number of bands = ", numBands)
-            
+
             darkPxlPercentile = 0.01
             minObjSize = 5
             offsetsImage = ""
-            
+
             if globalDOS:
                 offsetsImage = self.findPerBandDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile)
             else:
                 blockSize = 200
                 offsetsImage = self.findPerBandLocalDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, blockSize, minObjSize, darkPxlPercentile)
-                       
-            # TOA Image - Offset Image (if data and < 1 then set min value as 1)... 
+
+            # TOA Image - Offset Image (if data and < 1 then set min value as 1)...
             outputImage = os.path.join(outputPath, outputName)
             rsgislib.imagecalibration.applySubtractOffsets(inputTOAImage, offsetsImage, outputImage, outFormat, rsgislib.TYPE_16UINT, True, True, 0.0, dosOutRefl)
-            
+
             return outputImage
-            
+
         except Exception as e:
             raise e
-    
+
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
         try:
             print("Finding dark targets.")
@@ -849,14 +849,14 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             thresImageClumps = os.path.join(tmpPath, tmpBaseName+"_thresdclumps"+arcsiUtils.getFileExtension(outFormat))
             thresImageClumpsRMSmall = os.path.join(tmpPath, tmpBaseName+"_thresdclumpsgt10"+arcsiUtils.getFileExtension(outFormat))
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName+"_thresdclumpsFinal"+arcsiUtils.getFileExtension(outFormat))
-            
+
             percentiles = rsgislib.imagecalc.bandPercentile(inputTOAImage, 0.05, 0)
             if percentiles[5] > 30:
                 b6Thres = str(percentiles[5])
             else:
                 b6Thres = "30.0"
             print("SWIR DDV Threshold = ", b6Thres)
-            
+
             thresMathBands = list()
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b3', fileName=inputTOAImage, bandIndex=3))
             thresMathBands.append(rsgislib.imagecalc.BandDefn(bandName='b4', fileName=inputTOAImage, bandIndex=4))
@@ -867,13 +867,13 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             rsgislib.segmentation.rmSmallClumps(thresImageClumps, thresImageClumpsRMSmall, 100, outFormat)
             rsgislib.segmentation.relabelClumps(thresImageClumpsRMSmall, thresImageClumpsFinal, outFormat, False)
             rsgislib.rastergis.populateStats(thresImageClumpsFinal, True, True)
-            
+
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
                 gdalDriver.Delete(thresImage)
                 gdalDriver.Delete(thresImageClumps)
                 gdalDriver.Delete(thresImageClumpsRMSmall)
-        
+
             return thresImageClumpsFinal
         except Exception as e:
             raise e
@@ -882,15 +882,15 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
         print("Estimating AOD through Blue - SWIR relationship.")
         try:
             arcsiUtils = ARCSIUtils()
-            
+
             outputAOTImage = os.path.join(outputPath, outputName)
-            
+
             thresImageClumpsFinal = self.findDDVTargets(inputTOAImage, outputPath, outputName, "KEA", tmpPath)
-            
+
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanElev"))
             rsgislib.rastergis.populateRATWithStats(inputDEMFile, thresImageClumpsFinal, stats2CalcTOA)
-            
+
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, minField="MinB1TOA", meanField="MeanB1TOA"))
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=6, minField="MinB7TOA", meanField="MeanB7TOA"))
@@ -902,38 +902,38 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
             Histogram = rat.readColumn(ratDS, "Histogram")
             MeanElev = rat.readColumn(ratDS, "MeanElev")
-            
+
             selected = Histogram * 2
             selected[...] = 1
             selected[0] = 0
             rat.writeColumn(ratDS, "Selected", selected)
             ratDS = None
-            
+
             rsgislib.rastergis.spatialLocation(thresImageClumpsFinal, "Eastings", "Northings")
             rsgislib.rastergis.selectClumpsOnGrid(thresImageClumpsFinal, "Selected", "PredictAOTFor", "Eastings", "Northings", "MinB7TOA", "min", 10, 10)
-            
+
             ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
             MeanB1TOA = rat.readColumn(ratDS, "MeanB1TOA")
             MeanB7TOA = rat.readColumn(ratDS, "MeanB7TOA")
             MeanB1RAD = rat.readColumn(ratDS, "MeanB1RAD")
             PredictAOTFor = rat.readColumn(ratDS, "PredictAOTFor")
-            
+
             PredB1Refl = (MeanB7TOA/1000) * 0.33
-            
+
             rat.writeColumn(ratDS, "PredB1Refl", PredB1Refl)
-            
+
             numAOTValTests = int(math.ceil((aotValMax - aotValMin)/0.05))+1
-            
+
             if not numAOTValTests >= 1:
                 raise ARCSIException("min and max AOT range are too close together, they need to be at least 0.05 apart.")
-            
+
             cAOT = aotValMin
             cDist = 0.0
             minAOT = 0.0
             minDist = 0.0
-            
+
             aotVals = numpy.zeros_like(MeanB1RAD, dtype=numpy.float)
-            
+
             for i in range(len(MeanB1RAD)):
                 if PredictAOTFor[i] == 1:
                     print("Predicting AOD for Segment ", i)
@@ -954,36 +954,36 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 else:
                     aotVals[i] = 0
             rat.writeColumn(ratDS, "AOT", aotVals)
-            
+
             Eastings = rat.readColumn(ratDS, "Eastings")
             Northings = rat.readColumn(ratDS, "Northings")
             ratDS = None
-        
+
             Eastings = Eastings[PredictAOTFor!=0]
             Northings = Northings[PredictAOTFor!=0]
             aotVals = aotVals[PredictAOTFor!=0]
-        
+
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing, True, 0.05)
-            
+
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName("KEA")
-                gdalDriver.Delete(thresImageClumpsFinal)        
-        
+                gdalDriver.Delete(thresImageClumpsFinal)
+
             return outputAOTImage
         except Exception as e:
             raise e
 
-    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl): 
+    def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl):
         try:
             print("Estimating AOD Using DOS")
             arcsiUtils = ARCSIUtils()
-            
+
             outputAOTImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
             imgExtension = arcsiUtils.getFileExtension(outFormat)
-            
-            
+
+
             dosBlueImage = ""
             minObjSize = 5
             darkPxlPercentile = 0.01
@@ -994,16 +994,16 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             elif globalDOS:
                 dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
-                dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)            
-             
-            
+                dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
+
+
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
             rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalformat="KEA", numClusters=20, minPxls=10, bands=[4,5,3], processInMem=True)
-            
+
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanElev"))
             rsgislib.rastergis.populateRATWithStats(inputDEMFile, thresImageClumpsFinal, stats2CalcTOA)
-            
+
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanB1DOS"))
             rsgislib.rastergis.populateRATWithStats(dosBlueImage, thresImageClumpsFinal, stats2CalcTOA)
@@ -1017,39 +1017,39 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
             Histogram = rat.readColumn(ratDS, "Histogram")
             MeanElev = rat.readColumn(ratDS, "MeanElev")
-            
+
             MeanB4RAD = rat.readColumn(ratDS, "MeanB4RAD")
             MeanB3RAD = rat.readColumn(ratDS, "MeanB3RAD")
-            
+
             radNDVI = (MeanB4RAD - MeanB3RAD)/(MeanB4RAD + MeanB3RAD)
-            
+
             selected = Histogram * 2
             selected[...] = 0
             selected[radNDVI>0.2] = 1
             rat.writeColumn(ratDS, "Selected", selected)
             ratDS = None
-            
+
             rsgislib.rastergis.spatialLocation(thresImageClumpsFinal, "Eastings", "Northings")
             rsgislib.rastergis.selectClumpsOnGrid(thresImageClumpsFinal, "Selected", "PredictAOTFor", "Eastings", "Northings", "MeanB1DOS", "min", 10, 10)
-            
+
             ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
             MeanB1DOS = rat.readColumn(ratDS, "MeanB1DOS")
             MeanB1DOS = MeanB1DOS / 1000
             MeanB1RAD = rat.readColumn(ratDS, "MeanB1RAD")
             PredictAOTFor = rat.readColumn(ratDS, "PredictAOTFor")
-            
+
             numAOTValTests = int(math.ceil((aotValMax - aotValMin)/0.05))+1
-            
+
             if not numAOTValTests >= 1:
                 raise ARCSIException("min and max AOT range are too close together, they need to be at least 0.05 apart.")
-            
+
             cAOT = aotValMin
             cDist = 0.0
             minAOT = 0.0
             minDist = 0.0
-            
+
             aotVals = numpy.zeros_like(MeanB1RAD, dtype=numpy.float)
-            
+
             for i in range(len(MeanB1RAD)):
                 if PredictAOTFor[i] == 1:
                     print("Predicting AOD for Segment ", i)
@@ -1070,33 +1070,33 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
                 else:
                     aotVals[i] = 0
             rat.writeColumn(ratDS, "AOT", aotVals)
-            
+
             Eastings = rat.readColumn(ratDS, "Eastings")
             Northings = rat.readColumn(ratDS, "Northings")
             ratDS = None
-        
+
             Eastings = Eastings[PredictAOTFor!=0]
             Northings = Northings[PredictAOTFor!=0]
             aotVals = aotVals[PredictAOTFor!=0]
-        
+
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, aotVals, outputAOTImage, outFormat, interpSmoothing, True, 0.05)
-            
+
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName("KEA")
                 gdalDriver.Delete(thresImageClumpsFinal)
-                gdalDriver.Delete(dosBlueImage)      
-        
+                gdalDriver.Delete(dosBlueImage)
+
             return outputAOTImage
         except Exception as e:
             raise e
-    
+
     def estimateSingleAOTFromDOS(self, radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl):
         try:
             return self.estimateSingleAOTFromDOSBandImpl(radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl, 1)
         except Exception as e:
             raise
-    
+
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)
         dataset.GetRasterBand(1).SetDescription("Blue")
