@@ -513,7 +513,6 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         return outputImage
     
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
-        print("Generate Cloud Mask")
         try:
             arcsiUtils = ARCSIUtils()
             outputImage = os.path.join(outputPath, outputName)
