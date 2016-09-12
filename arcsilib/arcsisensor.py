@@ -624,6 +624,32 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor): pass
     
+    def generateClearSkyMask(self, cloudsImg, inputValidImg, outputPath, outputName, outFormat, tmpPath,  initClearSkyRegionDist=5000, initClearSkyRegionMinSize=3000, finalClearSkyRegionDist=1000, morphSize=21):
+        try:
+            arcsiUtils = ARCSIUtils()
+            outputImage = os.path.join(outputPath, outputName)
+            tmpBaseName = os.path.splitext(outputName)[0]
+            imgExtension = arcsiUtils.getFileExtension(outFormat)        
+            tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
+            
+            tmpDIRExisted = True
+            if not os.path.exists(tmpBaseDIR):
+                os.makedirs(tmpBaseDIR)
+                tmpDIRExisted = False
+            
+            deleteTmpFiles = not self.debugMode
+            
+            rsgislib.imagecalibration.calcClearSkyRegions(cloudsImg, inputValidImg, outputImage, outFormat, tmpBaseDIR, deleteTmpFiles, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, morphSize)
+            
+            if not self.debugMode:
+                if not tmpDIRExisted:
+                    shutil.rmtree(tmpBaseDIR, ignore_errors=True)
+                       
+            return outputImage    
+        except Exception as e:
+            raise e
+        
+    
     @abstractmethod
     def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor): pass
 
