@@ -384,6 +384,8 @@ class ARCSI (object):
             topoShadowImage=""
             footprintShpFile=""
             metaDataFile=""
+            propOfCloud = 0.0
+            propOfClearSky = 0.0
 
             # Check Input image(s) is valid before proceeding.
             print('Checking Input Images are valid')
@@ -618,168 +620,180 @@ class ARCSI (object):
                     print("Calculating Statistics...")
                     rsgislib.rastergis.populateStats(cloudsImage, True, True)
 
-                print("Applying cloud masks to images...")
-                outputRADImage = os.path.join(outFilePath, outBaseName + "_rad_mclds" + arcsiUtils.getFileExtension(outFormat))
-                rsgislib.imageutils.maskImage(radianceImage, cloudsImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 2)
-                radianceImage = outputRADImage
-                sensorClass.setBandNames(radianceImage)
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
-                outputTOAImage = os.path.join(outFilePath, outBaseName + "_rad_toa_mclds" + arcsiUtils.getFileExtension(outFormat))
-                rsgislib.imageutils.maskImage(toaImage, cloudsImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, 2)
-                toaImage = outputTOAImage
-                sensorClass.setBandNames(toaImage)
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
+                # Calculate the proportion of the scene cover by cloud.
+                propOfCloud = imagecalc.calcPropTrueExp('b1==1?1:b1==2?1:0', [BandDefn('b1', cloudsImage, 1)], validMaskImage)
+
+                if propOfCloud < 0.95: # Less than 95% cloud cover then process.
+                    print("Applying cloud masks to images...")
+                    outputRADImage = os.path.join(outFilePath, outBaseName + "_rad_mclds" + arcsiUtils.getFileExtension(outFormat))
+                    rsgislib.imageutils.maskImage(radianceImage, cloudsImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, [1,2])
+                    radianceImage = outputRADImage
+                    sensorClass.setBandNames(radianceImage)
+                    if calcStatsPy:
+                        print("Calculating Statistics...")
+                        rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
+                    outputTOAImage = os.path.join(outFilePath, outBaseName + "_rad_toa_mclds" + arcsiUtils.getFileExtension(outFormat))
+                    rsgislib.imageutils.maskImage(toaImage, cloudsImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, [1,2])
+                    toaImage = outputTOAImage
+                    sensorClass.setBandNames(toaImage)
+                    if calcStatsPy:
+                        print("Calculating Statistics...")
+                        rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
                 prodsCalculated["CLOUDS"] = True
                 print("")
 
-            if prodsToCalc["CLEARSKY"]:
-                outName = outBaseName + "_clearsky" + arcsiUtils.getFileExtension(outFormat)
-                clearskyImage = sensorClass.generateClearSkyMask(cloudsImage, validMaskImage, outFilePath, outName, outFormat, tmpPath)
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.rastergis.populateStats(clearskyImage, True, True)
+            # Don't continue further if there is more than 95% cloud cover in the scene.
+            if  (not prodsToCalc["CLOUDS"]) or (prodsToCalc["CLOUDS"] and propOfCloud < 0.95):
+                if prodsToCalc["CLEARSKY"]:
+                    outName = outBaseName + "_clearsky" + arcsiUtils.getFileExtension(outFormat)
+                    clearskyImage = sensorClass.generateClearSkyMask(cloudsImage, validMaskImage, outFilePath, outName, outFormat, tmpPath)
+                    if calcStatsPy:
+                        print("Calculating Statistics...")
+                        rsgislib.rastergis.populateStats(clearskyImage, True, True)
 
-                print("Applying clear-sky masks to images...")
-                outputRADImage = os.path.join(outFilePath, outBaseName + "_rad_clearsky" + arcsiUtils.getFileExtension(outFormat))
-                rsgislib.imageutils.maskImage(radianceImage, clearskyImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 2)
-                radianceImage = outputRADImage
-                sensorClass.setBandNames(radianceImage)
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
-                outputTOAImage = os.path.join(outFilePath, outBaseName + "_rad_toa_clearsky" + arcsiUtils.getFileExtension(outFormat))
-                rsgislib.imageutils.maskImage(toaImage, clearskyImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, 2)
-                toaImage = outputTOAImage
-                sensorClass.setBandNames(toaImage)
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
-                prodsCalculated["CLEARSKY"] = True
-                print("")
+                    # Calculate the proportion of the scene which is clear sky.
+                    propOfClearSky = imagecalc.calcPropTrueExp('b1==1?1:0', [BandDefn('b1', clearskyImage, 1)], validMaskImage)
 
-            # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
-            if prodsToCalc["DOS"]:
-                print("Convert to reflectance using dark object subtraction.")
-                outName = outBaseName + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)
-                if simpleDOS:
-                    srefImage = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImage, outFilePath, outName, outFormat, dosOutRefl)
-                else:
-                    srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath, globalDOS, dosOutRefl)
-
-                print("Setting Band Names...")
-                sensorClass.setBandNames(srefImage)
-
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+                    if propOfClearSky > 0.05: # Keep going if at least 5% of the scene is clear sky
+                        print("Applying clear-sky masks to images...")
+                        outputRADImage = os.path.join(outFilePath, outBaseName + "_rad_clearsky" + arcsiUtils.getFileExtension(outFormat))
+                        rsgislib.imageutils.maskImage(radianceImage, clearskyImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 1)
+                        radianceImage = outputRADImage
+                        sensorClass.setBandNames(radianceImage)
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
+                        outputTOAImage = os.path.join(outFilePath, outBaseName + "_rad_toa_clearsky" + arcsiUtils.getFileExtension(outFormat))
+                        rsgislib.imageutils.maskImage(toaImage, clearskyImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, 1)
+                        toaImage = outputTOAImage
+                        sensorClass.setBandNames(toaImage)
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
+                    prodsCalculated["CLEARSKY"] = True
                     print("")
-                prodsCalculated["DOS"] = True
 
-            # Step 9: Use image to estimate AOD values
-            if prodsToCalc["DOSAOTSGL"]:
-                aotVal = sensorClass.estimateSingleAOTFromDOS(radianceImage, toaImage, outDEMName, tmpPath, outBaseName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl)
-                minAOT = aotVal - lowAOT
-                if minAOT < 0.01:
-                    minAOT = 0.05
-                maxAOT = aotVal + upAOT
-                print("AOT Search Range = [" + str(minAOT) + ", " + str(maxAOT) + "]")
-                prodsCalculated["DOSAOTSGL"] = True
+                # Don't continue further if there is less than 5% clear sky in the scene.
+                if  (not prodsToCalc["CLEARSKY"]) or (prodsToCalc["CLEARSKY"] and propOfClearSky > 0.05):
+                    # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
+                    if prodsToCalc["DOS"]:
+                        print("Convert to reflectance using dark object subtraction.")
+                        outName = outBaseName + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)
+                        if simpleDOS:
+                            srefImage = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImage, outFilePath, outName, outFormat, dosOutRefl)
+                        else:
+                            srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath, globalDOS, dosOutRefl)
 
-            if prodsToCalc["DDVAOT"]:
-                outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
-                aotFile = sensorClass.estimateImageToAODUsingDDV(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT)
-                dataset = gdal.Open(aotFile, gdal.GA_Update)
-                dataset.GetRasterBand(1).SetDescription("AOT")
-                dataset = None
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
-                prodsCalculated["DDVAOT"] = True
-                print("")
+                        print("Setting Band Names...")
+                        sensorClass.setBandNames(srefImage)
 
-            if prodsToCalc["DOSAOT"]:
-                outName = outBaseName + "_dosaod" + arcsiUtils.getFileExtension(outFormat)
-                aotFile = sensorClass.estimateImageToAODUsingDOS(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, globalDOS, simpleDOS, dosOutRefl)
-                dataset = gdal.Open(aotFile, gdal.GA_Update)
-                dataset.GetRasterBand(1).SetDescription("AOT")
-                dataset = None
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
-                prodsCalculated["DOSAOT"] = True
-                print("")
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+                            print("")
+                        prodsCalculated["DOS"] = True
 
-            # Step 10: Convert to Surface Reflectance using 6S Standard Models
-            if prodsToCalc["SREF"]:
-                if (prodsToCalc["DDVAOT"] or prodsToCalc["DOSAOT"]) and (not aotFile == ""):
-                    imgDS = gdal.Open(aotFile, gdal.GA_ReadOnly )
-                    imgBand = imgDS.GetRasterBand(1)
-                    (min,max,mean,stddev) = imgBand.ComputeStatistics(False)
-                    print("AOT Mean (Std Dev) = " + str(mean) + " (" + str(stddev) + ")")
-                    print("AOT [Min, Max] = [" + str(min) + "," + str(max) + "]")
-                    aotVal = mean
-                    if aotVal < 0.01:
-                        print("WARNING: Something has gone wrong as AOT value is 0 or below. Setting to 0.05")
-                        aotVal = 0.05
-                    imgDS = None
-
-                if (aotVal == None) and (visVal == None) and (aotFile == ""):
-                    raise ARCSIException("Either the AOT or the visability need to specified.")
-                elif (aotVal == None) and (aotFile == ""):
-                    print("Convert to vis to aot...")
-                    aotVal = self.convertVisabilityToAOD(visVal)
-
-                if not (aotVal == None):
-                    print("AOT Value: {}".format(aotVal))
-
-                if (demFile == None):
-                    outName = outBaseName + "_rad_sref" + arcsiUtils.getFileExtension(outFormat)
-                    srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor)
-                else:
-                    # Calc Min, Max Elevation for region intersecting with the image.
-                    statsElev = rsgislib.imagecalc.getImageStatsInEnv(demFile, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
-
-                    print("Minimum Elevation = ", statsElev[0])
-                    print("Maximum Elevation = ", statsElev[1])
-
-                    minElev = self.findMinimumElev(statsElev[0])
-                    maxElev = self.findMaximumElev(statsElev[1])
-
-                    elevRange = (maxElev - minElev) / 100
-                    numElevSteps = math.ceil(elevRange) + 1
-                    print("Elevation Ranges from ", minElev, " to ", maxElev, " an LUT with ", numElevSteps, " will be created.")
-
-                    if (aotFile == None) or (aotFile == ""):
-                        print("Build an DEM LUT with AOT == " + str(aotVal) + "...")
-                        outName = outBaseName + "_rad_srefdem" + arcsiUtils.getFileExtension(outFormat)
-                        srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev, scaleFactor)
-                    else:
-                        print("Build an AOT and DEM LUT...")
-                        statsAOT = rsgislib.imagecalc.getImageStatsInEnv(aotFile, 1, -9999, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
-
-                        minAOT = self.findMinimumAOT(statsAOT[0])
+                    # Step 9: Use image to estimate AOD values
+                    if prodsToCalc["DOSAOTSGL"]:
+                        aotVal = sensorClass.estimateSingleAOTFromDOS(radianceImage, toaImage, outDEMName, tmpPath, outBaseName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl)
+                        minAOT = aotVal - lowAOT
                         if minAOT < 0.01:
                             minAOT = 0.05
-                        maxAOT = self.findMaximumAOT(statsAOT[1])
+                        maxAOT = aotVal + upAOT
+                        print("AOT Search Range = [" + str(minAOT) + ", " + str(maxAOT) + "]")
+                        prodsCalculated["DOSAOTSGL"] = True
 
-                        aotRange = (maxAOT - minAOT) / 0.05
-                        numAOTSteps = math.ceil(aotRange) + 1
-                        print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
-                        outName = outBaseName + "_rad_srefdemaot" + arcsiUtils.getFileExtension(outFormat)
-                        srefImage = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImage, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT, scaleFactor)
+                    if prodsToCalc["DDVAOT"]:
+                        outName = outBaseName + "_ddvaod" + arcsiUtils.getFileExtension(outFormat)
+                        aotFile = sensorClass.estimateImageToAODUsingDDV(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT)
+                        dataset = gdal.Open(aotFile, gdal.GA_Update)
+                        dataset.GetRasterBand(1).SetDescription("AOT")
+                        dataset = None
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
+                        prodsCalculated["DDVAOT"] = True
+                        print("")
 
-                print("Setting Band Names...")
-                sensorClass.setBandNames(srefImage)
+                    if prodsToCalc["DOSAOT"]:
+                        outName = outBaseName + "_dosaod" + arcsiUtils.getFileExtension(outFormat)
+                        aotFile = sensorClass.estimateImageToAODUsingDOS(radianceImage, toaImage, outDEMName, topoShadowImage, outFilePath, outName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, globalDOS, simpleDOS, dosOutRefl)
+                        dataset = gdal.Open(aotFile, gdal.GA_Update)
+                        dataset.GetRasterBand(1).SetDescription("AOT")
+                        dataset = None
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
+                        prodsCalculated["DOSAOT"] = True
+                        print("")
 
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
-                prodsCalculated["SREF"] = True
-                print("")
+                    # Step 10: Convert to Surface Reflectance using 6S Standard Models
+                    if prodsToCalc["SREF"]:
+                        if (prodsToCalc["DDVAOT"] or prodsToCalc["DOSAOT"]) and (not aotFile == ""):
+                            imgDS = gdal.Open(aotFile, gdal.GA_ReadOnly )
+                            imgBand = imgDS.GetRasterBand(1)
+                            (min,max,mean,stddev) = imgBand.ComputeStatistics(False)
+                            print("AOT Mean (Std Dev) = " + str(mean) + " (" + str(stddev) + ")")
+                            print("AOT [Min, Max] = [" + str(min) + "," + str(max) + "]")
+                            aotVal = mean
+                            if aotVal < 0.01:
+                                print("WARNING: Something has gone wrong as AOT value is 0 or below. Setting to 0.05")
+                                aotVal = 0.05
+                            imgDS = None
+
+                        if (aotVal == None) and (visVal == None) and (aotFile == ""):
+                            raise ARCSIException("Either the AOT or the visability need to specified.")
+                        elif (aotVal == None) and (aotFile == ""):
+                            print("Convert to vis to aot...")
+                            aotVal = self.convertVisabilityToAOD(visVal)
+
+                        if not (aotVal == None):
+                            print("AOT Value: {}".format(aotVal))
+
+                        if (demFile == None):
+                            outName = outBaseName + "_rad_sref" + arcsiUtils.getFileExtension(outFormat)
+                            srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor)
+                        else:
+                            # Calc Min, Max Elevation for region intersecting with the image.
+                            statsElev = rsgislib.imagecalc.getImageStatsInEnv(demFile, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+
+                            print("Minimum Elevation = ", statsElev[0])
+                            print("Maximum Elevation = ", statsElev[1])
+
+                            minElev = self.findMinimumElev(statsElev[0])
+                            maxElev = self.findMaximumElev(statsElev[1])
+
+                            elevRange = (maxElev - minElev) / 100
+                            numElevSteps = math.ceil(elevRange) + 1
+                            print("Elevation Ranges from ", minElev, " to ", maxElev, " an LUT with ", numElevSteps, " will be created.")
+
+                            if (aotFile == None) or (aotFile == ""):
+                                print("Build an DEM LUT with AOT == " + str(aotVal) + "...")
+                                outName = outBaseName + "_rad_srefdem" + arcsiUtils.getFileExtension(outFormat)
+                                srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev, scaleFactor)
+                            else:
+                                print("Build an AOT and DEM LUT...")
+                                statsAOT = rsgislib.imagecalc.getImageStatsInEnv(aotFile, 1, -9999, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+
+                                minAOT = self.findMinimumAOT(statsAOT[0])
+                                if minAOT < 0.01:
+                                    minAOT = 0.05
+                                maxAOT = self.findMaximumAOT(statsAOT[1])
+
+                                aotRange = (maxAOT - minAOT) / 0.05
+                                numAOTSteps = math.ceil(aotRange) + 1
+                                print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
+                                outName = outBaseName + "_rad_srefdemaot" + arcsiUtils.getFileExtension(outFormat)
+                                srefImage = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImage, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT, scaleFactor)
+
+                        print("Setting Band Names...")
+                        sensorClass.setBandNames(srefImage)
+
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+                        prodsCalculated["SREF"] = True
+                        print("")
 
             if prodsToCalc["METADATA"]:
                 print("Exporting Meta-data file")
