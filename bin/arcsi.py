@@ -638,7 +638,7 @@ class ARCSI (object):
 
             if prodsToCalc["CLEARSKY"]:
                 outName = outBaseName + "_clearsky" + arcsiUtils.getFileExtension(outFormat)
-                clearskyImage = sensorClass.generateClearSkyMask(cloudsImage, validMaskImage, outputPath, outputName, outFormat, tmpPath)
+                clearskyImage = sensorClass.generateClearSkyMask(cloudsImage, validMaskImage, outFilePath, outputName, outFormat, tmpPath)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.rastergis.populateStats(clearskyImage, True, True)
