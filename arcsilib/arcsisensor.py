@@ -22,7 +22,7 @@ Module that contains the ARCSIAbstractSensor class.
 #  along with ARCSI.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# Purpose:  An abstract class which provides the base class for each 
+# Purpose:  An abstract class which provides the base class for each
 #           sensor supported by the ARCSI system.
 #
 # Author: Pete Bunting
@@ -81,7 +81,7 @@ from osgeo import ogr
 from osgeo import osr
 # Import the ARCSI utilities class
 from .arcsiutils import ARCSIUtils
-# Import OS path module for manipulating the file system 
+# Import OS path module for manipulating the file system
 import os.path
 # Import the numpy module
 import numpy
@@ -94,9 +94,11 @@ from rios.imagewriter import ImageWriter
 # Import the RBF interpolator from scipy
 import scipy.interpolate.rbf
 # Import scipy interpolation library
-import scipy.interpolate 
+import scipy.interpolate
 # Import JSON module
 import json
+# Import shutil module
+import shutil
 
 class ARCSIAbstractSensor (object):
     """
@@ -105,7 +107,7 @@ class ARCSIAbstractSensor (object):
     variables (e.g., acqusiation date) stored and retrieved.
     """
     __metaclass__ = ABCMeta
-        
+
     def __init__(self, debugMode, inputImage):
         self.sensor = "NA"
         self.userSpInputImage = inputImage
@@ -257,38 +259,38 @@ class ARCSIAbstractSensor (object):
         self.epsgCodes["WGS84UTM58S"] = 32758
         self.epsgCodes["WGS84UTM59S"] = 32759
         self.epsgCodes["WGS84UTM60S"] = 32760
-        
+
     @abstractmethod
     def extractHeaderParameters(self, inputHeader, wktStr): pass
-    
+
     def checkInputImageValid(self):
         if not self.expectedImageDataPresent():
             raise ARCSIException("Not all of the image(s) are present.")
-    
+
     def defaultGenBaseOutFileName(self):
         """
         A function to generate a generic standard file
         base name which will be sensible.
-        
+
         It is expected that individual sensors may override this function.
         """
         date = self.acquisitionTime.strftime("%Y%m%d")
         pos = "lat" + str(round(self.latCentre,)).replace('.', '').replace('-', '') + "lon" + str(round(self.lonCentre,2)).replace('.', '').replace('-', '')
         outname = self.sensor + "_" + date + "_" + pos
         return outname
-        
+
     def generateOutputBaseName(self):
         """
         Provides a default implementation for generating file name.
         """
         return self.defaultGenBaseOutFileName()
-    
+
     def getJSONDictDefaultMetaData(self, productsStr, validMaskImage="", footprintCalc=False):
         softwareDict = dict()
         softwareDict['Name'] = 'ARCSI'
         softwareDict['URL'] = ARCSI_WEBSITE
         softwareDict['Version'] = ARCSI_VERSION
-       
+
         productsDict = dict()
         productsDict['ARCSIProducts'] = productsStr
         nowDateTime = datetime.datetime.today()
@@ -302,13 +304,13 @@ class ARCSIAbstractSensor (object):
         processTimeDict['Minute'] = nowDateTime.minute
         processTimeDict['Second'] = nowDateTime.second
         productsDict['ProcessTime'] = processTimeDict
-        
+
         filesDict = dict()
         filesDict['FileBaseName'] = self.generateOutputBaseName()
-        
+
         sensorDict = dict()
         sensorDict['ARCSISensorName'] = self.sensor
-        
+
         acqDict = dict()
         acqDateDict = dict()
         acqDateDict['Year'] = self.acquisitionTime.year
@@ -324,7 +326,7 @@ class ARCSIAbstractSensor (object):
         acqDict['SolarAzimuth'] = self.solarAzimuth
         acqDict['SenorZenith'] = self.senorZenith
         acqDict['SenorAzimuth'] = self.senorAzimuth
-        
+
         locDict = dict()
         locGeogDict = dict()
         locGeogDict['CentreLon'] = self.lonCentre
@@ -340,12 +342,12 @@ class ARCSIAbstractSensor (object):
         locGeogBBOXDict['BRLon'] = self.lonBR
         locGeogDict['BBOX'] = locGeogBBOXDict
         locDict['Geographical'] = locGeogDict
-        
+
         locProjDict = dict()
         if not validMaskImage is "":
             if not footprintCalc:
                 rsgislib.rastergis.spatialExtent(clumps=validMaskImage, minXX='MinXX', minXY='MinXY', maxXX='MaxXX', maxXY='MaxXY', minYX='MinYX', minYY='MinYY', maxYX='MaxYX', maxYY='MaxYY', ratband=1)
-            
+
             ratDataset = gdal.Open(validMaskImage)
             minXXVals = rat.readColumn(ratDataset, 'MinXX')
             minXYVals = rat.readColumn(ratDataset, 'MinXY')
@@ -356,8 +358,8 @@ class ARCSIAbstractSensor (object):
             maxYXVals = rat.readColumn(ratDataset, 'MaxYX')
             maxYYVals = rat.readColumn(ratDataset, 'MaxYY')
             ratDataset = None
-            
-            ## Remove First Row which is no data...    
+
+            ## Remove First Row which is no data...
             dataMask = numpy.ones_like(minXXVals, dtype=numpy.int16)
             dataMask[0] = 0
             minXXVals = minXXVals[dataMask == 1]
@@ -378,9 +380,9 @@ class ARCSIAbstractSensor (object):
             minYYValsSub = minYYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
             maxYXValsSub = maxYXVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
             maxYYValsSub = maxYYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
-    
+
             numFeats = minXXValsSub.shape[0]
-            
+
             if numFeats == 1:
                 locProjBBOXDict = dict()
                 locProjBBOXDict['TLX'] = minXXValsSub[0]
@@ -394,7 +396,7 @@ class ARCSIAbstractSensor (object):
                 locProjDict['BBOX'] = locProjBBOXDict
                 locProjDict['CentreX'] = minXXValsSub[0] + ((maxXXValsSub[0] - minXXValsSub[0])/2)
                 locProjDict['CentreY'] = minYYValsSub[0] + ((maxYYValsSub[0] - minYYValsSub[0])/2)
-                
+
                 locProjVPolyDict = dict()
                 locProjVPolyDict['MinXX'] = minXXValsSub[0]
                 locProjVPolyDict['MinXY'] = minXYValsSub[0]
@@ -405,9 +407,9 @@ class ARCSIAbstractSensor (object):
                 locProjVPolyDict['MinYX'] = minYXValsSub[0]
                 locProjVPolyDict['MinYY'] = minYYValsSub[0]
                 locProjDict['VPOLY'] = locProjVPolyDict
-        else:        
+        else:
             locProjDict['CentreX'] = self.xCentre
-            locProjDict['CentreY'] = self.yCentre 
+            locProjDict['CentreY'] = self.yCentre
             locProjBBOXDict = dict()
             locProjBBOXDict['TLX'] = self.xTL
             locProjBBOXDict['TLY'] = self.yTL
@@ -417,9 +419,9 @@ class ARCSIAbstractSensor (object):
             locProjBBOXDict['BLY'] = self.yBL
             locProjBBOXDict['BRX'] = self.xBR
             locProjBBOXDict['BRY'] = self.yBR
-            locProjDict['BBOX'] = locProjBBOXDict        
+            locProjDict['BBOX'] = locProjBBOXDict
         locDict['Projected'] = locProjDict
-                
+
         jsonBlock = dict()
         jsonBlock['FileInfo'] = filesDict
         jsonBlock['SensorInfo'] = sensorDict
@@ -427,9 +429,9 @@ class ARCSIAbstractSensor (object):
         jsonBlock['LocationInfo'] = locDict
         jsonBlock['ProductsInfo'] = productsDict
         jsonBlock['SoftwareInfo'] = softwareDict
-        
+
         return jsonBlock
-       
+
     def generateMetaDataFile(self, outputPath, outputFileName, productsStr, validMaskImage="", footprintCalc=False):
         """
         Provides a default implementation for generating file metadata.
@@ -438,34 +440,34 @@ class ARCSIAbstractSensor (object):
         jsonData = self.getJSONDictDefaultMetaData(productsStr, validMaskImage, footprintCalc)
         with open(outJSONFilePath, 'w') as outfile:
             json.dump(jsonData, outfile, sort_keys=True,indent=4, separators=(',', ': '), ensure_ascii=False)
-    
+
     @abstractmethod
     def expectedImageDataPresent(self): pass
-        
+
     def maskInputImages(self):
         return False
-    
+
     def imgNeedMosaicking(self):
         return False
-    
+
     @abstractmethod
     def mosaicImageTiles(self): pass
-    
+
     def hasThermal(self):
         return False
-    
+
     @abstractmethod
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile): pass
-    
+
     @abstractmethod
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat): pass
-    
+
     @abstractmethod
     def generateImageSaturationMask(self, outputPath, outputName, outFormat): pass
-    
+
     def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
         return None
-        
+
     def generateImageFootprint(self, validMaskImage, outputPath, outputName):
         print("Creating Vector Footprint...")
         rsgislib.rastergis.spatialExtent(clumps=validMaskImage, minXX='MinXX', minXY='MinXY', maxXX='MaxXX', maxXY='MaxXY', minYX='MinYX', minYY='MinYY', maxYX='MaxYX', maxYY='MaxYY', ratband=1)
@@ -480,7 +482,7 @@ class ARCSIAbstractSensor (object):
         maxYXVals = rat.readColumn(ratDataset, 'MaxYX')
         maxYYVals = rat.readColumn(ratDataset, 'MaxYY')
 
-        ## Remove First Row which is no data...    
+        ## Remove First Row which is no data...
         dataMask = numpy.ones_like(minXXVals, dtype=numpy.int16)
         dataMask[0] = 0
         minXXVals = minXXVals[dataMask == 1]
@@ -491,7 +493,7 @@ class ARCSIAbstractSensor (object):
         minYYVals = minYYVals[dataMask == 1]
         maxYXVals = maxYXVals[dataMask == 1]
         maxYYVals = maxYYVals[dataMask == 1]
-    
+
         ## Remove any features which are all zero (i.e., polygon not present...)
         minXXValsSub = minXXVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
         minXYValsSub = minXYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
@@ -501,9 +503,9 @@ class ARCSIAbstractSensor (object):
         minYYValsSub = minYYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
         maxYXValsSub = maxYXVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
         maxYYValsSub = maxYYVals[numpy.logical_not((minXXVals == 0) & (minXYVals == 0) & (maxXXVals == 0) & (maxXYVals == 0) & (minYXVals == 0) & (minYYVals == 0) & (maxYXVals == 0) & (maxYYVals == 0))]
-        
+
         numFeats = minXXValsSub.shape[0]
-        
+
         outShpLayerNamePath = os.path.join(outputPath, outputName)
         driver = ogr.GetDriverByName("ESRI Shapefile")
         if os.path.exists(outShpLayerNamePath+".shp"):
@@ -512,53 +514,53 @@ class ARCSIAbstractSensor (object):
         raster_srs = osr.SpatialReference()
         raster_srs.ImportFromWkt(ratDataset.GetProjectionRef())
         outLayer = outDatasource.CreateLayer(outShpLayerNamePath, srs=raster_srs) #ratDataset.GetProjection()
-        
-        fieldYearDefn = ogr.FieldDefn('Year', ogr.OFTInteger) 
-        fieldYearDefn.SetWidth(6) 
+
+        fieldYearDefn = ogr.FieldDefn('Year', ogr.OFTInteger)
+        fieldYearDefn.SetWidth(6)
         outLayer.CreateField(fieldYearDefn)
-        
-        fieldMonthDefn = ogr.FieldDefn('Month', ogr.OFTInteger) 
-        fieldMonthDefn.SetWidth(6) 
+
+        fieldMonthDefn = ogr.FieldDefn('Month', ogr.OFTInteger)
+        fieldMonthDefn.SetWidth(6)
         outLayer.CreateField(fieldMonthDefn)
-        
-        fieldDayDefn = ogr.FieldDefn('Day', ogr.OFTInteger) 
-        fieldDayDefn.SetWidth(6) 
+
+        fieldDayDefn = ogr.FieldDefn('Day', ogr.OFTInteger)
+        fieldDayDefn.SetWidth(6)
         outLayer.CreateField(fieldDayDefn)
-        
-        fieldBaseNameDefn = ogr.FieldDefn('BaseName', ogr.OFTString) 
-        fieldBaseNameDefn.SetWidth(254) 
+
+        fieldBaseNameDefn = ogr.FieldDefn('BaseName', ogr.OFTString)
+        fieldBaseNameDefn.SetWidth(254)
         outLayer.CreateField(fieldBaseNameDefn)
-        
-        fieldSolZenDefn = ogr.FieldDefn('SolZen', ogr.OFTReal) 
-        fieldSolZenDefn.SetWidth(10) 
+
+        fieldSolZenDefn = ogr.FieldDefn('SolZen', ogr.OFTReal)
+        fieldSolZenDefn.SetWidth(10)
         fieldSolZenDefn.SetPrecision(6)
         outLayer.CreateField(fieldSolZenDefn)
-        
-        fieldSolAziDefn = ogr.FieldDefn('SolAzi', ogr.OFTReal) 
-        fieldSolAziDefn.SetWidth(10) 
+
+        fieldSolAziDefn = ogr.FieldDefn('SolAzi', ogr.OFTReal)
+        fieldSolAziDefn.SetWidth(10)
         fieldSolAziDefn.SetPrecision(6)
         outLayer.CreateField(fieldSolAziDefn)
-        
-        fieldSenZenDefn = ogr.FieldDefn('SenZen', ogr.OFTReal) 
-        fieldSenZenDefn.SetWidth(10) 
+
+        fieldSenZenDefn = ogr.FieldDefn('SenZen', ogr.OFTReal)
+        fieldSenZenDefn.SetWidth(10)
         fieldSenZenDefn.SetPrecision(6)
         outLayer.CreateField(fieldSenZenDefn)
-        
-        fieldSenAziDefn = ogr.FieldDefn('SenAzi', ogr.OFTReal) 
-        fieldSenAziDefn.SetWidth(10) 
+
+        fieldSenAziDefn = ogr.FieldDefn('SenAzi', ogr.OFTReal)
+        fieldSenAziDefn.SetWidth(10)
         fieldSenAziDefn.SetPrecision(6)
         outLayer.CreateField(fieldSenAziDefn)
-        
-        fieldCenLatDefn = ogr.FieldDefn('CenLat', ogr.OFTReal) 
-        fieldCenLatDefn.SetWidth(10) 
+
+        fieldCenLatDefn = ogr.FieldDefn('CenLat', ogr.OFTReal)
+        fieldCenLatDefn.SetWidth(10)
         fieldCenLatDefn.SetPrecision(6)
         outLayer.CreateField(fieldCenLatDefn)
-        
-        fieldCenLonDefn = ogr.FieldDefn('CenLon', ogr.OFTReal) 
-        fieldCenLonDefn.SetWidth(10) 
+
+        fieldCenLonDefn = ogr.FieldDefn('CenLon', ogr.OFTReal)
+        fieldCenLonDefn.SetWidth(10)
         fieldCenLonDefn.SetPrecision(6)
         outLayer.CreateField(fieldCenLonDefn)
-                
+
         print("Create and Add Polygons...")
         for i in range(numFeats):
             wktStr = "POLYGON((" + str(minXXValsSub[i]) + " " + str(minXYValsSub[i]) + ", " + str(maxYXValsSub[i]) + " " + str(maxYYValsSub[i]) + ", " + str(maxXXValsSub[i]) + " " + str(maxXYValsSub[i]) + ", " + str(minYXValsSub[i]) + " " + str(minYYValsSub[i]) + ", " + str(minXXValsSub[i]) + " " + str(minXYValsSub[i]) + "))"
@@ -577,16 +579,16 @@ class ARCSIAbstractSensor (object):
             feat.SetField("SenAzi", self.senorAzimuth)
             feat.SetField("CenLat", self.latCentre)
             feat.SetField("CenLon", self.lonCentre)
-            
+
             if outLayer.CreateFeature(feat) != 0:
                 print(str(i) + ": " + wktStr)
                 print("Failed to create feature in shapefile.\n")
                 sys.exit( 1 )
             feat.Destroy()
-        
+
         outDatasource.Destroy()
         ratDataset = None
-    
+
     def generateTopoDirectShadowMask(self,  inputDEMImage, outputPath, outputName, outFormat, tmpPath):
         try:
             print("Calculating a direct topographic shadow mask.")
@@ -594,9 +596,9 @@ class ARCSIAbstractSensor (object):
             arcsiUtils = ARCSIUtils()
             outputImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
-            imgExtension = arcsiUtils.getFileExtension(outFormat)        
+            imgExtension = arcsiUtils.getFileExtension(outFormat)
             outputTmpFile = os.path.join(tmpPath, tmpBaseName + "_toposhadow_tmp" + imgExtension)
-            
+
             demDataset = gdal.Open( inputDEMImage, gdal.GA_ReadOnly )
             if demDataset is None:
                 raise ARCSIException("Could not open DEM dataset.")
@@ -606,56 +608,56 @@ class ARCSIAbstractSensor (object):
                 (demMin,demMax) = band.ComputeRasterMinMax(0)
             rsgislib.elevation.shadowmask(inputDEMImage, outputTmpFile, self.solarAzimuth, self.solarZenith, demMax, outFormat)
             rsgislib.imagefilter.applyMedianFilter(outputTmpFile, outputImage, 3, outFormat, rsgislib.TYPE_8UINT)
-            
+
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
                 gdalDriver.Delete(outputTmpFile)
-            
+
             return outputImage
         except Exception as e:
             raise e
-        
+
     @abstractmethod
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor): pass
-    
+
     @abstractmethod
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor): pass
-    
+
     @abstractmethod
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor): pass
-    
+
     def generateClearSkyMask(self, cloudsImg, inputValidImg, outputPath, outputName, outFormat, tmpPath,  initClearSkyRegionDist=5000, initClearSkyRegionMinSize=3000, finalClearSkyRegionDist=1000, morphSize=21):
         try:
             arcsiUtils = ARCSIUtils()
             outputImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
-            imgExtension = arcsiUtils.getFileExtension(outFormat)        
+            imgExtension = arcsiUtils.getFileExtension(outFormat)
             tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
-            
+
             tmpDIRExisted = True
             if not os.path.exists(tmpBaseDIR):
                 os.makedirs(tmpBaseDIR)
                 tmpDIRExisted = False
-            
+
             deleteTmpFiles = not self.debugMode
-            
+
             rsgislib.imagecalibration.calcClearSkyRegions(cloudsImg, inputValidImg, outputImage, outFormat, tmpBaseDIR, deleteTmpFiles, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, morphSize)
-            
+
             if not self.debugMode:
                 if not tmpDIRExisted:
                     shutil.rmtree(tmpBaseDIR, ignore_errors=True)
-                       
-            return outputImage    
+
+            return outputImage
         except Exception as e:
             raise e
-        
-    
+
+
     @abstractmethod
     def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor): pass
 
     @abstractmethod
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal): pass
-    
+
     def buildElevation6SCoeffLUT(self, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax):
         elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
         lut = list()
@@ -667,10 +669,10 @@ class ARCSIAbstractSensor (object):
             lut.append(elevLUTFeat(Elev=elevVal, Coeffs=self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, (float(elevVal)/1000), aotVal, useBRDF)))
             elevVal = elevVal + 100
         return lut
-    
+
     @abstractmethod
     def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor): pass
-    
+
     def buildElevationAOT6SCoeffLUT(self, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax):
         elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
         aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
@@ -678,11 +680,11 @@ class ARCSIAbstractSensor (object):
         elevRange = (surfaceAltitudeMax - surfaceAltitudeMin) / 100
         numElevSteps = int(math.ceil(elevRange) + 1)
         elevVal = surfaceAltitudeMin
-        
+
         aotRange = (aotMax - aotMin) / 0.05
         numAOTSteps = int(math.ceil(aotRange) + 1) + 1
         aotVal = aotMin
-        
+
         for i in range(numElevSteps):
             print("Building LUT Elevation ", elevVal)
             aotVal = aotMin
@@ -696,7 +698,7 @@ class ARCSIAbstractSensor (object):
 
     @abstractmethod
     def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax, scaleFactor): pass
-    
+
     def calcDarkTargetOffsetsForBand(self, inputTOAImage, offsetImage, band, outFormat, histBinWidth, minObjSize, darkPxlPercentile, tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg):
         print("Band: ", band)
         bandHist = rsgislib.imagecalc.getHistogram(inputTOAImage, band, histBinWidth, False, 1, 10000)
@@ -704,12 +706,12 @@ class ARCSIAbstractSensor (object):
         sumPxls = numpy.sum(bandHist[0])
         #print("Total Num Pixels: ", sumPxls)
         findTargets = True
-        
+
         while findTargets:
             findTargets = False
             numPxlThreshold = sumPxls * darkPxlPercentile #0.001 # 1th percentile
             #print("Number of pixels = ", numPxlThreshold)
-        
+
             pxlThreshold = 0
             pxlCount = 0
             for bin in bandHist[0]:
@@ -719,7 +721,7 @@ class ARCSIAbstractSensor (object):
                 else:
                     break
             print("Image Band Threshold (For Dark Pixels) = ", pxlThreshold)
-        
+
             dataType = rsgislib.TYPE_8UINT
             expression = str('(b1!=0)&&(b1<=') + str(pxlThreshold) + str(')?1:0')
             bandDefns = []
@@ -733,7 +735,7 @@ class ARCSIAbstractSensor (object):
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band), minField="MinTOARefl", meanField="MeanTOARefl"))
             rsgislib.rastergis.populateRATWithStats(inputTOAImage, tmpDarkObjsImg, stats2CalcTOA)
-        
+
             ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
             Histogram = rat.readColumn(ratDS, "Histogram")
             if Histogram.size > 10:
@@ -742,10 +744,10 @@ class ARCSIAbstractSensor (object):
                 break
             else:
                 findTargets = True
-                darkPxlPercentile = darkPxlPercentile * 2 
+                darkPxlPercentile = darkPxlPercentile * 2
                 print("Trying Dark Pixel Percentile Threshold: " + str(darkPxlPercentile))
                 ratDS = None
-        
+
         ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
         Histogram = rat.readColumn(ratDS, "Histogram")
         selected = Histogram * 2
@@ -753,46 +755,46 @@ class ARCSIAbstractSensor (object):
         selected[0] = 0
         rat.writeColumn(ratDS, "Selected", selected)
         ratDS = None
-        
+
         rsgislib.rastergis.spatialLocation(tmpDarkObjsImg, "Eastings", "Northings")
         rsgislib.rastergis.selectClumpsOnGrid(tmpDarkObjsImg, "Selected", "SelectedGrid", "Eastings", "Northings", "MeanTOARefl", "min", 20, 20)
-        
+
         ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
         Eastings = rat.readColumn(ratDS, "Eastings")
         Northings = rat.readColumn(ratDS, "Northings")
         MinTOARefl = rat.readColumn(ratDS, "MinTOARefl")
         SelectedGrid = rat.readColumn(ratDS, "SelectedGrid")
         ratDS = None
-        
+
         Eastings = Eastings[SelectedGrid!=0]
         Northings = Northings[SelectedGrid!=0]
         MinTOARefl = MinTOARefl[SelectedGrid!=0]
-        
+
         interpSmoothing = 10.0
         self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing, True, 0.0)
-    
+
     def findPerBandDarkTargetsOffsets(self, inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile):
         try:
             arcsiUtils = ARCSIUtils()
             tmpBaseName = os.path.splitext(outputName)[0]
             binWidth = 1
-                        
+
             bandDarkTargetOffsetImages = list()
             imgExtension = arcsiUtils.getFileExtension(outFormat)
             tmpDarkPxlsImg = os.path.join(tmpPath, tmpBaseName + "_darkpxls" + imgExtension)
             tmpDarkPxlsClumpsImg = os.path.join(tmpPath, tmpBaseName + "_darkclumps" + imgExtension)
             tmpDarkPxlsClumpsRMSmallImg = os.path.join(tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension)
             tmpDarkObjsImg = os.path.join(tmpPath, tmpBaseName+"_darkobjs"+imgExtension)
-            
+
             for band in range(numBands):
                 offsetImage = os.path.join(tmpPath, tmpBaseName+"_darktargetoffs_b"+str(band+1)+imgExtension)
                 self.calcDarkTargetOffsetsForBand(inputTOAImage, offsetImage, band+1, outFormat, binWidth, minObjSize, darkPxlPercentile, tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg)
                 bandDarkTargetOffsetImages.append(offsetImage)
-            
+
             outputImage = os.path.join(outputPath, tmpBaseName + "_dosuboffs" + imgExtension)
             print(outputImage)
             rsgislib.imageutils.stackImageBands(bandDarkTargetOffsetImages, None, outputImage, None, 0, outFormat, rsgislib.TYPE_32FLOAT)
-            
+
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
                 gdalDriver.Delete(tmpDarkPxlsImg)
@@ -801,26 +803,26 @@ class ARCSIAbstractSensor (object):
                 gdalDriver.Delete(tmpDarkObjsImg)
                 for image in bandDarkTargetOffsetImages:
                     gdalDriver.Delete(image)
-            
+
             return outputImage
-            
+
         except Exception as e:
             raise e
-    
+
     def performDOSOnSingleBand(self, inputTOAImage, band, outputPath, tmpBaseName, bandName, outFormat, tmpPath, minObjSize, darkPxlPercentile, dosOutRefl):
         try:
             arcsiUtils = ARCSIUtils()
             binWidth = 1
-                        
+
             imgExtension = arcsiUtils.getFileExtension(outFormat)
             tmpDarkPxlsImg = os.path.join(tmpPath, tmpBaseName + "_darkpxls" + imgExtension)
             tmpDarkPxlsClumpsImg = os.path.join(tmpPath, tmpBaseName + "_darkclumps" + imgExtension)
             tmpDarkPxlsClumpsRMSmallImg = os.path.join(tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension)
             tmpDarkObjsImg = os.path.join(tmpPath, tmpBaseName+"_darkobjs"+imgExtension)
-            
+
             offsetImage = os.path.join(outputPath, tmpBaseName+"_darktargetoffs_b"+str(band)+imgExtension)
             self.calcDarkTargetOffsetsForBand(inputTOAImage, offsetImage, band, outFormat, binWidth, minObjSize, darkPxlPercentile, tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg)
-            
+
             outputName = tmpBaseName + "DOS" + bandName + imgExtension
             outputImage = os.path.join(outputPath, outputName)
             print(outputImage)
@@ -830,19 +832,19 @@ class ARCSIAbstractSensor (object):
             bandDefns.append(rsgislib.imagecalc.BandDefn('TOA', inputTOAImage, band))
             expression = '(TOA==0)?0:((TOA-Off)+' + str(dosOutRefl) + ')<=0?1.0:(TOA-Off)+' + str(dosOutRefl)
             rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
-                        
+
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
                 gdalDriver.Delete(tmpDarkPxlsImg)
                 gdalDriver.Delete(tmpDarkPxlsClumpsImg)
                 gdalDriver.Delete(tmpDarkPxlsClumpsRMSmallImg)
                 gdalDriver.Delete(tmpDarkObjsImg)
-            
+
             return outputImage
-            
+
         except Exception as e:
             raise e
-            
+
     def performLocalDOSOnSingleBand(self, inputTOAImage, band, outputPath, tmpBaseName, bandName, outFormat, tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl):
         try:
             arcsiUtils = ARCSIUtils()
@@ -853,13 +855,13 @@ class ARCSIAbstractSensor (object):
             tmpDarkPxlsClumpsImg = os.path.join(tmpPath, tmpBaseName + "_darkclumps" + imgExtension)
             tmpDarkPxlsClumpsRMSmallImg = os.path.join(tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension)
             tmpDarkObjsImg = os.path.join(tmpPath, tmpBaseName+"_darkobjs"+imgExtension)
-            
+
             binWidth = 1
             self.findDOSLocalDarkTargets(inputTOAImage, tmpDarkTargetAllImage, blockSize, "KEA", binWidth, darkPxlPercentile)
-                        
+
             print("Band ", band)
-            rsgislib.imageutils.selectImageBands(tmpDarkTargetAllImage, tmpDarkPxlsImg, "KEA", rsgislib.TYPE_8UINT, [band]) 
-            rsgislib.segmentation.clump(tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, "KEA", False, 0.0)                
+            rsgislib.imageutils.selectImageBands(tmpDarkTargetAllImage, tmpDarkPxlsImg, "KEA", rsgislib.TYPE_8UINT, [band])
+            rsgislib.segmentation.clump(tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, "KEA", False, 0.0)
             rsgislib.rastergis.populateStats(tmpDarkPxlsClumpsImg, True, False)
             rsgislib.segmentation.rmSmallClumps(tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, minObjSize, "KEA")
             rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg, "KEA", False)
@@ -878,25 +880,25 @@ class ARCSIAbstractSensor (object):
 
             rsgislib.rastergis.spatialLocation(tmpDarkObjsImg, "Eastings", "Northings")
             rsgislib.rastergis.selectClumpsOnGrid(tmpDarkObjsImg, "Selected", "SelectedGrid", "Eastings", "Northings", "MeanTOARefl", "min", 20, 20)
-        
+
             print("Interpolating the offset image...")
-        
+
             offsetImage = os.path.join(tmpPath, tmpBaseName+"_darktargetoffs_b"+str(band)+imgExtension)
-        
+
             ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
             Eastings = rat.readColumn(ratDS, "Eastings")
             Northings = rat.readColumn(ratDS, "Northings")
             MinTOARefl = rat.readColumn(ratDS, "MinTOARefl")
             SelectedGrid = rat.readColumn(ratDS, "SelectedGrid")
             ratDS = None
-        
+
             Eastings = Eastings[SelectedGrid!=0]
             Northings = Northings[SelectedGrid!=0]
             MinTOARefl = MinTOARefl[SelectedGrid!=0]
-        
+
             interpSmoothing = 10.0
             self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, "KEA", interpSmoothing, True, 0.0)
-                                                
+
             outputName = tmpBaseName + "DOS" + bandName + imgExtension
             outputImage = os.path.join(outputPath, outputName)
             print(outputImage)
@@ -906,8 +908,8 @@ class ARCSIAbstractSensor (object):
             bandDefns.append(rsgislib.imagecalc.BandDefn('TOA', inputTOAImage, band))
             expression = '(TOA==0)?0:((TOA-Off)+' + str(dosOutRefl) + ')<=0?1.0:(TOA-Off)+' + str(dosOutRefl)
             rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
-            
-            if not self.debugMode:            
+
+            if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName("KEA")
                 gdalDriver.Delete(tmpDarkPxlsImg)
                 gdalDriver.Delete(tmpDarkPxlsClumpsImg)
@@ -915,18 +917,18 @@ class ARCSIAbstractSensor (object):
                 gdalDriver.Delete(tmpDarkObjsImg)
                 gdalDriver.Delete(tmpDarkTargetAllImage)
                 gdalDriver.Delete(offsetImage)
-            
+
             return outputImage
-            
+
         except Exception as e:
             raise e
-    
+
     def findDOSLocalDarkTargets(self, inputTOAImage, darkTargetImage, blockSize, outFormat, histBinWidth, darkPxlPercentile):
         reader = ImageReader(inputTOAImage, windowxsize=blockSize, windowysize=blockSize)
         writer = None
         for (info, block) in reader:
             out = numpy.zeros_like(block)
-                
+
             # Iterate through the image bands
             for i in range(len(out)):
                 minVal = numpy.min(block[i])
@@ -935,13 +937,13 @@ class ARCSIAbstractSensor (object):
                 if ((maxVal - minVal) > 5):
                     data = block[i].flatten()
                     data = data[data != 0]
-                
+
                     minVal = numpy.min(data)
                     maxVal = numpy.max(data)
-                
+
                     numBins = (math.ceil(maxVal - minVal) / histBinWidth) + 1
                     if data.shape[0] > ((blockSize*blockSize)*0.1):
-                        #out[i,...] = 1 
+                        #out[i,...] = 1
                         histo, histoBins = numpy.histogram(data, bins=numBins, range=(float(minVal), float(maxVal)))
                         numValues = numpy.sum(histo)
                         numValsPercentile = math.floor(numValues * darkPxlPercentile)
@@ -959,24 +961,24 @@ class ARCSIAbstractSensor (object):
                         #print("Threshold = ", threshold)
                         out[i, ((block[i] <= threshold) & (block[i] > 0))] = 1
                     else:
-                        out[i,...] = 0 
-            
+                        out[i,...] = 0
+
             if writer is None:
-                writer = ImageWriter(darkTargetImage, 
-                                     info=info, 
-                                     firstblock=out, 
+                writer = ImageWriter(darkTargetImage,
+                                     info=info,
+                                     firstblock=out,
                                      drivername=outFormat,
                                      creationoptions=[])
             else:
                 writer.write(out)
         writer.close(calcStats=False)
-    
+
     def findPerBandLocalDarkTargetsOffsets(self, inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, blockSize, minObjSize, darkPxlPercentile):
         try:
             arcsiUtils = ARCSIUtils()
             tmpBaseName = os.path.splitext(outputName)[0]
             binWidth = 1
-            
+
             bandDarkTargetOffsetImages = list()
             imgExtension = arcsiUtils.getFileExtension(outFormat)
             tmpDarkTargetAllImage = os.path.join(tmpPath, tmpBaseName + "_darkpxls_allbands" + imgExtension)
@@ -984,13 +986,13 @@ class ARCSIAbstractSensor (object):
             tmpDarkPxlsClumpsImg = os.path.join(tmpPath, tmpBaseName + "_darkclumps" + imgExtension)
             tmpDarkPxlsClumpsRMSmallImg = os.path.join(tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension)
             tmpDarkObjsImg = os.path.join(tmpPath, tmpBaseName+"_darkobjs"+imgExtension)
-            
+
             self.findDOSLocalDarkTargets(inputTOAImage, tmpDarkTargetAllImage, blockSize, outFormat, binWidth, darkPxlPercentile)
-                        
+
             for band in range(numBands):
                 print("Band ", band+1)
-                rsgislib.imageutils.selectImageBands(tmpDarkTargetAllImage, tmpDarkPxlsImg, outFormat, rsgislib.TYPE_8UINT, [band+1]) 
-                rsgislib.segmentation.clump(tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, outFormat, False, 0.0)                
+                rsgislib.imageutils.selectImageBands(tmpDarkTargetAllImage, tmpDarkPxlsImg, outFormat, rsgislib.TYPE_8UINT, [band+1])
+                rsgislib.segmentation.clump(tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, outFormat, False, 0.0)
                 rsgislib.rastergis.populateStats(tmpDarkPxlsClumpsImg, True, False)
                 rsgislib.segmentation.rmSmallClumps(tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, minObjSize, outFormat)
                 rsgislib.segmentation.relabelClumps(tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg, outFormat, False)
@@ -998,7 +1000,7 @@ class ARCSIAbstractSensor (object):
                 stats2CalcTOA = list()
                 stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=(band+1), minField="MinTOARefl", meanField="MeanTOARefl"))
                 rsgislib.rastergis.populateRATWithStats(inputTOAImage, tmpDarkObjsImg, stats2CalcTOA)
-        
+
                 ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
                 Histogram = rat.readColumn(ratDS, "Histogram")
                 selected = Histogram * 2
@@ -1006,34 +1008,34 @@ class ARCSIAbstractSensor (object):
                 selected[0] = 0
                 rat.writeColumn(ratDS, "Selected", selected)
                 ratDS = None
-        
+
                 rsgislib.rastergis.spatialLocation(tmpDarkObjsImg, "Eastings", "Northings")
                 rsgislib.rastergis.selectClumpsOnGrid(tmpDarkObjsImg, "Selected", "SelectedGrid", "Eastings", "Northings", "MeanTOARefl", "min", 20, 20)
-                
+
                 print("Interpolating the offset image...")
-                
+
                 offsetImage = os.path.join(tmpPath, tmpBaseName+"_darktargetoffs_b"+str(band+1)+imgExtension)
-                
+
                 ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
                 Eastings = rat.readColumn(ratDS, "Eastings")
                 Northings = rat.readColumn(ratDS, "Northings")
                 MinTOARefl = rat.readColumn(ratDS, "MinTOARefl")
                 SelectedGrid = rat.readColumn(ratDS, "SelectedGrid")
                 ratDS = None
-                
+
                 Eastings = Eastings[SelectedGrid!=0]
                 Northings = Northings[SelectedGrid!=0]
                 MinTOARefl = MinTOARefl[SelectedGrid!=0]
-                
+
                 interpSmoothing = 10.0
                 self.interpolateImageFromPointData(inputTOAImage, Eastings, Northings, MinTOARefl, offsetImage, outFormat, interpSmoothing, True, 0.0)
-                                                
+
                 bandDarkTargetOffsetImages.append(offsetImage)
-            
+
             outputImage = os.path.join(outputPath, tmpBaseName + "_dosuboffs" + imgExtension)
             print(outputImage)
             rsgislib.imageutils.stackImageBands(bandDarkTargetOffsetImages, None, outputImage, None, 0, outFormat, rsgislib.TYPE_32FLOAT)
-            
+
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
                 gdalDriver.Delete(tmpDarkPxlsImg)
@@ -1043,47 +1045,47 @@ class ARCSIAbstractSensor (object):
                 gdalDriver.Delete(tmpDarkTargetAllImage)
                 for image in bandDarkTargetOffsetImages:
                     gdalDriver.Delete(image)
-            
+
             return outputImage
-            
+
         except Exception as e:
             raise e
-    
+
     def convertImageToReflectanceSimpleDarkSubtract(self, inputTOAImage, outputPath, outputName, outFormat, dosOutRefl):
         try:
             print("Perform Simple Dark Object Subtraction")
             outputImage = os.path.join(outputPath, outputName)
-            
+
             percentiles = rsgislib.imagecalc.bandPercentile(inputTOAImage, 0.01, 0)
-                        
+
             offsetsList = list()
             OffVal = collections.namedtuple('DOSOffset', ['offset'])
             for val in percentiles:
                 offsetsList.append(OffVal(offset=val))
-            
+
             rsgislib.imagecalibration.applySubtractSingleOffsets(inputTOAImage, outputImage, outFormat, rsgislib.TYPE_16UINT, True, True, 0.0, dosOutRefl, offsetsList)
-            
+
             return outputImage
         except Exception as e:
             raise e
-            
+
     def convertImageBandToReflectanceSimpleDarkSubtract(self, inputTOAImage, outputPath, outputName, outFormat, dosOutRefl, imgBand):
         try:
             print("Perform Simple Dark Object Subtraction on image band")
             outputImage = os.path.join(outputPath, outputName)
-            
+
             percentiles = rsgislib.imagecalc.bandPercentile(inputTOAImage, 0.01, 0)
-            
+
             print("Band offset = " + str(percentiles[imgBand-1]))
             expression = "(b1 == 0.0)?0.0:((b1-" + str(percentiles[imgBand-1]) + ") + " + str(dosOutRefl) + ") < 0?1.0: (b1-" + str(percentiles[imgBand-1]) + ") + " + str(dosOutRefl)
             bandDefns = []
             bandDefns.append(rsgislib.imagecalc.BandDefn('b1', inputTOAImage, imgBand))
             rsgislib.imagecalc.bandMath(outputImage, expression, outFormat, rsgislib.TYPE_16UINT, bandDefns)
-                        
+
             return outputImage, percentiles[imgBand-1]
         except Exception as e:
             raise e
-            
+
     @abstractmethod
     def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl): pass
 
@@ -1095,10 +1097,10 @@ class ARCSIAbstractSensor (object):
 
     @abstractmethod
     def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl): pass
-    
+
     @abstractmethod
     def estimateSingleAOTFromDOS(self, radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl): pass
-    
+
     def estimateSingleAOTFromDOSBandImpl(self, radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, dosOutRefl, imgBand):
         try:
             print("Estimating a single AOD value Using DOS")
@@ -1108,23 +1110,23 @@ class ARCSIAbstractSensor (object):
             arcsiUtils = ARCSIUtils()
             dosBandFileName = outputName + "_simbanddos"+ arcsiUtils.getFileExtension(outFormat)
             dosBandFile, bandOff = self.convertImageBandToReflectanceSimpleDarkSubtract(toaImage, tmpPath, dosBandFileName, outFormat, dosOutRefl, imgBand)
-            
+
             darkROIMask = os.path.join(tmpPath, outputName + "_darkROIMask"+ arcsiUtils.getFileExtension(outFormat))
             expression = "((b1 != 0) && (b1 < " + str(dosOutRefl+5) + "))?1.0:0.0"
             bandDefns = []
             bandDefns.append(rsgislib.imagecalc.BandDefn('b1', dosBandFile, 1))
             rsgislib.imagecalc.bandMath(darkROIMask, expression, outFormat, rsgislib.TYPE_8UINT, bandDefns)
-            
+
             darkROIMaskClumps = os.path.join(tmpPath, outputName + "_darkROIMaskClumps"+ arcsiUtils.getFileExtension(outFormat))
-            rsgislib.segmentation.clump(darkROIMask, darkROIMaskClumps, outFormat, False, 0.0)                
+            rsgislib.segmentation.clump(darkROIMask, darkROIMaskClumps, outFormat, False, 0.0)
             rsgislib.rastergis.populateStats(darkROIMaskClumps, True, False)
-           
+
             darkROIMaskClumpsRMSmall = os.path.join(tmpPath, outputName + "_darkROIMaskClumpsRMSmall"+ arcsiUtils.getFileExtension(outFormat))
             rsgislib.segmentation.rmSmallClumps(darkROIMaskClumps, darkROIMaskClumpsRMSmall, 5, outFormat)
             darkROIMaskClumpsFinal = os.path.join(tmpPath, outputName + "_darkROIMaskClumpsFinal"+ arcsiUtils.getFileExtension(outFormat))
             rsgislib.segmentation.relabelClumps(darkROIMaskClumpsRMSmall, darkROIMaskClumpsFinal, outFormat, False)
             rsgislib.rastergis.populateStats(darkROIMaskClumpsFinal, True, False)
-           
+
             stats2CalcDOS = list()
             stats2CalcDOS.append(rsgislib.rastergis.BandAttStats(band=imgBand, meanField="MeanTOARefl"))
             rsgislib.rastergis.populateRATWithStats(toaImage, darkROIMaskClumpsFinal, stats2CalcDOS)
@@ -1134,19 +1136,19 @@ class ARCSIAbstractSensor (object):
             stats2CalcElev = list()
             stats2CalcElev.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanElev"))
             rsgislib.rastergis.populateRATWithStats(inputDEMFile, darkROIMaskClumpsFinal, stats2CalcElev)
-            
-            
+
+
             ratDS = gdal.Open(darkROIMaskClumpsFinal, gdal.GA_ReadOnly)
             Histogram = rat.readColumn(ratDS, "Histogram")
             MeanTOARefl = rat.readColumn(ratDS, "MeanTOARefl")
             MeanRad = rat.readColumn(ratDS, "MeanRad")
             MeanElev = rat.readColumn(ratDS, "MeanElev")
             ratDS = None
-            
+
             maxObjSizeArrIdx = numpy.where(Histogram == numpy.max(Histogram))
-            
+
             #print("maxObjSizeArrIdx = ", maxObjSizeArrIdx[0][0])
-            
+
             reflTOA = MeanTOARefl[maxObjSizeArrIdx][0]
             reflDOS = reflTOA - bandOff
             if reflDOS < dosOutRefl:
@@ -1154,12 +1156,12 @@ class ARCSIAbstractSensor (object):
             reflDOS = reflDOS/1000
             radVal = MeanRad[maxObjSizeArrIdx][0]
             elevVal = MeanElev[maxObjSizeArrIdx][0]
-            
+
             #print("reflTOA = ", reflTOA)
             #print("reflDOS = ", reflDOS)
             #print("radVal = ", radVal)
             #print("elevVal = ", elevVal)
-            
+
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
                 gdalDriver.Delete(dosBandFile)
@@ -1167,17 +1169,17 @@ class ARCSIAbstractSensor (object):
                 gdalDriver.Delete(darkROIMaskClumps)
                 gdalDriver.Delete(darkROIMaskClumpsRMSmall)
                 gdalDriver.Delete(darkROIMaskClumpsFinal)
-            
-            # Second Step - estimate AOT to get RAD value to SREF.        
+
+            # Second Step - estimate AOT to get RAD value to SREF.
             numAOTValTests = int(math.ceil((aotValMax - aotValMin)/0.05))+1
             if not numAOTValTests >= 1:
                 raise ARCSIException("min and max AOT range are too close together, they need to be at least 0.05 apart.")
-                        
+
             cAOT = aotValMin
             cDist = 0.0
             minAOT = 0.0
             minDist = 0.0
-            
+
             for j in range(numAOTValTests):
                 cAOT = aotValMin + (0.05 * j)
                 cDist = self.run6SToOptimiseAODValue(cAOT, radVal, reflDOS, aeroProfile, atmosProfile, grdRefl, elevVal/1000)
@@ -1189,18 +1191,18 @@ class ARCSIAbstractSensor (object):
                     minDist = cDist
             aotVal = minAOT
             print("IDENTIFIED AOT: ", aotVal)
-            
+
             return aotVal
         except Exception as e:
-            raise 
-    
+            raise
+
     @abstractmethod
     def setBandNames(self, imageFile): pass
-    
+
 #    def interpolateImageFromPointData(self, templateInImage, xVals, yVals, zVals, outputImage, outFormat, smoothingParam, notNegOut, notNegMinVal):
 #        print("Interpolating Image: Number of Features = ", xVals.shape[0])
 #        rbfi = scipy.interpolate.rbf.Rbf(xVals, yVals, zVals, function='linear', smooth=smoothingParam)
-#        
+#
 #        reader = ImageReader(templateInImage, windowxsize=200, windowysize=200)
 #        writer = None
 #        for (info, block) in reader:
@@ -1210,22 +1212,22 @@ class ARCSIAbstractSensor (object):
 #                interZ = numpy.where(interZ < 0, notNegMinVal, interZ)
 #            out = numpy.reshape(interZ, block[0].shape)
 #            out = numpy.expand_dims(out, axis=0)
-#    
+#
 #            if writer is None:
-#                writer = ImageWriter(outputImage, 
-#                                     info=info, 
-#                                     firstblock=out, 
+#                writer = ImageWriter(outputImage,
+#                                     info=info,
+#                                     firstblock=out,
 #                                     drivername=outFormat,
 #                                     creationoptions=[])
 #            else:
 #                writer.write(out)
 #        writer.close(calcStats=True)
 #        print("Interpolating Image - Complete")
-        
-        
+
+
     def interpolateImageFromPointData(self, templateInImage, xVals, yVals, zVals, outputImage, outFormat, smoothingParam, notNegOut, notNegMinVal):
         print("Interpolating Image: Number of Features = ", xVals.shape[0])
-        
+
         reader = ImageReader(templateInImage, windowxsize=200, windowysize=200)
         writer = None
         for (info, block) in reader:
@@ -1237,11 +1239,11 @@ class ARCSIAbstractSensor (object):
                 interZ = numpy.where(interZ < 0, notNegMinVal, interZ)
             out = numpy.reshape(interZ, block[0].shape)
             out = numpy.expand_dims(out, axis=0)
-    
+
             if writer is None:
-                writer = ImageWriter(outputImage, 
-                                     info=info, 
-                                     firstblock=out, 
+                writer = ImageWriter(outputImage,
+                                     info=info,
+                                     firstblock=out,
                                      drivername=outFormat,
                                      creationoptions=[])
             else:
@@ -1251,5 +1253,5 @@ class ARCSIAbstractSensor (object):
 
     def cleanFollowProcessing(self):
         print("")
-        
+
 
