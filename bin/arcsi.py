@@ -621,7 +621,8 @@ class ARCSI (object):
                     rsgislib.rastergis.populateStats(cloudsImage, True, True)
 
                 # Calculate the proportion of the scene cover by cloud.
-                propOfCloud = imagecalc.calcPropTrueExp('b1==1?1:b1==2?1:0', [BandDefn('b1', cloudsImage, 1)], validMaskImage)
+                propOfCloud = rsgislib.imagecalc.calcPropTrueExp('b1==1?1:b1==2?1:0', [BandDefn('b1', cloudsImage, 1)], validMaskImage)
+                print("The scene is " + str(propOfCloud*100) + "% cloud.")
 
                 if propOfCloud < 0.95: # Less than 95% cloud cover then process.
                     print("Applying cloud masks to images...")
@@ -652,7 +653,8 @@ class ARCSI (object):
                         rsgislib.rastergis.populateStats(clearskyImage, True, True)
 
                     # Calculate the proportion of the scene which is clear sky.
-                    propOfClearSky = imagecalc.calcPropTrueExp('b1==1?1:0', [BandDefn('b1', clearskyImage, 1)], validMaskImage)
+                    propOfClearSky = rsgislib.imagecalc.calcPropTrueExp('b1==1?1:0', [BandDefn('b1', clearskyImage, 1)], validMaskImage)
+                    print("The scene is " + str(propOfClearSky*100) + "% clear-sky.")
 
                     if propOfClearSky > 0.05: # Keep going if at least 5% of the scene is clear sky
                         print("Applying clear-sky masks to images...")
