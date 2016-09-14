@@ -618,10 +618,10 @@ class ARCSI (object):
                 cloudsImage = sensorClass.generateCloudMask(toaImage, saturateImage, thermalBrightImage, validMaskImage, outFilePath, outName, outFormat, tmpPath, scaleFactor)
                 if calcStatsPy:
                     print("Calculating Statistics...")
-                    rsgislib.rastergis.populateStats(cloudsImage, True, True)
+                    rsgislib.rastergis.populateStats(cloudsImage, False, True)
 
                 # Calculate the proportion of the scene cover by cloud.
-                propOfCloud = rsgislib.imagecalc.calcPropTrueExp('b1==1?1:b1==2?1:0', [BandDefn('b1', cloudsImage, 1)], validMaskImage)
+                propOfCloud = rsgislib.imagecalc.calcPropTrueExp('b1==1?1:b1==2?1:0', [rsgislib.imagecalc.BandDefn('b1', cloudsImage, 1)], validMaskImage)
                 print("The scene is " + str(propOfCloud*100) + "% cloud.")
 
                 if propOfCloud < 0.95: # Less than 95% cloud cover then process.
@@ -653,20 +653,20 @@ class ARCSI (object):
                         rsgislib.rastergis.populateStats(clearskyImage, True, True)
 
                     # Calculate the proportion of the scene which is clear sky.
-                    propOfClearSky = rsgislib.imagecalc.calcPropTrueExp('b1==1?1:0', [BandDefn('b1', clearskyImage, 1)], validMaskImage)
+                    propOfClearSky = rsgislib.imagecalc.calcPropTrueExp('b1==1?1:0', [rsgislib.imagecalc.BandDefn('b1', clearskyImage, 1)], validMaskImage)
                     print("The scene is " + str(propOfClearSky*100) + "% clear-sky.")
 
                     if propOfClearSky > 0.05: # Keep going if at least 5% of the scene is clear sky
                         print("Applying clear-sky masks to images...")
                         outputRADImage = os.path.join(outFilePath, outBaseName + "_rad_clearsky" + arcsiUtils.getFileExtension(outFormat))
-                        rsgislib.imageutils.maskImage(radianceImage, clearskyImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 1)
+                        rsgislib.imageutils.maskImage(radianceImage, clearskyImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 0)
                         radianceImage = outputRADImage
                         sensorClass.setBandNames(radianceImage)
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
                         outputTOAImage = os.path.join(outFilePath, outBaseName + "_rad_toa_clearsky" + arcsiUtils.getFileExtension(outFormat))
-                        rsgislib.imageutils.maskImage(toaImage, clearskyImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, 1)
+                        rsgislib.imageutils.maskImage(toaImage, clearskyImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, 0)
                         toaImage = outputTOAImage
                         sensorClass.setBandNames(toaImage)
                         if calcStatsPy:
