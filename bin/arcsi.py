@@ -146,7 +146,8 @@ class ARCSI (object):
             aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,
             atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal,
             aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT,
-            demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor):
+            demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor,
+            initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize):
         """
         A function contains the main flow of the software
         """
@@ -647,7 +648,7 @@ class ARCSI (object):
             if  (not prodsToCalc["CLOUDS"]) or (prodsToCalc["CLOUDS"] and propOfCloud < 0.95):
                 if prodsToCalc["CLEARSKY"]:
                     outName = outBaseName + "_clearsky" + arcsiUtils.getFileExtension(outFormat)
-                    clearskyImage = sensorClass.generateClearSkyMask(cloudsImage, validMaskImage, outFilePath, outName, outFormat, tmpPath)
+                    clearskyImage = sensorClass.generateClearSkyMask(cloudsImage, validMaskImage, outFilePath, outName, outFormat, tmpPath, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize)
                     if calcStatsPy:
                         print("Calculating Statistics...")
                         rsgislib.rastergis.populateStats(clearskyImage, True, True)
@@ -1085,7 +1086,21 @@ if __name__ == '__main__':
                         choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos'],
                         help='''Specifies interpolation algorithm when reprojecting the imagery
                                 (Note. the options are those in gdalwarp).''')
-
+    parser.add_argument("--cs_initdist", type=int, default=3000,
+                                     help='''When clear-sky regions are being defined this parameter
+                                               is the initial distance (m) from cloud objects to generate the initial
+                                               clear-sky regions. (Default 3000)''')
+    parser.add_argument("--cs_initminsize", type=int, default=3000,
+                                     help='''When clear-sky regions are being defined this parameter
+                                               is the minimum size (in pixels) of the initial objects (Default 3000)''')
+    parser.add_argument("--cs_finaldist", type=int, default=1000,
+                                     help='''When clear-sky regions are being defined this parameter
+                                               is final distance (m) from the cloud objects defining clear sky
+                                               regions. (Default 1000)''')
+    parser.add_argument("--cs_morphop", type=int, default=21,
+                                     help='''When clear-sky regions are being defined this parameter
+                                               is the size of the morphological opening operator used
+                                               to finalise the result. (Default 21)''')
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -1327,8 +1342,4 @@ if __name__ == '__main__':
                      args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified,
                      args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot,
                      args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug,
-                     args.scalefac, args.interp)
-
-
-
-
+                     args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop)

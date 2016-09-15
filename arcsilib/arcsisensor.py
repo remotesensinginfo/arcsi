@@ -626,7 +626,7 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor): pass
 
-    def generateClearSkyMask(self, cloudsImg, inputValidImg, outputPath, outputName, outFormat, tmpPath,  initClearSkyRegionDist=5000, initClearSkyRegionMinSize=3000, finalClearSkyRegionDist=1000, morphSize=21):
+    def generateClearSkyMask(self, cloudsImg, inputValidImg, outputPath, outputName, outFormat, tmpPath,  initClearSkyRegionDist=3000, initClearSkyRegionMinSize=3000, finalClearSkyRegionDist=1000, morphSize=21):
         try:
             arcsiUtils = ARCSIUtils()
             outputImage = os.path.join(outputPath, outputName)
