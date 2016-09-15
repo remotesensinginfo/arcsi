@@ -625,7 +625,7 @@ class ARCSI (object):
                 propOfCloud = rsgislib.imagecalc.calcPropTrueExp('b1==1?1:b1==2?1:0', [rsgislib.imagecalc.BandDefn('b1', cloudsImage, 1)], validMaskImage)
                 print("The scene is " + str(propOfCloud*100) + "% cloud.")
 
-                if propOfCloud < 0.95: # Less than 95% cloud cover then process.
+                if propOfCloud < 0.98: # Less than 98% cloud cover then process.
                     print("Applying cloud masks to images...")
                     outputRADImage = os.path.join(outFilePath, outBaseName + "_rad_mclds" + arcsiUtils.getFileExtension(outFormat))
                     rsgislib.imageutils.maskImage(radianceImage, cloudsImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, [1,2])
