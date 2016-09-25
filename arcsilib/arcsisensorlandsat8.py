@@ -256,6 +256,9 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             else:
                 raise ARCSIException("Expecting Landsat to be projected in UTM or PolarStereographic (PS) with datum=WGS84 and ellipsoid=WGS84.")
 
+            if self.inWKT is "":
+                self.inWKT = inProj.ExportToWkt()
+
             # Check image is square!
             if not ((self.xTL == self.xBL) and (self.yTL == self.yTR) and (self.xTR == self.xBR) and (self.yBL == self.yBR)):
                 raise ARCSIException("Image is not square in projected coordinates.")
@@ -435,7 +438,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
 
     def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
         print("Create the valid data mask")
-        inImages = [self.band1File, self.band2File, self.band3File, self.band4File, self.band5File, self.band6File, self.band7File]
+        inImages = [self.band1File, self.band2File, self.band3File, self.band4File, self.band5File, self.band6File, self.band7File, self.band10File, self.band11File]
         outputImage = os.path.join(outputPath, outputMaskName)
         rsgislib.imageutils.genValidMask(inimages=inImages, outimage=outputImage, format=outFormat, nodata=0.0)
         return outputImage

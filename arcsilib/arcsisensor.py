@@ -456,6 +456,55 @@ class ARCSIAbstractSensor (object):
     def hasThermal(self):
         return False
 
+    def getReProjBBOX(self, wktFile, proj4Str, useWKT2Reproject, outPxlRes, snap2Grid):
+        projImgBBOX = dict()
+        projImgBBOX['MinX'] = 0.0
+        projImgBBOX['MaxX'] = 0.0
+        projImgBBOX['MinY'] = 0.0
+        projImgBBOX['MaxY'] = 0.0
+
+        srcProj = osr.SpatialReference()
+        srcProj.ImportFromWkt(self.inWKT)
+
+        tarProj = osr.SpatialReference()
+        if useWKT2Reproject:
+            arcsiUtils = ARCSIUtils()
+            wktStr = arcsiUtils.readTextFile(wktFile)
+            tarProj.ImportFromWkt(wktStr)
+        else:
+            tarProj.ImportFromProj4(proj4Str)
+
+        wktPt = 'POINT(%s %s)' % (self.xTR, self.yTL)
+        point = ogr.CreateGeometryFromWkt(wktPt)
+        point.AssignSpatialReference(srcProj)
+        point.TransformTo(tarProj)
+
+        minXPt = (math.floor(point.GetX()/outPxlRes)*outPxlRes)
+        maxYPt = (math.ceil(point.GetY()/outPxlRes)*outPxlRes)
+
+        projImgBBOX['MinX'] = minXPt
+        projImgBBOX['MaxY'] = maxYPt
+
+        print("MinX: [{0}, {1}]".format(point.GetX(), minXPt))
+        print("MaxY: [{0}, {1}]".format(point.GetY(), maxYPt))
+
+        wktPt = 'POINT(%s %s)' % (self.xBR, self.yBR)
+        point = ogr.CreateGeometryFromWkt(wktPt)
+        point.AssignSpatialReference(srcProj)
+        point.TransformTo(tarProj)
+
+        maxXPt = (math.ceil(point.GetX()/outPxlRes)*outPxlRes)
+        minYPt = (math.floor(point.GetY()/outPxlRes)*outPxlRes)
+
+        projImgBBOX['MaxX'] = maxXPt
+        projImgBBOX['MinY'] = minYPt
+
+        print("MaxX: [{0}, {1}]".format(point.GetX(), maxXPt))
+        print("MinY: [{0}, {1}]".format(point.GetY(), minYPt)
+
+        return projImgBBOX
+
+
     @abstractmethod
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile): pass
 
