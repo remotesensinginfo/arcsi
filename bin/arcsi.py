@@ -245,14 +245,14 @@ class ARCSI (object):
             reproject = False
             useWKT2Reproject = True
             reProjStr = ""
-			if not outWKTFile is None:
-				reproject = True
-				useWKT2Reproject = True
-				reProjStr = outWKTFile
-			elif not outProj4Str is None:
-				reproject = True
-				useWKT2Reproject = False
-				reProjStr = outProj4Str
+            if not outWKTFile is None:
+                reproject = True
+                useWKT2Reproject = True
+                reProjStr = outWKTFile
+            elif not outProj4Str is None:
+                reproject = True
+                useWKT2Reproject = False
+                reProjStr = outProj4Str
 
             for prod in productsStr:
                 if prod == 'RAD':
@@ -412,9 +412,9 @@ class ARCSI (object):
                 print("Mosacking Input Image Tiles.")
                 sensorClass.mosaicImageTiles()
 
-			if reproject:
-				print("Define re-projected image BBOX.")
-				projImgBBOX = sensorClass.getReProjBBOX(outWKTFile, outProj4Str, useWKT2Reproject, True)
+            if reproject:
+                print("Define re-projected image BBOX.")
+                projImgBBOX = sensorClass.getReProjBBOX(outWKTFile, outProj4Str, useWKT2Reproject, True)
 
             # Get the valid image data maskImage
             outName = outBaseName + "_valid" + arcsiUtils.getFileExtension(outFormat)
@@ -1189,8 +1189,8 @@ if __name__ == '__main__':
             elif args.projabbv == None:
                 print("WARNING: It is recommended that a projection abbreviation or acronym is provided (--projabbv)...")
 
-		if not args.outproj4 is None:
-			if args.projabbv == None:
+        if not args.outproj4 is None:
+            if args.projabbv == None:
                 print("WARNING: It is recommended that a projection abbreviation or acronym is provided (--projabbv)...")
 
         needAOD = False
@@ -1316,8 +1316,8 @@ if __name__ == '__main__':
                 args.outwkt = envVar
                 print("Taking output WKT from environment variable.")
 
-		if args.outproj4 == None:
-			envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUTPUT_PROJ4")
+        if args.outproj4 == None:
+            envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUTPUT_PROJ4")
             if not envVar == None:
                 args.outproj4 = envVar
                 print("Taking output Proj4 string from environment variable.")
