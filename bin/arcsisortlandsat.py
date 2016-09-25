@@ -27,9 +27,9 @@ sensors (i.e., Landsat 1, Landsat 2 ... Landsat 8 etc).
 #  along with ARCSI.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# Purpose:  A script to sort Landsat scenes into sensor specific 
+# Purpose:  A script to sort Landsat scenes into sensor specific
 #           directories.
-#           
+#
 #           Landsat 1 MSS: LM1
 #           Landsat 2 MSS: LM2
 #           Landsat 3 MSS: LM3
@@ -50,6 +50,10 @@ sensors (i.e., Landsat 1, Landsat 2 ... Landsat 8 etc).
 #
 ############################################################################
 
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the python os.path module
 import os.path
 # Import the python os module
@@ -68,8 +72,8 @@ import os.path
 from arcsilib import ARCSI_VERSION
 
 class ARCSISortLandsatData (object):
-    
-    def createDIRStruct(self, outputDIR, noDIRStruct):    
+
+    def createDIRStruct(self, outputDIR, noDIRStruct):
         if not os.path.exists(outputDIR):
             os.makedirs(outputDIR)
             if not noDIRStruct:
@@ -77,8 +81,8 @@ class ARCSISortLandsatData (object):
                 os.makedirs(os.path.join(outputDIR, "Inputs"))
                 os.makedirs(os.path.join(outputDIR, "Outputs"))
                 os.makedirs(os.path.join(outputDIR, "tmp"))
-    
-    
+
+
     def moveFile(self, cFileLoc, outFileDIR, userInteract):
         ## CHECK IF FILE EXISTS AT outFileDIR
         ## IF EXISTS and userInteract == True THEN ask users which to use (show file sizes)
@@ -90,7 +94,7 @@ class ARCSISortLandsatData (object):
                 print("\t File Size: " + str((os.path.getsize(cFileLoc)/1024)/1024))
                 print("2) ", os.path.join(outFileDIR,fileName)) # ORIGINAL
                 print("\t File Size: " + str((os.path.getsize(os.path.join(outFileDIR,fileName))/1024)/1024))
-                # Print File 
+                # Print File
                 Answer = input("Press 1 to move NEW file or 2 to keep ORIGINAL.\n")
                 if Answer == '1': # Move New
                     os.remove(os.path.join(outFileDIR,fileName))
@@ -101,27 +105,27 @@ class ARCSISortLandsatData (object):
                 print("DUPLICATE IGNORING: ", cFileLoc)
         else:
             shutil.move(cFileLoc, outFileDIR)
-        
+
     def run(self, inputDir, outputDir, noDIRStruct, userInteract):
         inputDir = os.path.abspath(inputDir)
         outputDir = os.path.abspath(outputDir)
-        
+
         if not os.path.isdir(inputDir):
             raise ARCSIException("The input directory specified does not exist!")
         if not os.path.isdir(outputDir):
             raise ARCSIException("The output directory specified does not exist!")
-        
+
         #inputFiles = os.listdir(inputDir)
-        
+
         inputFiles = []
-        
+
         # Navigate the directory tree
         for dirName, sudirList, fileList in os.walk(inputDir):
             # Append target file to list f files using the absolute filepath
             for fname in fileList:
                 filename = os.path.join(dirName, fname)
                 inputFiles.append(filename)
-        
+
         createdLM1DIR = False
         createdLM2DIR = False
         createdLM3DIR = False
@@ -134,7 +138,7 @@ class ARCSISortLandsatData (object):
         createdLS05DIR = False
         createdLS07DIR = False
         outputFileDIR = ""
-        
+
         for file in inputFiles:
             #print(file)
             basefilename = os.path.basename(file)
@@ -266,35 +270,35 @@ if __name__ == '__main__':
                                                    Landsat data into a directory
                                                    structure.''',
                                     epilog='''ARCSI needs to process the Landsat
-                                              scenes from the different sensors 
-                                              independently, this command sorts a 
-                                              directory of input data into different 
+                                              scenes from the different sensors
+                                              independently, this command sorts a
+                                              directory of input data into different
                                               directories.''')
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input spectral response file.
-    parser.add_argument("-i", "--input", type=str, 
+    parser.add_argument("-i", "--input", type=str,
                         help='''Input directory containing the input Landsat Scenes.''')
     # Define the argument for specifying input seperator.
     parser.add_argument("-o", "--output", type=str,
                         help='''The output directory to which the output structure will be written.''')
-    parser.add_argument("--nodirstruct", action='store_true', default=False, 
+    parser.add_argument("--nodirstruct", action='store_true', default=False,
                         help='''Specifies that a directory structure should not be built when the new folders are created.''')
-    parser.add_argument("--userinteract", action='store_true', default=False, 
+    parser.add_argument("--userinteract", action='store_true', default=False,
                         help='''Specifies whether the user should be promoted for decision if two files of same name exist.''')
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-    
+
     if args.input == None:
         print("An input directory was not specified.")
         parser.print_help()
         sys.exit()
-    
+
     if args.output == None:
         print("An output directory was not specified.")
         parser.print_help()
         sys.exit()
-    
+
     arcsiObj = ARCSISortLandsatData()
     try:
         arcsiObj.run(args.input, args.output, args.nodirstruct, args.userinteract)

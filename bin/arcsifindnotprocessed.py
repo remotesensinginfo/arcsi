@@ -39,6 +39,10 @@ to find scene which have yet to be processed to completion.
 #
 ############################################################################
 
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the python os.path module
 import os.path
 # Import the python sys module
@@ -57,7 +61,7 @@ from arcsilib.arcsiutils import ARCSISensorFactory
 import json
 
 class ARCSIBuildFileNameLUT (object):
-    
+
     def getListOfFiles(self, searchDIR, fileEnding):
         outFiles = []
         for dirName, subdirList, fileList in os.walk(searchDIR):
@@ -70,14 +74,14 @@ class ARCSIBuildFileNameLUT (object):
     def findUnprocessedFiles(self, inputDIR, fileEnding, outputFile, lutFile, headersPath):
         inputDIR = os.path.abspath(inputDIR)
         fileList = self.getListOfFiles(inputDIR, fileEnding)
-        
+
         with open(lutFile, 'r') as f:
             jsonStrData = f.read()
         fileLUT = json.loads(jsonStrData)
-        
+
         if not headersPath is None:
             headersPath = os.path.abspath(headersPath)
-        
+
         outFile = open(outputFile, 'w+')
         for fileBase in fileLUT:
             print(fileBase)
@@ -101,31 +105,30 @@ if __name__ == '__main__':
     """
     parser = argparse.ArgumentParser(prog='arcsifindnotprocessed.py',
                                     description='''ARCSI command to build LUT of file names vs input files.''',
-                                    epilog='''A tools to build LUT of file names vs input headers files and 
+                                    epilog='''A tools to build LUT of file names vs input headers files and
                                     optionally the archives. Output is a JSON file.''')
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
-    
-    parser.add_argument("-i", "--input", type=str, required=True, 
+
+    parser.add_argument("-i", "--input", type=str, required=True,
                         help='''Input directory containing the data to be checked''')
 
-    parser.add_argument("-o", "--output", type=str, required=True, 
+    parser.add_argument("-o", "--output", type=str, required=True,
                         help='''Output text file list of header files which have not been processed.''')
-                        
-    parser.add_argument("-e", "--ending", type=str, required=True, 
+
+    parser.add_argument("-e", "--ending", type=str, required=True,
                         help='''The extension / unquie file ending for the input files.''')
-                        
+
     parser.add_argument("-l", "--lut", type=str,  required=True,
                         help='''Look up table (as generated arcsibuildfilenameslu.py) of the arcsi file names longside input headers''')
-                        
+
     parser.add_argument("-p", "--headerspath", type=str,
                         help='''Path to location for the header files which will be joined into the output.''')
-    
+
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-    
+
     arcsiObj = ARCSIBuildFileNameLUT()
-    
+
     arcsiObj.findUnprocessedFiles(args.input, args.ending, args.output, args.lut, args.headerspath)
-    
-    
+

@@ -41,6 +41,10 @@ deployment on a HPC system.
 #
 ############################################################################
 
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the python os.path module
 import os.path
 # Import the python sys module
@@ -65,7 +69,7 @@ class ARCSIBuildExtractDataCmds (object):
         outFile = open(outputFile, 'w')
         for dirName, subdirList, fileList in os.walk(inputDIR):
             for fname in fileList:
-                fileExt = os.path.basename(fname).split(".", 1)[-1].lower() 
+                fileExt = os.path.basename(fname).split(".", 1)[-1].lower()
                 filePath = os.path.abspath(os.path.join(dirName, fname))
                 relFileExe = False
                 for ext in ARCSI_ARCHIVE_EXE_LIST:
@@ -79,7 +83,7 @@ class ARCSIBuildExtractDataCmds (object):
                     command = command + '\n'
                     outFile.write(command)
         outFile.close()
-        
+
     def runGenCommandsFiles(self, inputFileList, outputFile, outDIR, nofolders):
         outDIR = os.path.abspath(outDIR)
         arcsiUtils = ARCSIUtils()
@@ -98,7 +102,7 @@ class ARCSIBuildExtractDataCmds (object):
                     command = command + ' --nofolders'
                 command = command + '\n'
                 outFile.write(command)
-            
+
         outFile.close()
 
 
@@ -110,14 +114,14 @@ if __name__ == '__main__':
                                     description='''ARCSI command to build commands for
                                                 arcsiextractdata.py.''',
                                     epilog='''ARCSI command to build commands for
-                                              arcsiextractdata.py for extracting 
+                                              arcsiextractdata.py for extracting
                                               single files on a HPC type system.''')
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input directory to be processed.
-    parser.add_argument("-i", "--input", type=str, 
+    parser.add_argument("-i", "--input", type=str,
                         help='''Input directory contains archives (tar, tar.gz, bz2, and/or zip).''')
-    parser.add_argument("-l", "--listfile", type=str, 
+    parser.add_argument("-l", "--listfile", type=str,
                         help='''Input text file containing a list of archive (tar, tar.gz, bz2, and/or zip) files.''')
     # Define the argument for specifying the output directory.
     parser.add_argument("-o", "--output", type=str, required=True,
@@ -125,16 +129,16 @@ if __name__ == '__main__':
     # Define the argument for specifying the output directory for the arcsiextractdata.py command.
     parser.add_argument("-d", "--outDIR", type=str, required=True,
                         help='''The output directory to which arcsiextractdata.py will write outputs.''')
-    parser.add_argument("--nofolders", action='store_true', default=False, 
+    parser.add_argument("--nofolders", action='store_true', default=False,
                         help='''Specifies individual folders should not be
                                 created for each archive which is being extracted.''')
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-    
+
     if (args.input == None) and (args.listfile == None):
         print("An input directory (-i) or file (-l) must be specified.")
         sys.exit()
-    
+
     arcsiObj = ARCSIBuildExtractDataCmds()
     if not args.input is None:
         arcsiObj.runGenCommandsDIR(args.input, args.output, args.outDIR, args.nofolders)

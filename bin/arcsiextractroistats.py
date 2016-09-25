@@ -22,7 +22,7 @@
 #  along with ARCSI.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# Purpose:  A class extracts data for an ROI for a set of ARCSI outputted 
+# Purpose:  A class extracts data for an ROI for a set of ARCSI outputted
 #           image files given an input shapefile.
 #
 # Author: Pete Bunting
@@ -35,7 +35,10 @@
 #
 ############################################################################
 
-
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the glob module.
 import glob
 # Import python system library
@@ -89,7 +92,7 @@ class ARCSIExtractROIStats (object):
             raise e
         except Exception as e:
             raise e
-    
+
     def importZonalStatsFields(self, statsFile):
         try:
             statsData = []
@@ -106,7 +109,7 @@ class ARCSIExtractROIStats (object):
             raise e
         except Exception as e:
             raise e
-    
+
     def exportStats2TextFile(self, outputFilePath, headerFields, statsData):
         try:
             outputFile = open(outputFilePath, 'w')
@@ -120,7 +123,7 @@ class ARCSIExtractROIStats (object):
                     rowStr = rowStr + ", " + str(field)
             rowStr = rowStr + "\n"
             outputFile.write(rowStr)
-            
+
             for data in statsData:
                 first = True
                 for field in data:
@@ -131,12 +134,12 @@ class ARCSIExtractROIStats (object):
                         rowStr = rowStr + ", " + str(field)
                 rowStr = rowStr + "\n"
                 outputFile.write(rowStr)
-            
+
         except ARCSIException as e:
             raise e
         except Exception as e:
             raise e
-    
+
     def extractSingleFileStats(self, tmpOutFile, roiFile, imageFile, pixelIntersectMethod):
         try:
             zonalattributes = zonalstats.ZonalAttributes(minThreshold=0, maxThreshold=10000, calcCount=False, calcMin=True, calcMax=True, calcMean=True, calcStdDev=True, calcMode=False, calcSum=False)
@@ -145,7 +148,7 @@ class ARCSIExtractROIStats (object):
             raise e
         except Exception as e:
             raise e
-    
+
     def sortByDate(self, dateVals, statsData):
         try:
             dateVals.sort()
@@ -154,13 +157,13 @@ class ARCSIExtractROIStats (object):
                 for statVals in statsData:
                     if statVals[0].strftime("%Y%m%d") == dateVal.strftime("%Y%m%d"):
                         statsDataSorted.append(statVals)
-        
+
             return statsDataSorted
         except ARCSIException as e:
             raise e
         except Exception as e:
             raise e
-    
+
     def extractImageFileStats(self, inputImagesLoc, outputFile, roiFile):
         try:
             inputImages = glob.glob(inputImagesLoc)
@@ -199,65 +202,64 @@ class ARCSIExtractROIStats (object):
             raise e
         except Exception as e:
             raise e
-    
-    
+
+
 if __name__ == '__main__':
     """
     The command line user interface to ARCSI Extract ROI Stats tool.
     """
     parser = argparse.ArgumentParser(prog='arcsiextractroistats.py',
-                                    description='''ARCSI command for extracting 
+                                    description='''ARCSI command for extracting
                                                    image pixels stats.''',
-                                    epilog='''A tool to extracts data for an ROI for 
+                                    epilog='''A tool to extracts data for an ROI for
                                               a set of ARCSI outputted image files
                                               given an input shapefile.''')
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
-    
-    parser.add_argument("-i", "--input", type=str, 
-                        help='''Specify the directory containing the input image files 
-                                and files selected from the input directory, glob 
+
+    parser.add_argument("-i", "--input", type=str,
+                        help='''Specify the directory containing the input image files
+                                and files selected from the input directory, glob
                                 supported wild characters .''')
 
-    parser.add_argument("-r", "--roi", type=str, 
+    parser.add_argument("-r", "--roi", type=str,
                         help='''String to specify the region of interest (ROI). Must be
                         a shapefile of the image projection as the input images.''')
-                        
-    parser.add_argument("-o", "--output", type=str, 
+
+    parser.add_argument("-o", "--output", type=str,
                         help='''An output text file with the zonal stats results.''')
 
-    
-    
+
+
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-    
+
     if args.input == None:
         print("Input file information was not specified.")
         parser.print_help()
         sys.exit()
-    
+
     if args.output == None:
         print("An output file was not specified.")
         parser.print_help()
         sys.exit()
-        
+
     if args.roi == None:
         print("An ROI shapefile was not specified.")
         parser.print_help()
         sys.exit()
-    
+
     arcsiObj = ARCSIExtractROIStats()
     arcsiObj.extractImageFileStats(args.input, args.output, args.roi)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
+
+
