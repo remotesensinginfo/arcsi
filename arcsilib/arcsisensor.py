@@ -35,6 +35,10 @@ Module that contains the ARCSIAbstractSensor class.
 #
 ############################################################################
 
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # import abstract base class stuff
 from abc import ABCMeta, abstractmethod
 # Import the datetime module
@@ -456,12 +460,14 @@ class ARCSIAbstractSensor (object):
     def hasThermal(self):
         return False
 
-    def getReProjBBOX(self, wktFile, proj4Str, useWKT2Reproject, outPxlRes, snap2Grid):
+    def getReProjBBOX(self, wktFile, proj4Str, useWKT2Reproject, xPxlRes, yPxlRes, snap2Grid):
         projImgBBOX = dict()
         projImgBBOX['MinX'] = 0.0
         projImgBBOX['MaxX'] = 0.0
         projImgBBOX['MinY'] = 0.0
         projImgBBOX['MaxY'] = 0.0
+
+        yPxlResAbs = math.fabs(yPxlRes)
 
         srcProj = osr.SpatialReference()
         srcProj.ImportFromWkt(self.inWKT)
@@ -474,33 +480,35 @@ class ARCSIAbstractSensor (object):
         else:
             tarProj.ImportFromProj4(proj4Str)
 
-        wktPt = 'POINT(%s %s)' % (self.xTR, self.yTL)
+        wktPt = 'POINT(%s %s)' % (self.xTL, self.yTL)
         point = ogr.CreateGeometryFromWkt(wktPt)
         point.AssignSpatialReference(srcProj)
         point.TransformTo(tarProj)
 
-        minXPt = (math.floor(point.GetX()/outPxlRes)*outPxlRes)
-        maxYPt = (math.ceil(point.GetY()/outPxlRes)*outPxlRes)
+        #print("Pxl Res: [{0}, {1} ({2})]".format(xPxlRes, yPxlRes, yPxlResAbs))
+
+        minXPt = (math.floor(point.GetX()/xPxlRes)*xPxlRes)
+        maxYPt = (math.ceil(point.GetY()/yPxlResAbs)*yPxlResAbs)
 
         projImgBBOX['MinX'] = minXPt
         projImgBBOX['MaxY'] = maxYPt
 
-        print("MinX: [{0}, {1}]".format(point.GetX(), minXPt))
-        print("MaxY: [{0}, {1}]".format(point.GetY(), maxYPt))
+        #print("MinX: [{0}, {1}]".format(point.GetX(), minXPt))
+        #print("MaxY: [{0}, {1}]".format(point.GetY(), maxYPt))
 
         wktPt = 'POINT(%s %s)' % (self.xBR, self.yBR)
         point = ogr.CreateGeometryFromWkt(wktPt)
         point.AssignSpatialReference(srcProj)
         point.TransformTo(tarProj)
 
-        maxXPt = (math.ceil(point.GetX()/outPxlRes)*outPxlRes)
-        minYPt = (math.floor(point.GetY()/outPxlRes)*outPxlRes)
+        maxXPt = (math.ceil(point.GetX()/xPxlRes)*xPxlRes)
+        minYPt = (math.floor(point.GetY()/yPxlResAbs)*yPxlResAbs)
 
         projImgBBOX['MaxX'] = maxXPt
         projImgBBOX['MinY'] = minYPt
 
-        print("MaxX: [{0}, {1}]".format(point.GetX(), maxXPt))
-        print("MinY: [{0}, {1}]".format(point.GetY(), minYPt)
+        #print("MaxX: [{0}, {1}]".format(point.GetX(), maxXPt))
+        #print("MinY: [{0}, {1}]".format(point.GetY(), minYPt))
 
         return projImgBBOX
 

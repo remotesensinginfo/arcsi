@@ -38,6 +38,10 @@ to find scene which have yet to be processed to completion.
 #
 ############################################################################
 
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the python os.path module
 import os.path
 # Import the python sys module
@@ -54,7 +58,7 @@ import json
 import shutil
 
 class ARCSIRemoveDuplicates (object):
-    
+
     def findBaseDIR(self, filePath):
         baseName = os.path.dirname(filePath)
         found = False
@@ -69,8 +73,8 @@ class ARCSIRemoveDuplicates (object):
             else:
                 baseName = baseNameTmp
         return baseName
-    
-    
+
+
     def sortDuplicateFiles(self, lutFile, headersDIR, archivesDIR, cpArchives2DIR):
         headersDIR = os.path.abspath(headersDIR)
         archivesDIR = os.path.abspath(archivesDIR)
@@ -107,37 +111,37 @@ if __name__ == '__main__':
     """
     parser = argparse.ArgumentParser(prog='arcsiremoveduplicates.py',
                                     description='''ARCSI command to remove duplicate files.''',
-                                    epilog='''A tool to remove duplicate files using the LUT 
+                                    epilog='''A tool to remove duplicate files using the LUT
                                     file generated from the arcsibuildfilenameslu.py command.''')
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
-    
+
     parser.add_argument("-l", "--lut", type=str,  required=True,
                         help='''Look up table (as generated arcsibuildfilenameslu.py) of the arcsi file names longside input headers''')
-    
-    parser.add_argument("-w", "--workingdir", type=str, 
+
+    parser.add_argument("-w", "--workingdir", type=str,
                         help='''Working directory from which the header file paths are reference from in the LUT''')
 
-    parser.add_argument("-a", "--archivedir", type=str, 
+    parser.add_argument("-a", "--archivedir", type=str,
                         help='''Directory containing the archvies references in the LUT.''')
-                        
-    parser.add_argument("-d", "--dirout", type=str, 
+
+    parser.add_argument("-d", "--dirout", type=str,
                         help='''A directory where the archives will be moved to.''')
-                        
-    
+
+
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-    
+
     if (args.workingdir is None) and (args.archivedir is None):
         print("Either or both the working and archives directories need to be defined")
         sys.exit()
-    
+
     if not args.archivedir is None:
         if args.dirout is None:
             print("If archives directory is specified then the output directory to which the duplicate archives will be moved must be specified.")
             sys.exit()
-            
+
     arcsiObj = ARCSIRemoveDuplicates()
     arcsiObj.sortDuplicateFiles(args.lut, args.workingdir, args.archivedir, args.dirout)
-    
-    
+
+

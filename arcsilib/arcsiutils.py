@@ -34,6 +34,10 @@ Module that contains the ARCSIUtils class.
 #
 ############################################################################
 
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the ARCSI exception class
 from .arcsiexception import ARCSIException
 # Import the OS python module
@@ -47,7 +51,7 @@ class ARCSIUtils (object):
     """
     A class with useful utilties for the ARCSI System.
     """
-    
+
     def getFileExtension(self, format):
         ext = ".NA"
         if format.lower() == "kea":
@@ -61,7 +65,7 @@ class ARCSIUtils (object):
         else:
             raise ARCSIException("The extension for the format specified is unknown.")
         return ext
-        
+
     def readTextFile(self, file):
         """
         Read a text file into a single string
@@ -76,10 +80,10 @@ class ARCSIUtils (object):
         except Exception as e:
             raise e
         return txtStr
-        
+
     def readTextFile2List(self, file):
         """
-        Read a text file into a list where each line 
+        Read a text file into a list where each line
         is an element in the list.
         """
         outList = []
@@ -93,7 +97,7 @@ class ARCSIUtils (object):
         except Exception as e:
             raise e
         return outList
-    
+
     def stringTokenizer(self, line, delimiter):
         tokens = list()
         token = str()
@@ -105,7 +109,7 @@ class ARCSIUtils (object):
                 token = token + line[i]
         tokens.append(token)
         return tokens
-        
+
     def readSpectralResponseFunc(self, inFile, seperator, ignoreLines, waveCol, respCol):
         specResp = list()
         try:
@@ -128,7 +132,7 @@ class ARCSIUtils (object):
         except Exception as e:
             raise e
         return numpy.array(specResp)
-    
+
     def isSummerOrWinter(self, lat, long, date):
         summerWinter = 0
         if lat < 0:
@@ -138,7 +142,7 @@ class ARCSIUtils (object):
                 summerWinter = 2 # Winter
             else:
                 summerWinter = 1 # Summer
-        else: 
+        else:
             # Northern Hemisphere
             print("Northern Hemisphere")
             if (date.month > 3) & (date.month < 10):
@@ -146,7 +150,7 @@ class ARCSIUtils (object):
             else:
                 summerWinter = 2 # Winter
         return summerWinter
-        
+
     def getEnvironmentVariable(self, var):
         outVar = None
         try:
@@ -162,25 +166,25 @@ class ARCSIUtils (object):
             band = ds.GetRasterBand(bandnum + 1)
             band.SetMetadataItem('LAYER_TYPE', 'thematic')
         ds = None
-        
+
     def copyGCPs(self, srcImg, destImg):
-        srcDS = gdal.Open(srcImg, gdal.GA_ReadOnly)     
+        srcDS = gdal.Open(srcImg, gdal.GA_ReadOnly)
         if srcDS == None:
             raise ARCSIException("Could not open the srcImg.")
         destDS = gdal.Open(destImg, gdal.GA_Update)
         if destDS == None:
             raise ARCSIException("Could not open the destImg.")
             srcDS = None
-        
+
         numGCPs = srcDS.GetGCPCount()
         if numGCPs > 0:
             gcpProj = srcDS.GetGCPProjection()
             gcpList = srcDS.GetGCPs()
             destDS.SetGCPs(gcpList, gcpProj)
-                
+
         srcDS = None
         destDS = None
-    
+
     def isNumber(self, strVal):
         try:
             float(strVal) # for int, long and float
@@ -190,7 +194,7 @@ class ARCSIUtils (object):
             except ValueError:
                 return False
         return True
-    
+
     def str2Float(self, strVal, errVal=None):
         strVal = str(strVal).strip()
         #print("IN: " + strVal)
@@ -204,7 +208,7 @@ class ARCSIUtils (object):
                 raise ARCSIException("could not convert string to float: \'" + strVal + '\'.')
         #print("Out: " + str(outFloat))
         return outFloat
-        
+
     def str2Int(self, strVal, errVal=None):
         strVal = str(strVal).strip()
         outInt = 0
@@ -215,7 +219,7 @@ class ARCSIUtils (object):
         else:
             raise ARCSIException("could not convert string to int: \'" + strVal + '\'.')
         return outInt
-    
+
 class ARCSILandsatMetaUtils(object):
     """
     A class with common functions for parsing Landsat
@@ -300,7 +304,7 @@ class ARCSILandsatMetaUtils(object):
         Returns a list with a name for each band.
         """
         metaFilenames = []
-        
+
         for i in range(1,nBands+1):
             try:
                 metaFilenames.append(headerParams["FILE_NAME_BAND_{}".format(i)])
@@ -363,7 +367,7 @@ class ARCSISensorFactory(object):
             sensorClass = ARCSISentinel2Sensor(debugMode, inputImage)
         else:
             raise ARCSIException("Could not get a class representing the sensor specified from the factory.")
-        
+
         if sensorClass == None:
             raise ARCSIException("Something has gone wrong sensorClass is None!")
 

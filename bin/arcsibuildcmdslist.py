@@ -39,6 +39,10 @@ Module that contains the ARSCI command to build lists of commands for arcsi.py.
 #
 ############################################################################
 
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the python os.path module
 import os.path
 # Import the python sys module

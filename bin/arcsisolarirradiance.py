@@ -25,7 +25,7 @@ Module that contains the ARCSISolarIrradiance Class.
 #  along with ARCSI.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# Purpose:  A class for calculating the irradiance for a specific 
+# Purpose:  A class for calculating the irradiance for a specific
 #           band of a sensor using the solar irradiance and the
 #           sensor/band specific spectral response function normalised
 #           to a range 0 to 1.
@@ -40,13 +40,17 @@ Module that contains the ARCSISolarIrradiance Class.
 #
 ############################################################################
 
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the numpy library
 import numpy
 # Import the ARCSI exception class
 from arcsilib.arcsiexception import ARCSIException
 # Import the ARCSI utilities class
 from arcsilib.arcsiutils import ARCSIUtils
-# Import the python maths module. 
+# Import the python maths module.
 import math
 # Import python system library
 import sys
@@ -60,7 +64,7 @@ class ARCSISolarIrradiance (object):
     A class which calculates the solar irradiance value for a given
     spectral response curve.
     """
-    
+
     def getE490SolarSpectrum(self):
         spectrum = numpy.array([[119.5,1,0.00006],
                                 [120.5,1,0.00056],
@@ -1760,27 +1764,27 @@ class ARCSISolarIrradiance (object):
                                 [400000,600000,0],
                                 [1000000,0,0]])
         return spectrum
-    
+
     def calcSolarDistance(self, julianDay):
         if ((julianDay < 1) or (julianDay > 366)):
             raise ARCSIException("Julian Day must be between 1 and 366.")
         radiansJulianDay = ((julianDay - 4)*0.9856)*(math.pi/180);
         solarDist = 1 - 0.01672 * math.cos(radiansJulianDay);
         return solarDist;
-    
+
     def calcSolarIrradiance(self, solarSpec, respFuncs, julianDay):
         minWv = respFuncs[0][0]
         maxWv = respFuncs[len(respFuncs)-1][0]
-        
+
         rangeWv = int(maxWv - minWv)+1
-        
+
         solarWVs = solarSpec[:,[0]]
         solarSpecSub = numpy.where(((solarWVs >= (minWv-100)) & (solarWVs <= (maxWv+100))), solarSpec, numpy.nan)
         solarSpecSub = solarSpecSub[~numpy.isnan(solarSpecSub).any(axis=1)]
-        
+
         partA = 0
         partB = 0
-        
+
         for i in range(rangeWv):
             wv = minWv + float(i)
             rfDist = 0
@@ -1799,7 +1803,7 @@ class ARCSISolarIrradiance (object):
                         minDistRF = respFuncs[j]
             minDist = 0
             minDistSS = None
-            first = True         
+            first = True
             for j in range(len(solarSpecSub)):
                 ssDist = math.fabs(wv - solarSpecSub[j][0])
                 if first:
@@ -1810,16 +1814,16 @@ class ARCSISolarIrradiance (object):
                     if ssDist < minDist:
                         minDist = ssDist
                         minDistSS = solarSpecSub[j]
-            
+
             partA = partA + (minDistSS[2]*minDistRF[1])
             partB = partB + minDistRF[1]
-        
+
         solarDist = self.calcSolarDistance(julianDay)
-        
+
         irradiance = ((partA * solarDist)/(partB * solarDist))*1000
-            
+
         return irradiance
-    
+
     def run(self, inputFile, seperator, ignoreLines, wvCol, respCol, julianDay):
         solarSpec = self.getE490SolarSpectrum()
         arcsiUtils = ARCSIUtils()
@@ -1833,28 +1837,28 @@ if __name__ == '__main__':
     """
     parser = argparse.ArgumentParser(prog='arcsiirradiance.py',
                                     description='''ARCSI command for calculating
-                                                the solar exoatmospheric 
+                                                the solar exoatmospheric
                                                 irradiance (ESUN) for a spectral
                                                 response function.''',
                                     epilog='''Using the E-490 Solar Spectrum and a
-                                              nearest neighbour interpolation to 
-                                              calculate the exoatmospheric 
+                                              nearest neighbour interpolation to
+                                              calculate the exoatmospheric
                                               irradiance (ESUN) value for a specific
                                               spectral response function. The ESUN value
                                               is require to convert at sensor radiance
-                                              to at sensor reflectance or top of 
+                                              to at sensor reflectance or top of
                                               atmosphere reflectance (TOA)''')
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input spectral response file.
-    parser.add_argument("-i", "--input", type=str, 
+    parser.add_argument("-i", "--input", type=str,
                         help='''A seperated (--sep) text file defining the
                         wavelength (nm) and normalised spectral response
                         function.''')
     # Define the argument for specifying input seperator.
     parser.add_argument("-s", "--sep", type=str,
                         help='''The seperator used to split the columns within the input
-                        file. The default is space seperated where consecutive spaces 
+                        file. The default is space seperated where consecutive spaces
                         are ignored.''')
     # Define the argument for specifying the number of lines to ignore.
     parser.add_argument("--ignore", type=int, default="0",
@@ -1871,24 +1875,23 @@ if __name__ == '__main__':
                         help='''The julian day of the acquasition.''')
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-    
+
     if args.input == None:
         print("An input file was not specified.")
         parser.print_help()
         sys.exit()
-    
+
     arcsiObj = ARCSISolarIrradiance()
-    
+
     arcsiObj.run(args.input, args.sep, args.ignore, args.wvcol, args.rcol, args.julianday)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
+
+

@@ -25,8 +25,8 @@ Module that contains the ARSCI command to extract data from archives.
 #  along with ARCSI.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# Purpose:  A script to unarchive data from tar / tar.gz files into 
-#           a directory structure with a directory for contents of 
+# Purpose:  A script to unarchive data from tar / tar.gz files into
+#           a directory structure with a directory for contents of
 #           each archive.
 #
 # Author: Pete Bunting
@@ -39,6 +39,10 @@ Module that contains the ARSCI command to extract data from archives.
 #
 ############################################################################
 
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the python os.path module
 import os.path
 # Import the python sys module
@@ -52,34 +56,34 @@ from arcsilib import ARCSI_VERSION
 
 
 class ARCSISensitivityAnalysis (object):
-    
-    
-            
-    
+
+
+
+
     def run(self):
         print("Hello World...")
-        
-        
-        
-        
+
+
+
+
 
 if __name__ == '__main__':
     """
     The command line user interface to ARCSI Sensitivity Analysis Tool.
     """
     parser = argparse.ArgumentParser(prog='arcsisensitivity.py',
-                                    description='''ARCSI command to run a 
+                                    description='''ARCSI command to run a
                                                     sensitivity analysis on 6S.''',
                                     epilog='''A tools to run a sensitivity
-                                              analysis on 6S for a range of 
+                                              analysis on 6S for a range of
                                               parameter inputs.''')
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-    
-    
+
+
     arcsiObj = ARCSISensitivityAnalysis()
-    
+
     arcsiObj.run()

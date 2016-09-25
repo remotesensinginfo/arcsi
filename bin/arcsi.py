@@ -38,8 +38,10 @@ Module that contains the ARSCI Main class.
 #
 ############################################################################
 
-# Import the print function (for Python 2)
+# Import the future functionality (for Python 2)
 from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the system library
 import sys
 # Import the subprocess module
@@ -142,9 +144,9 @@ class ARCSI (object):
 
 
     def run(self, inputHeader, inputImage, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName,
-            outWKTFile, outProj4Str, projAbbv, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption,
-            aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,
-            atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal,
+            outWKTFile, outProj4Str, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption,
+            atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude,
+            atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal,
             aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT,
             demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor,
             initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize):
@@ -242,18 +244,6 @@ class ARCSI (object):
             # Make a copy of the dictionary to store calculated products.
             prodsCalculated = copy.copy(prodsToCalc)
             needAtmModel = False
-            reproject = False
-            useWKT2Reproject = True
-            reProjStr = ""
-            if not outWKTFile is None:
-                reproject = True
-                useWKT2Reproject = True
-                reProjStr = outWKTFile
-            elif not outProj4Str is None:
-                reproject = True
-                useWKT2Reproject = False
-                reProjStr = outProj4Str
-
             for prod in productsStr:
                 if prod == 'RAD':
                     prodsToCalc["RAD"] = True
@@ -379,6 +369,32 @@ class ARCSI (object):
                 else:
                     raise ARCSIException("The specified ground reflectance is unknown.")
 
+
+            # Decide is the image needs to be reprojected, if so define parameters.
+            reproject = False
+            useWKT2Reproject = True
+            reProjStr = ""
+            xPxlRes = 0.0
+            yPxlRes = 0.0
+            pxlResDefd = False
+            if not outWKTFile is None:
+                reproject = True
+                useWKT2Reproject = True
+                reProjStr = outWKTFile
+            elif not outProj4Str is None:
+                reproject = True
+                useWKT2Reproject = False
+                reProjStr = outProj4Str
+
+
+            if (xPxlResUsr is None) or (yPxlResUsr is None):
+                pxlResDefd = False
+            else:
+                pxlResDefd = True
+                xPxlRes = xPxlResUsr
+                yPxlRes = yPxlResUsr
+
+
             validMaskImage=None
             validMaskImageProj=""
             radianceImage=""
@@ -412,10 +428,6 @@ class ARCSI (object):
                 print("Mosacking Input Image Tiles.")
                 sensorClass.mosaicImageTiles()
 
-            if reproject:
-                print("Define re-projected image BBOX.")
-                projImgBBOX = sensorClass.getReProjBBOX(outWKTFile, outProj4Str, useWKT2Reproject, True)
-
             # Get the valid image data maskImage
             outName = outBaseName + "_valid" + arcsiUtils.getFileExtension(outFormat)
             validMaskImage = sensorClass.generateValidImageDataMask(outFilePath, outName, "KEA")
@@ -424,19 +436,25 @@ class ARCSI (object):
             print("")
 
             if reproject and (not validMaskImage is None):
+                if not pxlResDefd:
+                    validImgDS = gdal.Open(validMaskImage, gdal.GA_ReadOnly)
+                    if validImgDS is None:
+                        raise ARCSIException('Could not open the Valid Image Mask ' + validMaskImage)
+                    geoTransform = validImgDS.GetGeoTransform()
+                    if geoTransform is None:
+                        raise ARCSIException('Could read the geotransform from the Valid Image Mask ' + validMaskImage)
+                    xPxlRes = geoTransform[1]
+                    yPxlRes = geoTransform[5]
+                    validImgDS = None
+                print("Define re-projected image BBOX.")
+                projImgBBOX = sensorClass.getReProjBBOX(outWKTFile, outProj4Str, useWKT2Reproject, xPxlRes, yPxlRes, True)
+                print("Output Image BBOX (TL, BR): [({0:10.2f}, {1:10.2f}), ({2:10.2f}, {3:10.2f})]".format(projImgBBOX['MinX'], projImgBBOX['MaxY'], projImgBBOX['MaxX'], projImgBBOX['MinY']))
                 outName = outBaseNameProj + "_valid" + arcsiUtils.getFileExtension(outFormat)
                 validMaskImageProj = os.path.join(outFilePath, outName)
-                validImgDS = gdal.Open(validMaskImage, gdal.GA_ReadOnly)
-                if validImgDS is None:
-                    raise ARCSIException('Could not open the Valid Image Mask ' + validMaskImage)
-                geoTransform = validImgDS.GetGeoTransform()
-                if geoTransform is None:
-                    raise ARCSIException('Could read the geotransform from the Valid Image Mask ' + validMaskImage)
-                xPxlRes = geoTransform[1]
-                yPxlRes = geoTransform[5]
-                validImgDS = None
+
                 cmd = 'gdalwarp -t_srs ' + reProjStr + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Byte -wt Float32 ' \
-                    + '-r near -tap -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
+                    + '-te ' + str(projImgBBOX['MinX']) + ' ' + str(projImgBBOX['MinY']) + ' ' + str(projImgBBOX['MaxX']) + ' ' + str(projImgBBOX['MaxY']) \
+                    + ' -r near -tap -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
                     + validMaskImage + ' ' + validMaskImageProj
                 print(cmd)
                 try:
@@ -471,7 +489,8 @@ class ARCSI (object):
                     outNameProj = outBaseNameProj + "_sat" + arcsiUtils.getFileExtension(outFormat)
                     saturateImageProj = os.path.join(outFilePath, outNameProj)
                     cmd = 'gdalwarp -t_srs ' + reProjStr + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Byte ' \
-                    + '-r near -tap -of ' + outFormat + ' -overwrite ' \
+                    + '-te ' + str(projImgBBOX['MinX']) + ' ' + str(projImgBBOX['MinY']) + ' ' + str(projImgBBOX['MaxX']) + ' ' + str(projImgBBOX['MaxY']) \
+                    + ' -r near -tap -of ' + outFormat + ' -overwrite ' \
                     + saturateImage + ' ' + saturateImageProj
                     print(cmd)
                     try:
@@ -542,7 +561,8 @@ class ARCSI (object):
 
                         outRadImagePath = os.path.join(outFilePath, outName)
                         cmd = 'gdalwarp -t_srs ' + reProjStr + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Float32 -wt Float32 ' \
-                        + '-r ' + interpAlgor + ' -tap -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
+                        + '-te ' + str(projImgBBOX['MinX']) + ' ' + str(projImgBBOX['MinY']) + ' ' + str(projImgBBOX['MaxX']) + ' ' + str(projImgBBOX['MaxY']) \
+                        + ' -r ' + interpAlgor + ' -tap -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
                         + radianceImage + ' ' + outRadImagePath
                         print(cmd)
                         try:
@@ -558,7 +578,8 @@ class ARCSI (object):
                         outName = outBaseNameProj + "_therm_rad" + arcsiUtils.getFileExtension(outFormat)
                         outThermRadImagePath = os.path.join(outFilePath, outName)
                         cmd = 'gdalwarp -t_srs ' + reProjStr + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Float32 -wt Float32 ' \
-                        + '-r ' + interpAlgor + ' -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
+                        + '-te ' + str(projImgBBOX['MinX']) + ' ' + str(projImgBBOX['MinY']) + ' ' + str(projImgBBOX['MaxX']) + ' ' + str(projImgBBOX['MaxY']) \
+                        + ' -r ' + interpAlgor + ' -tap -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
                         + thermalRadImage + ' ' + outThermRadImagePath
                         #print(cmd)
                         try:
@@ -980,6 +1001,12 @@ if __name__ == '__main__':
     # Define the argument for string added to the output files names indicating the projection.
     parser.add_argument("--projabbv", type=str,
                         help='''Abbreviation or acronym for the project which will added to the file name.''')
+    # Define the argument for the output x pixel resolution (if image re-projected).
+    parser.add_argument("--ximgres", type=float,
+                        help='''Float for the output image pixel x resolution (if re-projected). Optional, if not provided the input image resolution is used.''')
+    # Define the argument for the output y pixel resolution (if image re-projected).
+    parser.add_argument("--yimgres", type=float,
+                        help='''Float for the output image pixel y resolution (if re-projected). Optional, if not provided the input image resolution is used.''')
     # Define the argument for specifying the image file format.
     parser.add_argument("-f", "--format", type=str,
                         help='''Specify the image output format (GDAL name).''')
@@ -1370,7 +1397,7 @@ if __name__ == '__main__':
                 print("Not using simple DOS method due to environment variable.")
 
         arcsiObj.run(args.inputheader, args.imagefile, args.sensor, args.inwkt, args.format, args.outpath,
-                     args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.prods, args.stats, args.aeropro,
+                     args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro,
                      args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude,
                      args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater,
                      args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified,

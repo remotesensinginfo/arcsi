@@ -39,6 +39,10 @@ present following data extraction.
 #
 ############################################################################
 
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the python os.path module
 import os.path
 # Import the python glob module
@@ -51,18 +55,18 @@ from arcsilib import ARCSI_VERSION
 from arcsilib import ARCSI_ARCHIVE_EXE_LIST
 
 class ARCSIFindArchivesNotExtract (object):
-    
+
     def getListOfArchives(self, dirPath):
         archPaths = []
         for exe in ARCSI_ARCHIVE_EXE_LIST:
             fileList = glob.glob(os.path.join(dirPath, "*" + exe))
             archPaths.extend(fileList)
         return archPaths
-    
+
     def checkExtractedFiles(self, inputDIR, outputFile, archivesDIR):
         inputDIR = os.path.abspath(inputDIR)
         archivesDIR = os.path.abspath(archivesDIR)
-        archList = self.getListOfArchives(archivesDIR)        
+        archList = self.getListOfArchives(archivesDIR)
         outFileList = open(outputFile, 'w')
         for arch in archList:
             print("Checking: " + arch)
@@ -73,7 +77,7 @@ class ARCSIFindArchivesNotExtract (object):
                 outFileList.write(arch + "\n")
             elif not os.path.isdir(dirPath):
                 outFileList.write(arch + "\n")
-                        
+
         outFileList.flush()
         outFileList.close()
 
@@ -87,21 +91,20 @@ if __name__ == '__main__':
                                                    to have been used to extract data into folder structure).''')
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
-    
-    parser.add_argument("-i", "--input", type=str, required=True, 
+
+    parser.add_argument("-i", "--input", type=str, required=True,
                         help='''Input directory containing the folders for the extracted data''')
 
-    parser.add_argument("-o", "--output", type=str, required=True, 
+    parser.add_argument("-o", "--output", type=str, required=True,
                         help='''Output text file listing the archives which have problems''')
-                        
+
     parser.add_argument("-a", "--archives", type=str, required=True,
                         help='''Input directory containing the original archives''')
-    
+
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-    
+
     arcsiObj = ARCSIFindArchivesNotExtract()
-    
+
     arcsiObj.checkExtractedFiles(args.input, args.output, args.archives)
-    
-    
+

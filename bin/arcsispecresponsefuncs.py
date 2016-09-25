@@ -25,7 +25,7 @@ Module that contains the ARCSIResampleSpectralResponseFuncs Class.
 #  along with ARCSI.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# Purpose:  A class for resampling spectral response functions for 
+# Purpose:  A class for resampling spectral response functions for
 #           remote sensing sensors.
 #
 # Author: Pete Bunting
@@ -38,13 +38,17 @@ Module that contains the ARCSIResampleSpectralResponseFuncs Class.
 #
 ############################################################################
 
+# Import the future functionality (for Python 2)
+from __future__ import print_function
+from __future__ import division
+from __future__ import unicode_literals
 # Import the numpy library
 import numpy
 # Import the ARCSI exception class
 from arcsilib.arcsiexception import ARCSIException
 # Import the ARCSI utilities class
 from arcsilib.arcsiutils import ARCSIUtils
-# Import the python maths module. 
+# Import the python maths module.
 import math
 # Import python system library
 import sys
@@ -61,16 +65,16 @@ class ARCSIResampleSpectralResponseFuncs (object):
     def resampleSpectralResponseFunction(self, outputFile, respFuncs, sampling, method):
         minWv = respFuncs[0][0]
         maxWv = respFuncs[len(respFuncs)-1][0]
-        
+
         print("minWv = ", minWv)
         print("maxWv = ", maxWv)
-        
+
         rangeWv = float(maxWv - minWv)
-        
+
         print("rangeWv = ", rangeWv)
-        
+
         numOfSamples = int(math.ceil(float(rangeWv)/float(sampling)))+1
-        
+
         print("numOfSamples = ", numOfSamples)
         try:
             outFile = open(outputFile, 'w')
@@ -78,7 +82,7 @@ class ARCSIResampleSpectralResponseFuncs (object):
             wv = minWv
             for i in range(numOfSamples):
                 line = "{0:f},".format(wv)# str(wv) + str(",")
-                                
+
                 rfDist = 0
                 minDist = 0
                 minDistRF = None
@@ -102,13 +106,13 @@ class ARCSIResampleSpectralResponseFuncs (object):
                     resps.append(minDistRF[1])
                 else:
                     raise ARCSIException("Method of resampling is not reconised.")
-                
+
                 print(line)
                 line = line + str("\n")
                 outFile.write(line)
                 wv = wv + sampling
-            
-            
+
+
             line = "\n"
             for respVal in resps:
                 line = line + "{0:f},".format(respVal)
@@ -120,7 +124,7 @@ class ARCSIResampleSpectralResponseFuncs (object):
             raise e
         except Exception as e:
             raise e
-    
+
     def run(self, outputFile, inputFile, seperator, ignoreLines, wvCol, respCol, sampling, method):
         arcsiUtils = ARCSIUtils()
         respFunc = arcsiUtils.readSpectralResponseFunc(inputFile, seperator, ignoreLines, wvCol, respCol)
@@ -142,18 +146,18 @@ if __name__ == '__main__':
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input spectral response file.
-    parser.add_argument("-o", "--output", type=str, 
+    parser.add_argument("-o", "--output", type=str,
                         help='''A file to where the resampled spectral response functions will
                         be outputted as a comma seperated file.''')
     # Define the argument for specifying the input spectral response file.
-    parser.add_argument("-i", "--input", type=str, 
+    parser.add_argument("-i", "--input", type=str,
                         help='''A seperated (--sep) text file defining the
                         wavelength (nm) and normalised spectral response
                         function.''')
     # Define the argument for specifying input seperator.
     parser.add_argument("-s", "--sep", type=str,
                         help='''The seperator used to split the columns within the input
-                        file. The default is space seperated where consecutive spaces 
+                        file. The default is space seperated where consecutive spaces
                         are ignored.''')
     # Define the argument for specifying the number of lines to ignore.
     parser.add_argument("--ignore", type=int, default="0",
@@ -174,29 +178,28 @@ if __name__ == '__main__':
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-    
+
     if args.input == None:
         print("An input file was not specified.")
         parser.print_help()
         sys.exit()
-    
+
     if args.output == None:
         print("An output file was not specified.")
         parser.print_help()
         sys.exit()
-    
+
     arcsiObj = ARCSIResampleSpectralResponseFuncs()
-    
+
     arcsiObj.run(args.output, args.input, args.sep, args.ignore, args.wvcol, args.rcol, args.sample, args.method)
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
-        
+
+
+
+
+
+
+
+
+
+
+
