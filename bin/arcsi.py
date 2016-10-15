@@ -143,7 +143,7 @@ class ARCSI (object):
         return aotVal
 
 
-    def run(self, inputHeader, inputImage, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName,
+    def run(self, inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName,
             outWKTFile, outProj4Str, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption,
             atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude,
             atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal,
@@ -657,10 +657,13 @@ class ARCSI (object):
             # Step 7: Generate Cloud Masks
             if prodsToCalc["CLOUDS"]:
                 outName = outBaseName + "_clouds" + arcsiUtils.getFileExtension(outFormat)
-                cloudsImage = sensorClass.generateCloudMask(toaImage, saturateImage, thermalBrightImage, validMaskImage, outFilePath, outName, outFormat, tmpPath, scaleFactor)
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.rastergis.populateStats(cloudsImage, False, True)
+                if cloudMaskUsrImg == None:
+                    cloudsImage = sensorClass.generateCloudMask(toaImage, saturateImage, thermalBrightImage, validMaskImage, outFilePath, outName, outFormat, tmpPath, scaleFactor)
+                    if calcStatsPy:
+                        print("Calculating Statistics...")
+                        rsgislib.rastergis.populateStats(cloudsImage, False, True)
+                else:
+                    cloudsImage = cloudMaskUsrImg
 
                 # Calculate the proportion of the scene cover by cloud.
                 propOfCloud = rsgislib.imagecalc.calcPropTrueExp('b1==1?1:b1==2?1:0', [rsgislib.imagecalc.BandDefn('b1', cloudsImage, 1)], validMaskImage)
@@ -979,6 +982,9 @@ if __name__ == '__main__':
     # Define the argument for specifying the input image file - overriding the header file.
     parser.add_argument("--imagefile", type=str,
                         help='''Specify the input image file, overriding the image header.''')
+    # Define the argument for specifying the input cloud mask image file - overrides calculating a cloud mask.
+    parser.add_argument("--cloudmask", type=str,
+                        help='''Specify an input cloud mask image file, overrides ARCSI calculating its own cloud mask.''')
     # Define the argument for specifying the sensor.
     parser.add_argument("-s", "--sensor", choices=ARCSI_SENSORS_LIST,
                         help='''Specify the sensor being processed.''')
@@ -1396,7 +1402,7 @@ if __name__ == '__main__':
                 args.simpledos = False
                 print("Not using simple DOS method due to environment variable.")
 
-        arcsiObj.run(args.inputheader, args.imagefile, args.sensor, args.inwkt, args.format, args.outpath,
+        arcsiObj.run(args.inputheader, args.imagefile, args.cloudmask, args.sensor, args.inwkt, args.format, args.outpath,
                      args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro,
                      args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude,
                      args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater,
