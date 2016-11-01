@@ -209,7 +209,7 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif filePrefix3 == 'LT4':
+            elif filePrefix3 == 'LT4' or filePrefix4 == 'LS04' or filePrefix4 == 'LE04':
                 outputFileDIR = os.path.join(outputDir, "LS4")
                 if (not createdLS4DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -221,7 +221,7 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif filePrefix3 == 'LT5' or filePrefix4 == 'LS05':
+            elif filePrefix3 == 'LT5' or filePrefix4 == 'LS05' or filePrefix4 == 'LE05':
                 outputFileDIR = os.path.join(outputDir, "LS5")
                 if (not createdLS5DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -233,7 +233,7 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif filePrefix3 == 'LE7' or filePrefix4 == 'LS07':
+            elif filePrefix3 == 'LE7' or filePrefix4 == 'LS07' or filePrefix4 == 'LE07':
                 outputFileDIR = os.path.join(outputDir, "LS7")
                 if (not createdLS7DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
