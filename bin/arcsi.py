@@ -1315,7 +1315,7 @@ if __name__ == '__main__':
                 print("Taking DEM path from environment variable.")
 
         if needDEM:
-            if not os.path.exists(args.dem):
+            if (args.dem == None) or (not os.path.exists(args.dem)):
                 print("Error: A file path to a DEM has either not been specified or does exist, please check it and run again.\n")
                 parser.print_help()
                 sys.exit()
