@@ -841,6 +841,22 @@ class ARCSI (object):
                             rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
                         prodsCalculated["SREF"] = True
                         print("")
+                else:
+                    keys2Del = []
+                    for key in prodsToCalc.keys():
+                        if prodsToCalc[key] is not prodsCalculated[key]:
+                            if key in ['DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS']:
+                                keys2Del.append(key)
+                    for key in keys2Del:
+                        del prodsToCalc[key]
+            else:
+                keys2Del = []
+                for key in prodsToCalc.keys():
+                    if prodsToCalc[key] is not prodsCalculated[key]:
+                        if key in ['CLEARSKY', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS']:
+                            keys2Del.append(key)
+                for key in keys2Del:
+                    del prodsToCalc[key]
 
             if prodsToCalc["METADATA"]:
                 print("Exporting Meta-data file")
@@ -852,6 +868,9 @@ class ARCSI (object):
                         validMaskImagePath = validMaskImageProj
                     else:
                         validMaskImagePath = validMaskImage
+                
+                
+
                 sensorClass.generateMetaDataFile(outFilePath, outName, productsStr, validMaskImagePath, prodsToCalc["FOOTPRINT"])
                 prodsCalculated["METADATA"] = True
                 print("")
@@ -1024,11 +1043,9 @@ if __name__ == '__main__':
     # Define the argument for specifying the file path of the output images.
     parser.add_argument("-o", "--outpath", type=str,
                         help='''Specify the output file path.''')
-
     # Define the argument for specifying the file path of the output images.
     parser.add_argument("-t", "--tmpath", type=str,
                         help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOS and CLOUDS).''')
-
     # Define the argument which specifies the products which are to be generated.
     parser.add_argument("-p", "--prods", type=str, nargs='+', choices=ARCSI_PRODUCTS_LIST,
                         help='''Specify the output products which are to be
