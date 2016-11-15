@@ -149,7 +149,7 @@ class ARCSI (object):
             atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal,
             aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT,
             demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor,
-            initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize):
+            initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts):
         """
         A function contains the main flow of the software
         """
@@ -398,13 +398,18 @@ class ARCSI (object):
             validMaskImage=None
             validMaskImageProj=""
             radianceImage=""
+            radianceImageWhole=""
             saturateImage=""
             saturateImageProj=""
             thermalRadImage=""
             thermalBrightImage=""
+            thermalBrightImageWhole=""
             maskImage=""
             toaImage=""
+            toaImageWhole=""
             srefImage=""
+            srefDOSWholeImage=""
+            sref6SWholeImage=""
             aotFile=""
             cloudsImage=""
             clearskyImage=""
@@ -419,6 +424,10 @@ class ARCSI (object):
             projImgBBOX['MaxX'] = 0.0
             projImgBBOX['MinY'] = 0.0
             projImgBBOX['MaxY'] = 0.0
+            processStageStr = ""
+            processStageWholeImgStr = ""
+            finalOutFiles = dict()
+            calcdOutVals = dict()
 
             # Check Input image(s) is valid before proceeding.
             print('Checking Input Images are valid')
@@ -434,6 +443,8 @@ class ARCSI (object):
             if not validMaskImage is None:
                 rsgislib.rastergis.populateStats(validMaskImage, True, True)
             print("")
+            if (not validMaskImage is None):
+                finalOutFiles["VALID_MASK"] = validMaskImage
 
             if reproject and (not validMaskImage is None):
                 if not pxlResDefd:
@@ -465,6 +476,7 @@ class ARCSI (object):
                     raise ARCSIException('Reprojected valid image mask is not present: ' + validMaskImageProj)
                 else:
                     rsgislib.rastergis.populateStats(validMaskImageProj, True, True)
+                finalOutFiles["VALID_MASK"] = validMaskImageProj
                 print("")
 
             if prodsToCalc["FOOTPRINT"]:
@@ -477,6 +489,7 @@ class ARCSI (object):
                 else:
                     outFootprintLyrName = outBaseName + "_footprint"
                     footprintShpFile = sensorClass.generateImageFootprint(validMaskImage, outFilePath, outFootprintLyrName)
+                finalOutFiles["FOOTPRINT"] = validMaskImageProj
                 prodsCalculated["FOOTPRINT"] = True
                 print("")
 
@@ -518,7 +531,8 @@ class ARCSI (object):
                 radianceImage, thermalRadImage = sensorClass.convertImageToRadiance(outFilePath, outName, outThermName, outFormat)
 
                 if sensorClass.maskInputImages():
-                    outImgName = outBaseName + "_rad_msk" + arcsiUtils.getFileExtension(outFormat)
+                    processStageStr = processStageStr + "_msk"
+                    outImgName = outBaseName + processStageStr + "_rad" + arcsiUtils.getFileExtension(outFormat)
                     outMaskName = outBaseName + "_mask" + arcsiUtils.getFileExtension(outFormat)
                     radianceImageTmp, maskImage = sensorClass.applyImageDataMask(inputHeader, radianceImage, outFilePath, outMaskName, outImgName, outFormat, None)
                     if not radianceImageTmp is radianceImage:
@@ -534,14 +548,13 @@ class ARCSI (object):
 
                 if not validMaskImage is None:
                     print("Masking to valid data area.")
-                    outRadPathName = os.path.join(outFilePath, outBaseName + "_rad_vmsk" + arcsiUtils.getFileExtension(outFormat))
-                    if sensorClass.maskInputImages() & (not maskImage is None):
-                        outRadPathName = os.path.join(outFilePath, outBaseName + "_rad_msk_vmsk" + arcsiUtils.getFileExtension(outFormat))
+                    processStageStr = processStageStr + "_vmsk"
+                    outRadPathName = os.path.join(outFilePath, outBaseName + processStageStr + "_rad" + arcsiUtils.getFileExtension(outFormat))
                     rsgislib.imageutils.maskImage(radianceImage, validMaskImage, outRadPathName, outFormat, rsgisUtils.getRSGISLibDataTypeFromImg(radianceImage), 0.0, 0.0)
                     rsgisUtils.deleteFileWithBasename(radianceImage)
                     radianceImage = outRadPathName
                     if not thermalRadImage == None:
-                        outThermPathName = os.path.join(outFilePath, outBaseName + "_therm_vmsk" + arcsiUtils.getFileExtension(outFormat))
+                        outThermPathName = os.path.join(outFilePath, outBaseName + processStageStr + "_thermrad" + arcsiUtils.getFileExtension(outFormat))
                         rsgislib.imageutils.maskImage(thermalRadImage, validMaskImage, outThermPathName, outFormat, rsgisUtils.getRSGISLibDataTypeFromImg(thermalRadImage), 0.0, 0.0)
                         rsgisUtils.deleteFileWithBasename(thermalRadImage)
                         thermalRadImage = outThermPathName
@@ -551,13 +564,7 @@ class ARCSI (object):
 
                 if reproject:
                     if not radianceImage is None:
-                        outName = outBaseNameProj + "_rad" + arcsiUtils.getFileExtension(outFormat)
-                        if not validMaskImage is None:
-                                outName = outBaseNameProj + "_rad_vmsk" + arcsiUtils.getFileExtension(outFormat)
-                        if sensorClass.maskInputImages() & (not maskImage is None):
-                            outName = outBaseNameProj + "_rad_msk" + arcsiUtils.getFileExtension(outFormat)
-                            if not validMaskImage is None:
-                                outName = outBaseNameProj + "_rad_msk_vmsk" + arcsiUtils.getFileExtension(outFormat)
+                        outName = outBaseNameProj + processStageStr + "_rad" + arcsiUtils.getFileExtension(outFormat)
 
                         outRadImagePath = os.path.join(outFilePath, outName)
                         cmd = 'gdalwarp -t_srs ' + reProjStr + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Float32 -wt Float32 ' \
@@ -575,7 +582,7 @@ class ARCSI (object):
                             rsgisUtils.deleteFileWithBasename(radianceImage)
                             radianceImage = outRadImagePath
                     if not thermalRadImage is None:
-                        outName = outBaseNameProj + "_therm_rad" + arcsiUtils.getFileExtension(outFormat)
+                        outName = outBaseNameProj + processStageStr + "_thrad" + arcsiUtils.getFileExtension(outFormat)
                         outThermRadImagePath = os.path.join(outFilePath, outName)
                         cmd = 'gdalwarp -t_srs ' + reProjStr + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Float32 -wt Float32 ' \
                         + '-te ' + str(projImgBBOX['MinX']) + ' ' + str(projImgBBOX['MinY']) + ' ' + str(projImgBBOX['MaxX']) + ' ' + str(projImgBBOX['MaxY']) \
@@ -600,59 +607,46 @@ class ARCSI (object):
                     rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
                     if not thermalRadImage == None:
                         rsgislib.imageutils.popImageStats(thermalRadImage, True, 0.0, True)
+                
+                finalOutFiles["RADIANCE_WHOLE"] = radianceImage
+                finalOutFiles["RADIANCE"] = radianceImage
+                if not thermalRadImage == None:
+                    finalOutFiles["THERM_RADIANCE_WHOLE"] = thermalRadImage
+
+                radianceImageWhole = radianceImage
                 prodsCalculated["RAD"] = True
-                print("")
-
-            # Interpolate DEM image to output refl image resolution and convert projection to the same as the output image.
-            if (not (demFile == None)) and (outDEMName == ""):
-                outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
-                print("Output DEM: ", outDEMName)
-                rsgislib.imageutils.createCopyImage(radianceImage, outDEMName, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)
-
-                inDEMDS = gdal.Open(demFile, gdal.GA_ReadOnly)
-                outDEMDS = gdal.Open(outDEMName, gdal.GA_Update)
-
-                print("Subset and reproject DEM...")
-                gdal.ReprojectImage(inDEMDS, outDEMDS, None, None, gdal.GRA_CubicSpline)
-
-                inDEMDS = None
-                outDEMDS = None
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
-                print("")
-
-            # Execute generation of the topographic shadow image
-            if prodsToCalc["TOPOSHADOW"]:
-                outName = outBaseName + "_toposhad" + arcsiUtils.getFileExtension(outFormat)
-                topoShadowImage = sensorClass.generateTopoDirectShadowMask(outDEMName, outFilePath, outName, outFormat, tmpPath)
-                if calcStatsPy:
-                    print("Calculating Statistics...")
-                    rsgislib.rastergis.populateStats(topoShadowImage, True, True)
-                prodsCalculated["TOPOSHADOW"] = True
                 print("")
 
             # Execute calibrate thermal to brightness
             if prodsToCalc["THERMAL"]:
-                outName = outBaseName + "_thermal" + arcsiUtils.getFileExtension(outFormat)
+                outName = outBaseName + processStageStr + "_thrad_thermbright" + arcsiUtils.getFileExtension(outFormat)
                 thermalBrightImage = sensorClass.convertThermalToBrightness(thermalRadImage, outFilePath, outName, outFormat, scaleFactor)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(thermalBrightImage, True, 0.0, True)
+                finalOutFiles["THERMAL_BRIGHT_WHOLE"] = thermalBrightImage
+                finalOutFiles["THERMAL_BRIGHT"] = thermalBrightImage
+                thermalBrightImageWhole = thermalBrightImage
                 prodsCalculated["THERMAL"] = True
                 print("")
 
             # Execute conversion to top of atmosphere reflectance
             if prodsToCalc["TOA"]:
-                outName = outBaseName + "_rad_toa" + arcsiUtils.getFileExtension(outFormat)
+                outName = outBaseName + processStageStr +"_rad_toa" + arcsiUtils.getFileExtension(outFormat)
                 toaImage = sensorClass.convertImageToTOARefl(radianceImage, outFilePath, outName, outFormat, scaleFactor)
                 print("Setting Band Names...")
                 sensorClass.setBandNames(toaImage)
                 if calcStatsPy:
                     print("Calculating Statistics...")
                     rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
+                finalOutFiles["TOA_WHOLE"] = toaImage
+                finalOutFiles["TOA"] = toaImage
+                toaImageWhole = toaImage
                 prodsCalculated["TOA"] = True
                 print("")
+
+            # Save the process stage string for using with whole image outputs.
+            processStageWholeImgStr = processStageStr
 
             # Step 7: Generate Cloud Masks
             if prodsToCalc["CLOUDS"]:
@@ -664,24 +658,29 @@ class ARCSI (object):
                         rsgislib.rastergis.populateStats(cloudsImage, False, True)
                 else:
                     cloudsImage = cloudMaskUsrImg
+                finalOutFiles["CLOUD_MASK"] = cloudsImage
 
                 # Calculate the proportion of the scene cover by cloud.
                 propOfCloud = rsgislib.imagecalc.calcPropTrueExp('b1==1?1:b1==2?1:0', [rsgislib.imagecalc.BandDefn('b1', cloudsImage, 1)], validMaskImage)
                 print("The scene is " + str(propOfCloud*100) + "% cloud.")
+                calcdOutVals['ARCSI_CLOUD_COVER'] = propOfCloud
 
                 if propOfCloud < 0.98: # Less than 98% cloud cover then process.
                     print("Applying cloud masks to images...")
-                    outputRADImage = os.path.join(outFilePath, outBaseName + "_rad_mclds" + arcsiUtils.getFileExtension(outFormat))
+                    processStageStr = processStageStr + "_mclds"
+                    outputRADImage = os.path.join(outFilePath, outBaseName + processStageStr + "_rad" + arcsiUtils.getFileExtension(outFormat))
                     rsgislib.imageutils.maskImage(radianceImage, cloudsImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, [1,2])
                     radianceImage = outputRADImage
                     sensorClass.setBandNames(radianceImage)
+                    finalOutFiles["RADIANCE"] = radianceImage
                     if calcStatsPy:
                         print("Calculating Statistics...")
                         rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
-                    outputTOAImage = os.path.join(outFilePath, outBaseName + "_rad_toa_mclds" + arcsiUtils.getFileExtension(outFormat))
+                    outputTOAImage = os.path.join(outFilePath, outBaseName + processStageStr + "_rad_toa" + arcsiUtils.getFileExtension(outFormat))
                     rsgislib.imageutils.maskImage(toaImage, cloudsImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, [1,2])
                     toaImage = outputTOAImage
                     sensorClass.setBandNames(toaImage)
+                    finalOutFiles["TOA"] = toaImage
                     if calcStatsPy:
                         print("Calculating Statistics...")
                         rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
@@ -696,24 +695,29 @@ class ARCSI (object):
                     if calcStatsPy:
                         print("Calculating Statistics...")
                         rsgislib.rastergis.populateStats(clearskyImage, True, True)
+                    finalOutFiles["CLEARSKY_MASK"] = clearskyImage
 
                     # Calculate the proportion of the scene which is clear sky.
                     propOfClearSky = rsgislib.imagecalc.calcPropTrueExp('b1==1?1:0', [rsgislib.imagecalc.BandDefn('b1', clearskyImage, 1)], validMaskImage)
                     print("The scene is " + str(propOfClearSky*100) + "% clear-sky.")
+                    calcdOutVals['ARCSI_CLEARSKY_COVER'] = propOfClearSky
 
                     if propOfClearSky > 0.05: # Keep going if at least 5% of the scene is clear sky
                         print("Applying clear-sky masks to images...")
-                        outputRADImage = os.path.join(outFilePath, outBaseName + "_rad_clearsky" + arcsiUtils.getFileExtension(outFormat))
+                        processStageStr = processStageStr + "_clearsky"
+                        outputRADImage = os.path.join(outFilePath, outBaseName + processStageStr + "_rad" + arcsiUtils.getFileExtension(outFormat))
                         rsgislib.imageutils.maskImage(radianceImage, clearskyImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 0)
                         radianceImage = outputRADImage
                         sensorClass.setBandNames(radianceImage)
+                        finalOutFiles["RADIANCE"] = radianceImage
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
-                        outputTOAImage = os.path.join(outFilePath, outBaseName + "_rad_toa_clearsky" + arcsiUtils.getFileExtension(outFormat))
+                        outputTOAImage = os.path.join(outFilePath, outBaseName + processStageStr + "_rad_toa" + arcsiUtils.getFileExtension(outFormat))
                         rsgislib.imageutils.maskImage(toaImage, clearskyImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, 0)
                         toaImage = outputTOAImage
                         sensorClass.setBandNames(toaImage)
+                        finalOutFiles["TOA"] = toaImage
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
@@ -722,32 +726,108 @@ class ARCSI (object):
 
                 # Don't continue further if there is less than 5% clear sky in the scene.
                 if  (not prodsToCalc["CLEARSKY"]) or (prodsToCalc["CLEARSKY"] and propOfClearSky > 0.05):
+                    # Interpolate DEM image to output refl image resolution and convert projection to the same as the output image.
+                    if (not (demFile == None)) and (outDEMName == ""):
+                        outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
+                        print("Output DEM: ", outDEMName)
+                        rsgislib.imageutils.createCopyImage(radianceImage, outDEMName, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)
+
+                        inDEMDS = gdal.Open(demFile, gdal.GA_ReadOnly)
+                        outDEMDS = gdal.Open(outDEMName, gdal.GA_Update)
+
+                        print("Subset and reproject DEM...")
+                        gdal.ReprojectImage(inDEMDS, outDEMDS, None, None, gdal.GRA_CubicSpline)
+                        inDEMDS = None
+                        outDEMDS = None
+
+                        outDEMMaskName = os.path.join(outFilePath, (outBaseName + "_dem_msk" + arcsiUtils.getFileExtension(outFormat)))
+                        mskDEM = False
+                        if prodsToCalc["CLEARSKY"]:
+                            rsgislib.imageutils.maskImage(outDEMName, clearskyImage, outDEMMaskName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
+                            mskDEM = True
+                        elif prodsToCalc["CLOUDS"]:
+                            rsgislib.imageutils.maskImage(outDEMName, cloudsImage, outDEMMaskName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, [1,2])
+                            mskDEM = True
+                        else:
+                            outDEMMaskName = outDEMName
+
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
+                            if mskDEM:
+                                rsgislib.imageutils.popImageStats(outDEMMaskName, True, -32768.0, True)
+                        print("")
+
+                    # Execute generation of the topographic shadow image
+                    if prodsToCalc["TOPOSHADOW"]:
+                        outName = outBaseName + "_toposhad" + arcsiUtils.getFileExtension(outFormat)
+                        topoShadowImage = sensorClass.generateTopoDirectShadowMask(outDEMMaskName, outFilePath, outName, outFormat, tmpPath)
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.rastergis.populateStats(topoShadowImage, True, True)
+                        finalOutFiles["TOPO_SHADOW_MASK"] = topoShadowImage
+
+                        processStageStr = processStageStr + "_topshad"
+                        outputRADImage = os.path.join(outFilePath, outBaseName + processStageStr + "_rad"  + arcsiUtils.getFileExtension(outFormat))
+                        rsgislib.imageutils.maskImage(radianceImage, topoShadowImage, outputRADImage, outFormat, rsgislib.TYPE_32FLOAT, 0, 1)
+                        radianceImage = outputRADImage
+                        sensorClass.setBandNames(radianceImage)
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.imageutils.popImageStats(radianceImage, True, 0.0, True)
+                        outputTOAImage = os.path.join(outFilePath, outBaseName + processStageStr + "_rad_toa" + arcsiUtils.getFileExtension(outFormat))
+                        rsgislib.imageutils.maskImage(toaImage, topoShadowImage, outputTOAImage, outFormat, rsgislib.TYPE_16UINT, 0, 1)
+                        toaImage = outputTOAImage
+                        sensorClass.setBandNames(toaImage)
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.imageutils.popImageStats(toaImage, True, 0.0, True)
+
+                        prodsCalculated["TOPOSHADOW"] = True
+                        print("")
+
                     # Step 8: Convert to an approximation of Surface Reflectance using a dark object subtraction
                     if prodsToCalc["DOS"]:
                         print("Convert to reflectance using dark object subtraction.")
-                        outName = outBaseName + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)
+                        outName = outBaseName + processStageStr + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)
+                        outWholeName = outBaseName + processStageWholeImgStr + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)
                         if simpleDOS:
-                            srefImage = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImage, outFilePath, outName, outFormat, dosOutRefl)
+                            srefImage, offVals = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImage, outFilePath, outName, outFormat, dosOutRefl)
+                            if fullImgOuts:
+                                srefDOSWholeImage, offVals = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImageWhole, outFilePath, outWholeName, outFormat, dosOutRefl, offVals)
+                            offVals = None
                         else:
-                            srefImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath, globalDOS, dosOutRefl)
+                            srefImage, offsetsImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath, globalDOS, dosOutRefl)
+                            if fullImgOuts:
+                                srefDOSWholeImage, offsetsImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImageWhole, outFilePath, outWholeName, outFormat, tmpPath, globalDOS, dosOutRefl, offsetsImage)
+                            offsetsImage = None
 
                         print("Setting Band Names...")
                         sensorClass.setBandNames(srefImage)
+                        finalOutFiles["SREF_DOS_IMG"] = srefImage
+                        if fullImgOuts:
+                            sensorClass.setBandNames(srefDOSWholeImage)
+                            finalOutFiles["SREF_DOS_IMG_WHOLE"] = srefDOSWholeImage
 
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+                            if fullImgOuts:
+                                rsgislib.imageutils.popImageStats(srefDOSWholeImage, True, 0.0, True)
                             print("")
                         prodsCalculated["DOS"] = True
 
                     # Step 9: Use image to estimate AOD values
                     if prodsToCalc["DOSAOTSGL"]:
+                        calcdOutVals['ARCSI_AOT_RANGE_MIN'] = minAOT
+                        calcdOutVals['ARCSI_AOT_RANGE_MAX'] = maxAOT
                         aotVal = sensorClass.estimateSingleAOTFromDOS(radianceImage, toaImage, outDEMName, tmpPath, outBaseName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl)
                         minAOT = aotVal - lowAOT
                         if minAOT < 0.01:
                             minAOT = 0.05
                         maxAOT = aotVal + upAOT
                         print("AOT Search Range = [" + str(minAOT) + ", " + str(maxAOT) + "]")
+                        calcdOutVals['ARCSI_AOT_VALUE'] = aotVal
                         prodsCalculated["DOSAOTSGL"] = True
 
                     if prodsToCalc["DDVAOT"]:
@@ -759,6 +839,9 @@ class ARCSI (object):
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
+                        finalOutFiles["AOTIMG_DDV"] = aotFile
+                        calcdOutVals['ARCSI_AOT_RANGE_MIN'] = minAOT
+                        calcdOutVals['ARCSI_AOT_RANGE_MAX'] = maxAOT
                         prodsCalculated["DDVAOT"] = True
                         print("")
 
@@ -771,6 +854,9 @@ class ARCSI (object):
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.imageutils.popImageStats(aotFile, True, 0.0, True)
+                        finalOutFiles["AOTIMG_DOS"] = aotFile
+                        calcdOutVals['ARCSI_AOT_RANGE_MIN'] = minAOT
+                        calcdOutVals['ARCSI_AOT_RANGE_MAX'] = maxAOT
                         prodsCalculated["DOSAOT"] = True
                         print("")
 
@@ -796,13 +882,20 @@ class ARCSI (object):
 
                         if not (aotVal == None):
                             print("AOT Value: {}".format(aotVal))
+                            calcdOutVals['ARCSI_AOT_VALUE'] = aotVal
 
                         if (demFile == None):
-                            outName = outBaseName + "_rad_sref" + arcsiUtils.getFileExtension(outFormat)
+                            outName = outBaseName + processStageStr + "_rad_sref" + arcsiUtils.getFileExtension(outFormat)
                             srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor)
+                            if fullImgOuts:
+                                outName = outBaseName + processStageWholeImgStr + "_rad_sref" + arcsiUtils.getFileExtension(outFormat)
+                                sref6SWholeImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImageWhole, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor)
+                            calcdOutVals['ARCSI_ELEVATION_VALUE'] = surfaceAltitude
                         else:
                             # Calc Min, Max Elevation for region intersecting with the image.
-                            statsElev = rsgislib.imagecalc.getImageStatsInEnv(demFile, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+                            statsElev = rsgislib.imagecalc.getImageStatsInEnv(outDEMMaskName, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+
+                            #calcdOutVals['ARCSI_AOT_VALUE'] = aotVal
 
                             print("Minimum Elevation = ", statsElev[0])
                             print("Maximum Elevation = ", statsElev[1])
@@ -810,14 +903,21 @@ class ARCSI (object):
                             minElev = self.findMinimumElev(statsElev[0])
                             maxElev = self.findMaximumElev(statsElev[1])
 
+                            calcdOutVals['ARCSI_LUT_ELEVATION_MIN'] = minElev
+                            calcdOutVals['ARCSI_LUT_ELEVATION_MAX'] = maxElev
+
                             elevRange = (maxElev - minElev) / 100
                             numElevSteps = math.ceil(elevRange) + 1
                             print("Elevation Ranges from ", minElev, " to ", maxElev, " an LUT with ", numElevSteps, " will be created.")
 
                             if (aotFile == None) or (aotFile == ""):
                                 print("Build an DEM LUT with AOT == " + str(aotVal) + "...")
-                                outName = outBaseName + "_rad_srefdem" + arcsiUtils.getFileExtension(outFormat)
-                                srefImage = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev, scaleFactor)
+                                outName = outBaseName + processStageStr + "_rad_srefdem" + arcsiUtils.getFileExtension(outFormat)
+                                srefImage, sixsLUTCoeffs = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev, scaleFactor)
+                                if fullImgOuts:
+                                    outName = outBaseName + processStageWholeImgStr + "_rad_srefdem" + arcsiUtils.getFileExtension(outFormat)
+                                    sref6SWholeImage, sixsLUTCoeffs = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImageWhole, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev, scaleFactor, sixsLUTCoeffs)
+                                sixsLUTCoeffs = None
                             else:
                                 print("Build an AOT and DEM LUT...")
                                 statsAOT = rsgislib.imagecalc.getImageStatsInEnv(aotFile, 1, -9999, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
@@ -827,18 +927,31 @@ class ARCSI (object):
                                     minAOT = 0.05
                                 maxAOT = self.findMaximumAOT(statsAOT[1])
 
+                                calcdOutVals['ARCSI_LUT_AOT_MIN'] = minAOT
+                                calcdOutVals['ARCSI_LUT_AOT_MAX'] = maxAOT
+
                                 aotRange = (maxAOT - minAOT) / 0.05
                                 numAOTSteps = math.ceil(aotRange) + 1
                                 print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
-                                outName = outBaseName + "_rad_srefdemaot" + arcsiUtils.getFileExtension(outFormat)
-                                srefImage = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImage, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT, scaleFactor)
+                                outName = outBaseName + processStageStr + "_rad_srefdemaot" + arcsiUtils.getFileExtension(outFormat)
+                                srefImage, sixsLUTCoeffs = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImage, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT, scaleFactor)
+                                if fullImgOuts:
+                                    outName = outBaseName + processStageWholeImgStr + "_rad_srefdemaot" + arcsiUtils.getFileExtension(outFormat)
+                                    sref6SWholeImage, sixsLUTCoeffs = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImageWhole, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT, scaleFactor, sixsLUTCoeffs)
+                                sixsLUTCoeffs = None
 
                         print("Setting Band Names...")
                         sensorClass.setBandNames(srefImage)
+                        if fullImgOuts:
+                            sensorClass.setBandNames(sref6SWholeImage)
+                            finalOutFiles["SREF_DOS_IMG_WHOLE"] = sref6SWholeImage
 
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.imageutils.popImageStats(srefImage, True, 0.0, True)
+                            if fullImgOuts:
+                                rsgislib.imageutils.popImageStats(sref6SWholeImage, True, 0.0, True)
+                        finalOutFiles["SREF_6S_IMG"] = srefImage
                         prodsCalculated["SREF"] = True
                         print("")
                 else:
@@ -861,6 +974,7 @@ class ARCSI (object):
             if prodsToCalc["METADATA"]:
                 print("Exporting Meta-data file")
                 outName = outBaseName + "_meta.json"
+                finalOutFiles["METADATA"] = outName
 
                 validMaskImagePath = ""
                 if not validMaskImage is None:
@@ -868,8 +982,6 @@ class ARCSI (object):
                         validMaskImagePath = validMaskImageProj
                     else:
                         validMaskImagePath = validMaskImage
-                
-                
 
                 sensorClass.generateMetaDataFile(outFilePath, outName, productsStr, validMaskImagePath, prodsToCalc["FOOTPRINT"])
                 prodsCalculated["METADATA"] = True
@@ -1028,13 +1140,19 @@ if __name__ == '__main__':
                         help='''Abbreviation or acronym for the project which will added to the file name.''')
     # Define the argument for the output x pixel resolution (if image re-projected).
     parser.add_argument("--ximgres", type=float,
-                        help='''Float for the output image pixel x resolution (if re-projected). Optional, if not provided the input image resolution is used.''')
+                        help='''Float for the output image pixel x resolution (if re-projected). 
+                                Optional, if not provided the input image resolution is used.''')
     # Define the argument for the output y pixel resolution (if image re-projected).
     parser.add_argument("--yimgres", type=float,
-                        help='''Float for the output image pixel y resolution (if re-projected). Optional, if not provided the input image resolution is used.''')
+                        help='''Float for the output image pixel y resolution (if re-projected). 
+                                Optional, if not provided the input image resolution is used.''')
     # Define the argument for specifying the image file format.
     parser.add_argument("-f", "--format", type=str,
                         help='''Specify the image output format (GDAL name).''')
+    # Define the argument stating that alongsided the masked products should none masked products.
+    parser.add_argument("--fullimgouts", action='store_true', default=False,
+                        help='''If set then alongside the masked outputs (e.g., clouds) then SREF (DOS and/or modelled) 
+                                versions of the full images (i.e., without mask applied) will also be outputted.''')
     # Define the argument for specifying the output image base file name if it is
     # not to be automatically generated.
     parser.add_argument("--outbasename", type=str,
@@ -1426,4 +1544,4 @@ if __name__ == '__main__':
                      args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified,
                      args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot,
                      args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug,
-                     args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop)
+                     args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts)

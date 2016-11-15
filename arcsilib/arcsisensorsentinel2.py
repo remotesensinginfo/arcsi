@@ -251,11 +251,11 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         print("Converting to Surface Reflectance")
         raise ARCSIException("Not Implemented")
 
-    def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor):
+    def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor, elevCoeffs=None):
         print("Converting to Surface Reflectance")
         raise ARCSIException("Not Implemented")
 
-    def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax, scaleFactor):
+    def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax, scaleFactor, elevAOTCoeffs=None):
         print("Converting to Surface Reflectance")
         raise ARCSIException("Not Implemented")
 
@@ -263,7 +263,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         """Used as part of the optimastion for identifying values of AOD"""
         raise ARCSIException("Not Implemented")
 
-    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl):
+    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl, offsetsImage=None):
         raise ARCSIException("Not Implemented")
 
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
