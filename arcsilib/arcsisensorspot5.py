@@ -426,7 +426,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
 
         return outputImage
 
-    def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor):
+    def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor, elevCoeffs=None):
         print("Converting to Surface Reflectance")
         outputImage = os.path.join(outputPath, outputName)
 
@@ -452,36 +452,37 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.apply6SCoeffElevLUTParam(inputRadImage, inputDEMFile, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, elevCoeffs)
         return outputImage
 
-    def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax, scaleFactor):
+    def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax, scaleFactor, elevAOTCoeffs=None):
         print("Converting to Surface Reflectance")
         outputImage = os.path.join(outputPath, outputName)
 
-        print("Build an LUT for elevation and AOT values.")
-        elevAOT6SCoeffsLUT = self.buildElevationAOT6SCoeffLUT(aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax)
+        if elevAOTCoeffs is None:
+            print("Build an LUT for elevation and AOT values.")
+            elevAOT6SCoeffsLUT = self.buildElevationAOT6SCoeffLUT(aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax)
 
-        elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
-        aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
-        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
+            elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
+            aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
+            Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
 
-        elevAOTCoeffs = list()
-        for elevLUT in elevAOT6SCoeffsLUT:
-            elevVal = elevLUT.Elev
-            aotLUT = elevLUT.Coeffs
-            aot6SCoeffsOut = list()
-            for aotFeat in aotLUT:
-                sixsCoeffs = aotFeat.Coeffs
-                aotVal = aotFeat.AOT
-                imgBandCoeffs = list()
-                imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
-                imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
-                imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
-                imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
-                aot6SCoeffsOut.append(aotLUTFeat(AOT=float(aotVal), Coeffs=imgBandCoeffs))
-            elevAOTCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=aot6SCoeffsOut))
+            elevAOTCoeffs = list()
+            for elevLUT in elevAOT6SCoeffsLUT:
+                elevVal = elevLUT.Elev
+                aotLUT = elevLUT.Coeffs
+                aot6SCoeffsOut = list()
+                for aotFeat in aotLUT:
+                    sixsCoeffs = aotFeat.Coeffs
+                    aotVal = aotFeat.AOT
+                    imgBandCoeffs = list()
+                    imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
+                    imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
+                    imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
+                    imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
+                    aot6SCoeffsOut.append(aotLUTFeat(AOT=float(aotVal), Coeffs=imgBandCoeffs))
+                elevAOTCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=aot6SCoeffsOut))
 
         rsgislib.imagecalibration.apply6SCoeffElevAOTLUTParam(inputRadImage, inputDEMFile, inputAOTImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, elevAOTCoeffs)
 
-        return outputImage
+        return outputImage, elevAOTCoeffs
 
     def run6SToOptimiseAODValue(self, aotVal, radBlueVal, predBlueVal, aeroProfile, atmosProfile, grdRefl, surfaceAltitude):
         """Used as part of the optimastion for identifying values of AOD"""
@@ -521,28 +522,28 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         print("\taX: ", aX, " bX: ", bX, " cX: ", cX, "     Dist = ", outDist)
         return outDist
 
-    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl):
+    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl, offsetsImage=None):
         try:
-            print("Opening: ", inputTOAImage)
-            toaDataset = gdal.Open(inputTOAImage, gdal.GA_ReadOnly)
-            if toaDataset == None:
-                raise Exception('Could not open the image dataset \'' + inputTOAImage + '\'')
+            if offsetsImage is None:
+                print("Opening: ", inputTOAImage)
+                toaDataset = gdal.Open(inputTOAImage, gdal.GA_ReadOnly)
+                if toaDataset == None:
+                    raise Exception('Could not open the image dataset \'' + inputTOAImage + '\'')
 
-            numBands = toaDataset.RasterCount
-            toaDataset = None
+                numBands = toaDataset.RasterCount
+                toaDataset = None
 
-            print("Number of bands = ", numBands)
+                print("Number of bands = ", numBands)
 
-            darkPxlPercentile = 0.01
-            minObjSize = 5
-            offsetsImage = ""
+                darkPxlPercentile = 0.01
+                minObjSize = 5
+                offsetsImage = ""
 
-            if globalDOS:
-                offsetsImage = self.findPerBandDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile)
-            else:
-                blockSize = 200
-                offsetsImage = self.findPerBandLocalDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, blockSize, minObjSize, darkPxlPercentile)
-
+                if globalDOS:
+                    offsetsImage = self.findPerBandDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile)
+                else:
+                    blockSize = 200
+                    offsetsImage = self.findPerBandLocalDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, blockSize, minObjSize, darkPxlPercentile)
 
             # TOA Image - Offset Image (if data and < 1 then set min value as 1)...
             outputImage = os.path.join(outputPath, outputName)
@@ -553,7 +554,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
                 arcsiUtils.copyGCPs(self.fileName, outputImage)
                 rsgislib.imageutils.assignSpatialInfo(outputImage, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0)
 
-            return outputImage
+            return outputImage, offsetsImage
 
         except Exception as e:
             raise e

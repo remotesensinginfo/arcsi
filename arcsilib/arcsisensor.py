@@ -289,7 +289,7 @@ class ARCSIAbstractSensor (object):
         """
         return self.defaultGenBaseOutFileName()
 
-    def getJSONDictDefaultMetaData(self, productsStr, validMaskImage="", footprintCalc=False):
+    def getJSONDictDefaultMetaData(self, productsStr, validMaskImage="", footprintCalc=False, calcdValuesDict=dict(), outFilesDict=dict()):
         softwareDict = dict()
         softwareDict['Name'] = 'ARCSI'
         softwareDict['URL'] = ARCSI_WEBSITE
@@ -308,9 +308,13 @@ class ARCSIAbstractSensor (object):
         processTimeDict['Minute'] = nowDateTime.minute
         processTimeDict['Second'] = nowDateTime.second
         productsDict['ProcessTime'] = processTimeDict
+        for key in calcdValuesDict:
+            productsDict[key] = calcdValuesDict[key]
 
         filesDict = dict()
         filesDict['FileBaseName'] = self.generateOutputBaseName()
+        for key in outFilesDict:
+            filesDict[key] = outFilesDict[key]
 
         sensorDict = dict()
         sensorDict['ARCSISensorName'] = self.sensor
@@ -436,7 +440,7 @@ class ARCSIAbstractSensor (object):
 
         return jsonBlock
 
-    def generateMetaDataFile(self, outputPath, outputFileName, productsStr, validMaskImage="", footprintCalc=False):
+    def generateMetaDataFile(self, outputPath, outputFileName, productsStr, validMaskImage="", footprintCalc=False, calcdValuesDict=dict(), outFilesDict=dict()):
         """
         Provides a default implementation for generating file metadata.
         """
@@ -649,7 +653,7 @@ class ARCSIAbstractSensor (object):
     def generateTopoDirectShadowMask(self,  inputDEMImage, outputPath, outputName, outFormat, tmpPath):
         try:
             print("Calculating a direct topographic shadow mask.")
-            print("Solar Zenith = " + str(solarZenith) + " Solar Azimuth = " + str(solarAzimuth))
+            print("Solar Zenith = " + str(self.solarZenith) + " Solar Azimuth = " + str(self.solarAzimuth))
             arcsiUtils = ARCSIUtils()
             outputImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
@@ -728,7 +732,7 @@ class ARCSIAbstractSensor (object):
         return lut
 
     @abstractmethod
-    def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor): pass
+    def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor, elevCoeffs=None): pass
 
     def buildElevationAOT6SCoeffLUT(self, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax):
         elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
@@ -754,7 +758,7 @@ class ARCSIAbstractSensor (object):
         return lut
 
     @abstractmethod
-    def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax, scaleFactor): pass
+    def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax, scaleFactor, elevAOTCoeffs=None): pass
 
     def calcDarkTargetOffsetsForBand(self, inputTOAImage, offsetImage, band, outFormat, histBinWidth, minObjSize, darkPxlPercentile, tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg):
         print("Band: ", band)
@@ -1108,21 +1112,21 @@ class ARCSIAbstractSensor (object):
         except Exception as e:
             raise e
 
-    def convertImageToReflectanceSimpleDarkSubtract(self, inputTOAImage, outputPath, outputName, outFormat, dosOutRefl):
+    def convertImageToReflectanceSimpleDarkSubtract(self, inputTOAImage, outputPath, outputName, outFormat, dosOutRefl, offsetsList=None):
         try:
             print("Perform Simple Dark Object Subtraction")
             outputImage = os.path.join(outputPath, outputName)
 
-            percentiles = rsgislib.imagecalc.bandPercentile(inputTOAImage, 0.01, 0)
-
-            offsetsList = list()
-            OffVal = collections.namedtuple('DOSOffset', ['offset'])
-            for val in percentiles:
-                offsetsList.append(OffVal(offset=val))
+            if offsetsList is None:
+                percentiles = rsgislib.imagecalc.bandPercentile(inputTOAImage, 0.01, 0)
+                offsetsList = list()
+                OffVal = collections.namedtuple('DOSOffset', ['offset'])
+                for val in percentiles:
+                    offsetsList.append(OffVal(offset=val))
 
             rsgislib.imagecalibration.applySubtractSingleOffsets(inputTOAImage, outputImage, outFormat, rsgislib.TYPE_16UINT, True, True, 0.0, dosOutRefl, offsetsList)
 
-            return outputImage
+            return outputImage, offsetsList
         except Exception as e:
             raise e
 
@@ -1144,7 +1148,7 @@ class ARCSIAbstractSensor (object):
             raise e
 
     @abstractmethod
-    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl): pass
+    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl, offsetsImage=None): pass
 
     @abstractmethod
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath): pass
