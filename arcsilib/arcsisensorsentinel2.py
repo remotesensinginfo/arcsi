@@ -114,7 +114,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
     def mosaicImageTiles(self):
         raise ARCSIException("Image data does not need mosaicking")
 
-    def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
+    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         raise ARCSIException("Don't know how to create a valid data mask for Sentinel-2")
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):

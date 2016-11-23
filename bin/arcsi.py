@@ -144,7 +144,7 @@ class ARCSI (object):
 
 
     def run(self, inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName,
-            outWKTFile, outProj4Str, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption,
+            outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption,
             atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude,
             atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal,
             aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT,
@@ -373,19 +373,18 @@ class ARCSI (object):
             # Decide is the image needs to be reprojected, if so define parameters.
             reproject = False
             useWKT2Reproject = True
-            reProjStr = ""
             xPxlRes = 0.0
             yPxlRes = 0.0
             pxlResDefd = False
+            reProjStr = ''
             if not outWKTFile is None:
                 reproject = True
                 useWKT2Reproject = True
                 reProjStr = outWKTFile
-            elif not outProj4Str is None:
+            elif not outProj4File is None:
                 reproject = True
                 useWKT2Reproject = False
-                reProjStr = outProj4Str
-
+                reProjStr = '"' + arcsiUtils.readTextFile(outProj4File) + '"'
 
             if (xPxlResUsr is None) or (yPxlResUsr is None):
                 pxlResDefd = False
@@ -397,6 +396,8 @@ class ARCSI (object):
 
             validMaskImage=None
             validMaskImageProj=""
+            viewAngleImg=""
+            viewAngleImgProj=""
             radianceImage=""
             radianceImageWhole=""
             saturateImage=""
@@ -429,6 +430,12 @@ class ARCSI (object):
             finalOutFiles = dict()
             calcdOutVals = dict()
 
+            if reproject:
+                if useWKT2Reproject:
+                    calcdOutVals["REPROJECT"] = arcsiUtils.readTextFile(outWKTFile)
+                else:
+                    calcdOutVals["REPROJECT"] = arcsiUtils.readTextFile(outProj4File)
+
             # Check Input image(s) is valid before proceeding.
             print('Checking Input Images are valid')
             sensorClass.checkInputImageValid()
@@ -439,12 +446,17 @@ class ARCSI (object):
 
             # Get the valid image data maskImage
             outName = outBaseName + "_valid" + arcsiUtils.getFileExtension(outFormat)
-            validMaskImage = sensorClass.generateValidImageDataMask(outFilePath, outName, "KEA")
+            viewAngleImg = os.path.join(outFilePath, outBaseName + "_viewangle" + arcsiUtils.getFileExtension(outFormat))
+            validMaskImage = sensorClass.generateValidImageDataMask(outFilePath, outName, viewAngleImg, outFormat)
             if not validMaskImage is None:
                 rsgislib.rastergis.populateStats(validMaskImage, True, True)
+            if not viewAngleImg is "":
+                rsgislib.imageutils.popImageStats(viewAngleImg, usenodataval=True, nodataval=99999, calcpyramids=True)
             print("")
             if (not validMaskImage is None):
                 finalOutFiles["VALID_MASK"] = validMaskImage
+            if not viewAngleImg is "":
+                finalOutFiles["VIEW_ANGLE"] = viewAngleImg
 
             if reproject and (not validMaskImage is None):
                 if not pxlResDefd:
@@ -458,7 +470,7 @@ class ARCSI (object):
                     yPxlRes = geoTransform[5]
                     validImgDS = None
                 print("Define re-projected image BBOX.")
-                projImgBBOX = sensorClass.getReProjBBOX(outWKTFile, outProj4Str, useWKT2Reproject, xPxlRes, yPxlRes, True)
+                projImgBBOX = sensorClass.getReProjBBOX(outWKTFile, outProj4File, useWKT2Reproject, xPxlRes, yPxlRes, True)
                 print("Output Image BBOX (TL, BR): [({0:10.2f}, {1:10.2f}), ({2:10.2f}, {3:10.2f})]".format(projImgBBOX['MinX'], projImgBBOX['MaxY'], projImgBBOX['MaxX'], projImgBBOX['MinY']))
                 outName = outBaseNameProj + "_valid" + arcsiUtils.getFileExtension(outFormat)
                 validMaskImageProj = os.path.join(outFilePath, outName)
@@ -478,6 +490,44 @@ class ARCSI (object):
                     rsgislib.rastergis.populateStats(validMaskImageProj, True, True)
                 finalOutFiles["VALID_MASK"] = validMaskImageProj
                 print("")
+
+
+            if reproject and (not viewAngleImg is ""):
+                if not pxlResDefd:
+                    viewAngleImgDS = gdal.Open(viewAngleImg, gdal.GA_ReadOnly)
+                    if viewAngleImgDS is None:
+                        raise ARCSIException('Could not open the Valid Image Mask ' + viewAngleImg)
+                    geoTransform = viewAngleImgDS.GetGeoTransform()
+                    if geoTransform is None:
+                        raise ARCSIException('Could read the geotransform from the Valid Image Mask ' + viewAngleImg)
+                    xPxlRes = geoTransform[1]
+                    yPxlRes = geoTransform[5]
+                    viewAngleImgDS = None
+                print("Define re-projected image BBOX.")
+                projImgBBOX = sensorClass.getReProjBBOX(outWKTFile, outProj4File, useWKT2Reproject, xPxlRes, yPxlRes, True)
+                print("Output Image BBOX (TL, BR): [({0:10.2f}, {1:10.2f}), ({2:10.2f}, {3:10.2f})]".format(projImgBBOX['MinX'], projImgBBOX['MaxY'], projImgBBOX['MaxX'], projImgBBOX['MinY']))
+                outName = outBaseNameProj + "_viewangle" + arcsiUtils.getFileExtension(outFormat)
+                viewAngleImgProj = os.path.join(outFilePath, outName)
+
+                cmd = 'gdalwarp -t_srs ' + reProjStr + ' -tr ' + str(xPxlRes) + ' ' + str(yPxlRes) + ' -ot Float32 -wt Float32 ' \
+                    + '-te ' + str(projImgBBOX['MinX']) + ' ' + str(projImgBBOX['MinY']) + ' ' + str(projImgBBOX['MaxX']) + ' ' + str(projImgBBOX['MaxY']) \
+                    + ' -r cubicspline -tap -srcnodata 99999 -dstnodata 99999 -of ' + outFormat + ' -overwrite ' \
+                    + viewAngleImg + ' ' + viewAngleImgProj
+                print(cmd)
+                try:
+                    subprocess.call(cmd, shell=True)
+                except OSError as e:
+                    raise ARCSIException('Could not re-projection valid image mask: ' + cmd)
+                if not os.path.exists(viewAngleImgProj):
+                    raise ARCSIException('Reprojected valid image mask is not present: ' + viewAngleImgProj)
+                else:
+                    rsgislib.imageutils.popImageStats(viewAngleImg, usenodataval=True, nodataval=99999, calcpyramids=True)
+                rsgisUtils.deleteFileWithBasename(viewAngleImg)
+                viewAngleImg = viewAngleImgProj
+                finalOutFiles["VIEW_ANGLE"] = viewAngleImgProj
+                print("")
+
+
 
             if prodsToCalc["FOOTPRINT"]:
                 if validMaskImage is None:
@@ -983,7 +1033,7 @@ class ARCSI (object):
                     else:
                         validMaskImagePath = validMaskImage
 
-                sensorClass.generateMetaDataFile(outFilePath, outName, productsStr, validMaskImagePath, prodsToCalc["FOOTPRINT"])
+                sensorClass.generateMetaDataFile(outFilePath, outName, productsStr, validMaskImagePath, prodsToCalc["FOOTPRINT"], calcdOutVals, finalOutFiles)
                 prodsCalculated["METADATA"] = True
                 print("")
 
@@ -1134,7 +1184,7 @@ if __name__ == '__main__':
                         help='''Transform the outputs to the projection defined with WKT file.''')
     # Define the argument for specifying the proj4 projection string for the outputs.
     parser.add_argument("--outproj4", type=str,
-                        help='''Transform the outputs to the projection defined with proj4 string (Note. this argument will need to be in quotes).''')
+                        help='''Transform the outputs to the projection defined using a proj4 string and provided within a text file.''')
     # Define the argument for string added to the output files names indicating the projection.
     parser.add_argument("--projabbv", type=str,
                         help='''Abbreviation or acronym for the project which will added to the file name.''')
@@ -1358,7 +1408,10 @@ if __name__ == '__main__':
                 print("WARNING: It is recommended that a projection abbreviation or acronym is provided (--projabbv)...")
 
         if not args.outproj4 is None:
-            if args.projabbv == None:
+            if not os.path.exists(args.outproj4):
+                print("Error: The output proj4 file does not exist.\n")
+                sys.exit()
+            elif args.projabbv == None:
                 print("WARNING: It is recommended that a projection abbreviation or acronym is provided (--projabbv)...")
 
         needAOD = False
@@ -1482,13 +1535,13 @@ if __name__ == '__main__':
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUTPUT_WKT")
             if not envVar == None:
                 args.outwkt = envVar
-                print("Taking output WKT from environment variable.")
+                print("Taking output WKT file from environment variable.")
 
         if args.outproj4 == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUTPUT_PROJ4")
             if not envVar == None:
                 args.outproj4 = envVar
-                print("Taking output Proj4 string from environment variable.")
+                print("Taking output proj4 file from environment variable.")
 
 
         if args.projabbv == None:

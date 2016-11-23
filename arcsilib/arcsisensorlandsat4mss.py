@@ -264,7 +264,7 @@ class ARCSILandsat4MSSSensor (ARCSIAbstractSensor):
         Generate file metadata.
         """
         outJSONFilePath = os.path.join(outputPath, outputFileName)
-        jsonData = self.getJSONDictDefaultMetaData(productsStr, validMaskImage, footprintCalc)
+        jsonData = self.getJSONDictDefaultMetaData(productsStr, validMaskImage, footprintCalc, calcdValuesDict, outFilesDict)
         sensorInfo = jsonData['SensorInfo']
         sensorInfo['Row'] = self.row
         sensorInfo['Path'] = self.path
@@ -301,11 +301,19 @@ class ARCSILandsat4MSSSensor (ARCSIAbstractSensor):
     def mosaicImageTiles(self):
         raise ARCSIException("Image data does not need mosaicking")
 
-    def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
+    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         print("Create the valid data mask")
-        inImages = [self.band1File, self.band2File, self.band3File, self.band4File]
+        tmpBaseName = os.path.splitext(outputMaskName)[0]
+        tmpValidPxlMsk = os.path.join(outputPath, tmpBaseName+'vldpxlmsk.kea')
         outputImage = os.path.join(outputPath, outputMaskName)
-        rsgislib.imageutils.genValidMask(inimages=inImages, outimage=outputImage, format=outFormat, nodata=0.0)
+        inImages = [self.band1File, self.band2File, self.band3File, self.band4File]
+        rsgislib.imageutils.genValidMask(inimages=inImages, outimage=tmpValidPxlMsk, format='KEA', nodata=0.0)
+        if not os.path.exists(viewAngleImg):
+            rsgislib.rastergis.spatialExtent(clumps=tmpValidPxlMsk, minXX='MinXX', minXY='MinXY', maxXX='MaxXX', maxXY='MaxXY', minYX='MinYX', minYY='MinYY', maxYX='MaxYX', maxYY='MaxYY', ratband=1)
+            rsgislib.imagecalibration.calcNadirImgViewAngle(tmpValidPxlMsk, viewAngleImg, 'KEA', 705000.0, 'MinXX', 'MinXY', 'MaxXX', 'MaxXY', 'MinYX', 'MinYY', 'MaxYX', 'MaxYY')
+        rsgislib.imagecalc.imageMath(viewAngleImg, outputImage, 'b1<7.65?1:0', outFormat, rsgislib.TYPE_8UINT)
+        rsgisUtils = rsgislib.RSGISPyUtils()
+        rsgisUtils.deleteFileWithBasename(tmpValidPxlMsk)
         return outputImage
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):

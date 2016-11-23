@@ -314,7 +314,7 @@ class ARCSIAbstractSensor (object):
         filesDict = dict()
         filesDict['FileBaseName'] = self.generateOutputBaseName()
         for key in outFilesDict:
-            filesDict[key] = outFilesDict[key]
+            filesDict[key] = os.path.basename(outFilesDict[key])
 
         sensorDict = dict()
         sensorDict['ARCSISensorName'] = self.sensor
@@ -445,7 +445,7 @@ class ARCSIAbstractSensor (object):
         Provides a default implementation for generating file metadata.
         """
         outJSONFilePath = os.path.join(outputPath, outputFileName)
-        jsonData = self.getJSONDictDefaultMetaData(productsStr, validMaskImage, footprintCalc)
+        jsonData = self.getJSONDictDefaultMetaData(productsStr, validMaskImage, footprintCalc, calcdValuesDict, outFilesDict)
         with open(outJSONFilePath, 'w') as outfile:
             json.dump(jsonData, outfile, sort_keys=True,indent=4, separators=(',', ': '), ensure_ascii=False)
 
@@ -464,7 +464,8 @@ class ARCSIAbstractSensor (object):
     def hasThermal(self):
         return False
 
-    def getReProjBBOX(self, wktFile, proj4Str, useWKT2Reproject, xPxlRes, yPxlRes, snap2Grid):
+    def getReProjBBOX(self, wktFile, proj4File, useWKT2Reproject, xPxlRes, yPxlRes, snap2Grid):
+        arcsiUtils = ARCSIUtils()
         projImgBBOX = dict()
         projImgBBOX['MinX'] = 0.0
         projImgBBOX['MaxX'] = 0.0
@@ -478,10 +479,10 @@ class ARCSIAbstractSensor (object):
 
         tarProj = osr.SpatialReference()
         if useWKT2Reproject:
-            arcsiUtils = ARCSIUtils()
             wktStr = arcsiUtils.readTextFile(wktFile)
             tarProj.ImportFromWkt(wktStr)
         else:
+            proj4Str = arcsiUtils.readTextFile(proj4File)
             tarProj.ImportFromProj4(proj4Str)
 
         wktPt = 'POINT(%s %s)' % (self.xTL, self.yTL)
@@ -489,7 +490,7 @@ class ARCSIAbstractSensor (object):
         point.AssignSpatialReference(srcProj)
         point.TransformTo(tarProj)
 
-        #print("Pxl Res: [{0}, {1} ({2})]".format(xPxlRes, yPxlRes, yPxlResAbs))
+        print("Pxl Res: [{0}, {1} ({2})]".format(xPxlRes, yPxlRes, yPxlResAbs))
 
         minXPt = (math.floor(point.GetX()/xPxlRes)*xPxlRes)
         maxYPt = (math.ceil(point.GetY()/yPxlResAbs)*yPxlResAbs)
@@ -497,8 +498,8 @@ class ARCSIAbstractSensor (object):
         projImgBBOX['MinX'] = minXPt
         projImgBBOX['MaxY'] = maxYPt
 
-        #print("MinX: [{0}, {1}]".format(point.GetX(), minXPt))
-        #print("MaxY: [{0}, {1}]".format(point.GetY(), maxYPt))
+        print("MinX: [{0}, {1}]".format(point.GetX(), minXPt))
+        print("MaxY: [{0}, {1}]".format(point.GetY(), maxYPt))
 
         wktPt = 'POINT(%s %s)' % (self.xBR, self.yBR)
         point = ogr.CreateGeometryFromWkt(wktPt)
@@ -511,8 +512,8 @@ class ARCSIAbstractSensor (object):
         projImgBBOX['MaxX'] = maxXPt
         projImgBBOX['MinY'] = minYPt
 
-        #print("MaxX: [{0}, {1}]".format(point.GetX(), maxXPt))
-        #print("MinY: [{0}, {1}]".format(point.GetY(), minYPt))
+        print("MaxX: [{0}, {1}]".format(point.GetX(), maxXPt))
+        print("MinY: [{0}, {1}]".format(point.GetY(), minYPt))
 
         return projImgBBOX
 
@@ -526,7 +527,7 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def generateImageSaturationMask(self, outputPath, outputName, outFormat): pass
 
-    def generateValidImageDataMask(self, outputPath, outputMaskName, outFormat):
+    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         return None
 
     def generateImageFootprint(self, validMaskImage, outputPath, outputName):
