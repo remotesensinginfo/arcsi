@@ -79,24 +79,10 @@ class ARCSIBuildCommands (object):
                      atmosozone, atmoswater, aerowater,
                      aerodust, aerooceanic, aerosoot, aot, vis, tmpath,
                      minaot, maxaot, dem, localdos, dosout, simpledos,
-                     scalefac, outwkt, projabbv, interp):
+                     scalefac, outwkt, outproj4, projabbv, interp):
 
         inputPath = os.path.abspath(inputPath)
         outputFile = os.path.abspath(outputFile)
-        if not aeroimg == None:
-            aeroimg = "\"" + os.path.abspath(aeroimg) + "\""
-        if not atmosimg == None:
-            atmosimg = "\"" + os.path.abspath(atmosimg) + "\""
-        if not dem == None:
-            dem = "\"" + os.path.abspath(dem) + "\""
-        if not tmpath == None:
-            tmpath = "\"" + os.path.abspath(tmpath) + "\""
-        if not outpath == None:
-            outpath = "\"" + os.path.abspath(outpath) + "\""
-        if not inwkt == None:
-            inwkt = "\"" + os.path.abspath(inwkt) + "\""
-        if not outwkt == None:
-            outwkt = "\"" + os.path.abspath(outwkt) + "\""
 
         headersFilesList = []
         if inputIsDIR:
@@ -119,7 +105,7 @@ class ARCSIBuildCommands (object):
             print("Processing :", hFile)
             cmd = "arcsi.py -s " + sensor + " -p " + prodsStr + " -i \"" + hFile + "\""
             if not outpath == None:
-                cmd = cmd + " --outpath " + outpath
+                cmd = cmd + " --outpath \"" + os.path.abspath(outpath) + "\""
             if stats:
                cmd = cmd + " --stats"
             if not format == None:
@@ -127,15 +113,15 @@ class ARCSIBuildCommands (object):
             else:
                 cmd = cmd + " --format KEA"
             if not tmpath == None:
-               cmd = cmd + " --tmpath " + tmpath
+               cmd = cmd + " --tmpath \"" + os.path.abspath(tmpath) + "\""
             if not dem == None:
-               cmd = cmd + " --dem " + dem
+               cmd = cmd + " --dem \"" + os.path.abspath(dem) + "\""
             if not aeroimg == None:
-               cmd = cmd + " --aeroimg " + aeroimg
+               cmd = cmd + " --aeroimg \"" + os.path.abspath(aeroimg) + "\""
             elif not aeropro == None:
                cmd = cmd + " --aeropro " + aeropro
             if not atmosimg == None:
-               cmd = cmd + " --atmosimg " + atmosimg
+               cmd = cmd + " --atmosimg \"" + os.path.abspath(atmosimg) + "\""
             elif not atmospro == None:
                cmd = cmd + " --atmospro " + atmospro
             if not surfacealtitude == None:
@@ -147,7 +133,7 @@ class ARCSIBuildCommands (object):
             elif not vis == None:
                cmd = cmd + " --vis " + str(vis)
             if not inwkt == None:
-               cmd = cmd + " --inwkt " + inwkt
+               cmd = cmd + " --inwkt \"" + os.path.abspath(inwkt) + "\""
             if not grdrefl == None:
                 cmd = cmd + " --grdrefl " + grdrefl
             if not atmosozone == None:
@@ -167,7 +153,9 @@ class ARCSIBuildCommands (object):
             if not scalefac == None:
                 cmd = cmd + " --scalefac " + str(scalefac)
             if not outwkt == None:
-                cmd = cmd + " --outwkt " + str(outwkt)
+                cmd = cmd + " --outwkt \"" + os.path.abspath(outwkt) + "\""
+            if not outproj4 == None:
+                cmd = cmd + " --outproj4 \"" + os.path.abspath(outproj4) + "\""
             if not projabbv == None:
                 cmd = cmd + " --projabbv " + str(projabbv)
             if not interp == None:
@@ -344,6 +332,10 @@ if __name__ == '__main__':
     parser.add_argument("--projabbv", type=str,
                         help='''Abbreviation or acronym for the project which will added to the file name.''')
 
+    # Define the argument for specifying the proj4 projection string for the outputs.
+    parser.add_argument("--outproj4", type=str,
+                        help='''Transform the outputs to the projection defined using a proj4 string and provided within a text file.''')
+
     parser.add_argument("--interp", type=str,
                         choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos'],
                         help='''Specifies interpolation algorithm when reprojecting the imagery
@@ -368,5 +360,5 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, args.aerowater,
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath,
                      args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos,
-                     args.scalefac, args.outwkt, args.projabbv, args.interp)
+                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp)
 
