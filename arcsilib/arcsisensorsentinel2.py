@@ -270,9 +270,6 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         """Used as part of the optimastion for identifying values of AOD"""
         raise ARCSIException("Not Implemented")
 
-    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl, offsetsImage=None):
-        raise ARCSIException("Not Implemented")
-
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
         print("Not implemented\n")
         sys.exit()

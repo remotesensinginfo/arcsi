@@ -529,43 +529,6 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         print("\taX: ", aX, " bX: ", bX, " cX: ", cX, "     Dist = ", outDist)
         return outDist
 
-    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl, offsetsImage=None):
-        try:
-            if offsetsImage is None:
-                print("Opening: ", inputTOAImage)
-                toaDataset = gdal.Open(inputTOAImage, gdal.GA_ReadOnly)
-                if toaDataset == None:
-                    raise Exception('Could not open the image dataset \'' + inputTOAImage + '\'')
-
-                numBands = toaDataset.RasterCount
-                toaDataset = None
-
-                print("Number of bands = ", numBands)
-
-                darkPxlPercentile = 0.01
-                minObjSize = 5
-                offsetsImage = ""
-
-                if globalDOS:
-                    offsetsImage = self.findPerBandDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, minObjSize, darkPxlPercentile)
-                else:
-                    blockSize = 200
-                    offsetsImage = self.findPerBandLocalDarkTargetsOffsets(inputTOAImage, numBands, outputPath, outputName, outFormat, tmpPath, blockSize, minObjSize, darkPxlPercentile)
-
-            # TOA Image - Offset Image (if data and < 1 then set min value as 1)...
-            outputImage = os.path.join(outputPath, outputName)
-            rsgislib.imagecalibration.applySubtractOffsets(inputTOAImage, offsetsImage, outputImage, outFormat, rsgislib.TYPE_16UINT, True, True, 0.0, dosOutRefl)
-
-            if self.inImgHasGCPs:
-                arcsiUtils = ARCSIUtils()
-                arcsiUtils.copyGCPs(self.fileName, outputImage)
-                rsgislib.imageutils.assignSpatialInfo(outputImage, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0)
-
-            return outputImage, offsetsImage
-
-        except Exception as e:
-            raise e
-
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
         raise ARCSIException("SPOT5 does not provide an implement of a method to derive AOT from DDV.")
 

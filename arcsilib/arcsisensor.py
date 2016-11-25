@@ -1152,10 +1152,7 @@ class ARCSIAbstractSensor (object):
             return outputImage, percentiles[imgBand-1]
         except Exception as e:
             raise e
-
-    @abstractmethod
-    def convertImageToReflectanceDarkSubstract(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath, globalDOS, dosOutRefl, offsetsImage=None): pass
-
+    
     @abstractmethod
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath): pass
 
