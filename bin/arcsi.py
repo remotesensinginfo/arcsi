@@ -778,43 +778,41 @@ class ARCSI (object):
                 if  (not prodsToCalc["CLEARSKY"]) or (prodsToCalc["CLEARSKY"] and propOfClearSky > 0.05):
                     # Interpolate DEM image to output refl image resolution and convert projection to the same as the output image.
                     if (not (demFile == None)) and (outDEMName == ""):
-                        outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
-                        print("Output DEM: ", outDEMName)
-                        rsgislib.imageutils.createCopyImage(radianceImage, outDEMName, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)
+                        outDEMNameTmp = os.path.join(outFilePath, (outBaseName + "_dem_tmp" + arcsiUtils.getFileExtension(outFormat)))
+                        rsgislib.imageutils.createCopyImage(radianceImage, outDEMNameTmp, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)
 
                         inDEMDS = gdal.Open(demFile, gdal.GA_ReadOnly)
-                        outDEMDS = gdal.Open(outDEMName, gdal.GA_Update)
+                        outDEMDS = gdal.Open(outDEMNameTmp, gdal.GA_Update)
 
                         print("Subset and reproject DEM...")
                         gdal.ReprojectImage(inDEMDS, outDEMDS, None, None, gdal.GRA_CubicSpline)
                         inDEMDS = None
                         outDEMDS = None
 
-                        outDEMMaskName = os.path.join(outFilePath, (outBaseName + "_dem_msk" + arcsiUtils.getFileExtension(outFormat)))
-                        mskDEM = False
-                        if prodsToCalc["CLEARSKY"]:
-                            rsgislib.imageutils.maskImage(outDEMName, clearskyImage, outDEMMaskName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
-                            mskDEM = True
-                        elif prodsToCalc["CLOUDS"]:
-                            rsgislib.imageutils.maskImage(outDEMName, cloudsImage, outDEMMaskName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, [1,2])
-                            mskDEM = True
+                        outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
+                        print("Output DEM: ", outDEMName)
+                        if fullImgOuts:
+                            rsgislib.imageutils.maskImage(outDEMNameTmp, validMaskImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
                         else:
-                            outDEMMaskName = outDEMName
+                            if prodsToCalc["CLEARSKY"]:
+                                rsgislib.imageutils.maskImage(outDEMNameTmp, clearskyImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
+                            elif prodsToCalc["CLOUDS"]:
+                                rsgislib.imageutils.maskImage(outDEMNameTmp, cloudsImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, [1,2])
+                            else:
+                                rsgislib.imageutils.maskImage(outDEMNameTmp, validMaskImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
 
+                        # Remove tmp DEM file.
+                        rsgisUtils.deleteFileWithBasename(outDEMNameTmp)
+                        finalOutFiles["IMAGE_DEM"] = topoShadowImage
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
-                            if mskDEM:
-                                rsgislib.imageutils.popImageStats(outDEMMaskName, True, -32768.0, True)
                         print("")
 
                     # Execute generation of the topographic shadow image
                     if prodsToCalc["TOPOSHADOW"]:
                         outName = outBaseName + "_toposhad" + arcsiUtils.getFileExtension(outFormat)
-                        tmpDEMFilePath = outDEMMaskName
-                        if fullImgOuts:
-                            tmpDEMFilePath = outDEMName
-                        topoShadowImage = sensorClass.generateTopoDirectShadowMask(tmpDEMFilePath, outFilePath, outName, outFormat, tmpPath)
+                        topoShadowImage = sensorClass.generateTopoDirectShadowMask(outDEMName, outFilePath, outName, outFormat, tmpPath)
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.rastergis.populateStats(topoShadowImage, True, True)
@@ -844,16 +842,10 @@ class ARCSI (object):
                         print("Convert to reflectance using dark object subtraction.")
                         outName = outBaseName + processStageStr + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)
                         outWholeName = outBaseName + processStageWholeImgStr + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)
-                        if simpleDOS:
-                            srefImage, offVals = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImage, outFilePath, outName, outFormat, dosOutRefl)
+                        srefImage, offVals = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImage, outFilePath, outName, outFormat, dosOutRefl)
                             if fullImgOuts:
                                 srefDOSWholeImage, offVals = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImageWhole, outFilePath, outWholeName, outFormat, dosOutRefl, offVals)
                             offVals = None
-                        else:
-                            srefImage, offsetsImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImage, outFilePath, outName, outFormat, tmpPath, globalDOS, dosOutRefl)
-                            if fullImgOuts:
-                                srefDOSWholeImage, offsetsImage = sensorClass.convertImageToReflectanceDarkSubstract(toaImageWhole, outFilePath, outWholeName, outFormat, tmpPath, globalDOS, dosOutRefl, offsetsImage)
-                            offsetsImage = None
 
                         print("Setting Band Names...")
                         sensorClass.setBandNames(srefImage)
@@ -946,7 +938,7 @@ class ARCSI (object):
                             calcdOutVals['ARCSI_ELEVATION_VALUE'] = surfaceAltitude
                         else:
                             # Calc Min, Max Elevation for region intersecting with the image.
-                            statsElev = rsgislib.imagecalc.getImageStatsInEnv(outDEMMaskName, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+                            statsElev = rsgislib.imagecalc.getImageStatsInEnv(outDEMName, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
 
                             #calcdOutVals['ARCSI_AOT_VALUE'] = aotVal
 
