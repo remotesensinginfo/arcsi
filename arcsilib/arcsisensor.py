@@ -267,6 +267,9 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def extractHeaderParameters(self, inputHeader, wktStr): pass
 
+    @abstractmethod
+    def getSolarIrrStdSolarGeom(self): pass
+
     def checkInputImageValid(self):
         if not self.expectedImageDataPresent():
             raise ARCSIException("Not all of the image(s) are present.")
@@ -654,7 +657,8 @@ class ARCSIAbstractSensor (object):
     def generateTopoDirectShadowMask(self,  inputDEMImage, outputPath, outputName, outFormat, tmpPath):
         try:
             print("Calculating a direct topographic shadow mask.")
-            print("Solar Zenith = " + str(self.solarZenith) + " Solar Azimuth = " + str(self.solarAzimuth))
+            solarAz, solarZen = self.getSolarIrrStdSolarGeom()
+            print("Solar Zenith = " + str(solarZen) + " Solar Azimuth = " + str(solarAz))
             arcsiUtils = ARCSIUtils()
             outputImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
@@ -668,7 +672,8 @@ class ARCSIAbstractSensor (object):
             demMax = demBand.GetMaximum()
             if demMax is None:
                 (demMin,demMax) = band.ComputeRasterMinMax(0)
-            rsgislib.elevation.shadowmask(inputDEMImage, outputTmpFile, self.solarAzimuth, self.solarZenith, demMax, outFormat)
+            demMax10p = demMax * 1.1 # Go 10% higher than max in DEM.
+            rsgislib.elevation.shadowmask(inputDEMImage, outputTmpFile, solarAz, solarZen, demMax10p, outFormat)
             rsgislib.imagefilter.applyMedianFilter(outputTmpFile, outputImage, 3, outFormat, rsgislib.TYPE_8UINT)
 
             if not self.debugMode:

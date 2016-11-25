@@ -75,6 +75,8 @@ import numpy
 import json
 # Import the shutil module
 import shutil
+# Import the solar angle tools from RSGISLib
+import rsgislib.imagecalibration.solarangles
 
 class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
     """
@@ -286,6 +288,14 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
 
         except Exception as e:
             raise e
+
+    def getSolarIrrStdSolarGeom(self):
+        """
+        Get Solar Azimuth and Zenith as standard geometry.
+        Azimuth: N=0, E=90, S=180, W=270.
+        """
+        solarAz = rsgislib.imagecalibration.solarangles.getSolarIrrConventionSolarAzimuthFromUSGS(self.solarAzimuth)
+        return (solarAz, self.solarZenith)
 
     def generateOutputBaseName(self):
         """

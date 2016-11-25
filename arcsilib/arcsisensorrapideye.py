@@ -441,6 +441,13 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         elif nBands != 5:
             raise ARCSIException('Input Image \'' + self.fileName + '\' does not have the expect 5 image bands.')
 
+    def getSolarIrrStdSolarGeom(self):
+        """
+        Get Solar Azimuth and Zenith as standard geometry.
+        Azimuth: N=0, E=90, S=180, W=270.
+        """
+        return (self.solarAzimuth, self.solarZenith)
+
     def generateOutputBaseName(self):
         """
         Customises the generic name for the RapidEye sensor
