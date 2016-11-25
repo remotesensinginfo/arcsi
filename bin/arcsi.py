@@ -843,9 +843,9 @@ class ARCSI (object):
                         outName = outBaseName + processStageStr + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)
                         outWholeName = outBaseName + processStageWholeImgStr + "_rad_toa_dos" + arcsiUtils.getFileExtension(outFormat)
                         srefImage, offVals = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImage, outFilePath, outName, outFormat, dosOutRefl)
-                            if fullImgOuts:
-                                srefDOSWholeImage, offVals = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImageWhole, outFilePath, outWholeName, outFormat, dosOutRefl, offVals)
-                            offVals = None
+                        if fullImgOuts:
+                            srefDOSWholeImage, offVals = sensorClass.convertImageToReflectanceSimpleDarkSubtract(toaImageWhole, outFilePath, outWholeName, outFormat, dosOutRefl, offVals)
+                        offVals = None
 
                         print("Setting Band Names...")
                         sensorClass.setBandNames(srefImage)
