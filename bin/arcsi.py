@@ -811,7 +811,10 @@ class ARCSI (object):
                     # Execute generation of the topographic shadow image
                     if prodsToCalc["TOPOSHADOW"]:
                         outName = outBaseName + "_toposhad" + arcsiUtils.getFileExtension(outFormat)
-                        topoShadowImage = sensorClass.generateTopoDirectShadowMask(outDEMMaskName, outFilePath, outName, outFormat, tmpPath)
+                        tmpDEMFilePath = outDEMMaskName
+                        if fullImgOuts:
+                            tmpDEMFilePath = outDEMName
+                        topoShadowImage = sensorClass.generateTopoDirectShadowMask(tmpDEMFilePath, outFilePath, outName, outFormat, tmpPath)
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.rastergis.populateStats(topoShadowImage, True, True)
