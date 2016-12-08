@@ -549,5 +549,5 @@ else:
                  args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug,
                  args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts)
 
-    runTimer.end("ARCSI took ", " to process the input image. Thank you for using ARCSI.")
+    runTimer.end(True, "ARCSI took ", " to process the input image. Thank you for using ARCSI.")
     print("\n\n")
