@@ -114,6 +114,7 @@ class ARCSIAbstractSensor (object):
 
     def __init__(self, debugMode, inputImage):
         self.sensor = "NA"
+        self.headerFileName = ""
         self.userSpInputImage = inputImage
         self.debugMode = debugMode
         self.acquisitionTime = datetime.datetime.today()
@@ -270,6 +271,9 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def getSolarIrrStdSolarGeom(self): pass
 
+    @abstractmethod
+    def getSensorViewGeom(self): pass
+
     def checkInputImageValid(self):
         if not self.expectedImageDataPresent():
             raise ARCSIException("Not all of the image(s) are present.")
@@ -316,6 +320,7 @@ class ARCSIAbstractSensor (object):
 
         filesDict = dict()
         filesDict['FileBaseName'] = self.generateOutputBaseName()
+        filesDict['ProviderMetadata'] = self.headerFileName
         for key in outFilesDict:
             filesDict[key] = os.path.basename(outFilesDict[key])
 
@@ -765,6 +770,73 @@ class ARCSIAbstractSensor (object):
 
     @abstractmethod
     def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax, scaleFactor, elevAOTCoeffs=None): pass
+
+    def convertSREF2StdisedSREF(self, inputSREFImage, inputSREFWholeImage, inputDEMFile, inputTopoShadowMask, outputPath, outputName, outputWholeName, outFormat, tmpPath, sixsLUTCoeffs, aotLUT, scaleFactor, brdfBeta=1, outIncidenceAngle=0, outExitanceAngle=0):
+        print("Converting to Standardised Reflectance")
+        try:
+            arcsiUtils = ARCSIUtils()
+            outputStdSREFImage = os.path.join(outputPath, outputName)
+            outputStdSREFWholeImage = os.path.join(outputPath, outputWholeName)
+            tmpBaseName = os.path.splitext(outputName)[0]
+            imgExtension = arcsiUtils.getFileExtension(outFormat)
+            tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
+
+            tmpDIRExisted = True
+            if not os.path.exists(tmpBaseDIR):
+                os.makedirs(tmpBaseDIR)
+                tmpDIRExisted = False
+
+            # Define Angles with the correct origin.
+            solarAz, solarZen = self.getSolarIrrStdSolarGeom()
+            viewAz = 0.0
+            viewZen = 0.0
+
+            # Derive layers from DEM 
+            incidAngleImg = os.path.join(tmpBaseDIR, tmpBaseName+'_incidangle'+imgExtension)
+            rsgislib.elevation.localIncidenceAngle(inputDEMFile, incidAngleImg, solarAz, solarZen, outFormat)
+
+            existAngleImg = os.path.join(tmpBaseDIR, tmpBaseName+'_existangle'+imgExtension)
+            rsgislib.elevation.localExistanceAngle(inputDEMFile, existAngleImg, viewAz, viewZen, outFormat)
+
+            slopeImg = os.path.join(tmpBaseDIR, tmpBaseName+'_slope'+imgExtension)
+            rsgislib.elevation.slope(inputDEMFile, slopeImg, 'degrees', outFormat)
+
+            # Derive the valid area mask
+            validMaskSREF = os.path.join(tmpBaseDIR, tmpBaseName+'_validMask'+imgExtension)
+            if inputSREFWholeImage is None:
+                rsgislib.imageutils.genValidMask(inputSREFImage, validMaskSREF, outFormat, 0.0)
+            else:
+                rsgislib.imageutils.genValidMask(inputSREFWholeImage, validMaskSREF, outFormat, 0.0)
+
+            # Calculate the solar irradiance
+            solarIrradianceImg = os.path.join(tmpBaseDIR, tmpBaseName+'_solarirr'+imgExtension)
+            if aotLUT:
+                raise ARCSIException("Doh! Currently don't have an implementation of rsgislib.imagecalibration.calcIrradianceImageElevLUT for using an Elev and AOT LUT...")
+            else:
+                if inputSREFWholeImage is None:
+                    rsgislib.imagecalibration.calcIrradianceImageElevLUT(validMaskSREF, inputDEMFile, incidAngleImg, slopeImg, inputSREFImage, inputTopoShadowMask, solarIrradianceImg, outFormat, solarZen, scaleFactor, sixsLUTCoeffs)
+                else:
+                    rsgislib.imagecalibration.calcIrradianceImageElevLUT(validMaskSREF, inputDEMFile, incidAngleImg, slopeImg, inputSREFWholeImage, inputTopoShadowMask, solarIrradianceImg, outFormat, solarZen, scaleFactor, sixsLUTCoeffs)
+
+            rsgislib.imagecalibration.calcStandardisedReflectanceSD2010(validMaskSREF, inputSREFImage, solarIrradianceImg, incidAngleImg, existAngleImg, outputStdSREFImage, outFormat, scaleFactor, brdfBeta, outIncidenceAngle, outExitanceAngle)
+            if inputSREFWholeImage is not None:
+                rsgislib.imagecalibration.calcStandardisedReflectanceSD2010(validMaskSREF, inputSREFWholeImage, solarIrradianceImg, incidAngleImg, existAngleImg, outputStdSREFWholeImage, outFormat, scaleFactor, brdfBeta, outIncidenceAngle, outExitanceAngle)
+            else:
+                outputStdSREFWholeImage = ""
+
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName(outFormat)
+                gdalDriver.Delete(incidAngleImg)
+                gdalDriver.Delete(existAngleImg)
+                gdalDriver.Delete(slopeImg)
+                gdalDriver.Delete(validMaskSREF)
+                gdalDriver.Delete(solarIrradianceImg)
+                if not tmpDIRExisted:
+                    shutil.rmtree(tmpBaseDIR, ignore_errors=True)
+
+            return (outputStdSREFImage, outputStdSREFWholeImage)
+        except Exception as e:
+            raise e
 
     def calcDarkTargetOffsetsForBand(self, inputTOAImage, offsetImage, band, outFormat, histBinWidth, minObjSize, darkPxlPercentile, tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg):
         print("Band: ", band)

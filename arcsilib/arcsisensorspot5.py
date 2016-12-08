@@ -116,6 +116,8 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         Understands and parses the RapidEye metadata.xml header file
         """
         try:
+            self.headerFileName = os.path.split(inputHeader)[1]
+            
             print("Reading header file")
             tree = ET.parse(inputHeader)
             root = tree.getroot()
@@ -267,6 +269,13 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         Azimuth: N=0, E=90, S=180, W=270.
         """
         return (self.solarAzimuth, self.solarZenith)
+
+    def getSensorViewGeom(self):
+        """
+        Get sensor viewing angles
+        returns (viewAzimuth, viewZenith)
+        """
+        return (self.senorAzimuth, self.senorZenith)
 
     def generateOutputBaseName(self):
         """

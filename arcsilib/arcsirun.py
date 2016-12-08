@@ -235,6 +235,7 @@ class ARCSIRun (object):
             prodsToCalc["TOPOSHADOW"] = False
             prodsToCalc["FOOTPRINT"] = False
             prodsToCalc["METADATA"] = False
+            prodsToCalc["STDSREF"] = False
 
             # Make a copy of the dictionary to store calculated products.
             prodsCalculated = copy.copy(prodsToCalc)
@@ -276,6 +277,14 @@ class ARCSIRun (object):
                     prodsToCalc["RAD"] = True
                     prodsToCalc["SREF"] = True
                     needAtmModel = True
+                elif prod == 'STDSREF':
+                    prodsToCalc["RAD"] = True
+                    prodsToCalc["SREF"] = True
+                    prodsToCalc["STDSREF"] = True
+                    prodsToCalc["TOPOSHADOW"] = True
+                    needAtmModel = True
+                    if (demFile is None) or (demFile is ""):
+                        raise ARCSIException("STDSREF requires a DEM file to be provided.")
                 elif prod == 'DOS':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOA"] = True
@@ -293,11 +302,13 @@ class ARCSIRun (object):
                 elif prod == 'TOPOSHADOW':
                     prodsToCalc["RAD"] = True
                     prodsToCalc["TOPOSHADOW"] = True
+                    if (demFile is None) or (demFile is ""):
+                        raise ARCSIException("STDSREF requires a DEM file to be provided.")
                 elif prod == 'FOOTPRINT':
                     prodsToCalc["FOOTPRINT"] = True
                 elif prod == 'METADATA':
                     prodsToCalc["METADATA"] = True
-
+                
             if prodsToCalc["DOSAOT"] and prodsToCalc["DDVAOT"]:
                 raise ARCSIException("You cannot specify both the DOSAOT and DDVAOT products, you must choose one or the other.")
 
@@ -364,7 +375,6 @@ class ARCSIRun (object):
                 else:
                     raise ARCSIException("The specified ground reflectance is unknown.")
 
-
             # Decide is the image needs to be reprojected, if so define parameters.
             reproject = False
             useWKT2Reproject = True
@@ -422,8 +432,11 @@ class ARCSIRun (object):
             projImgBBOX['MaxY'] = 0.0
             processStageStr = ""
             processStageWholeImgStr = ""
+            processSREFStr = ""
             finalOutFiles = dict()
             calcdOutVals = dict()
+            sixsLUTCoeffs = None
+            aotLUT = False
 
             if reproject:
                 if useWKT2Reproject:
@@ -486,7 +499,6 @@ class ARCSIRun (object):
                 finalOutFiles["VALID_MASK"] = validMaskImageProj
                 print("")
 
-
             if reproject and (not viewAngleImg is ""):
                 if not pxlResDefd:
                     viewAngleImgDS = gdal.Open(viewAngleImg, gdal.GA_ReadOnly)
@@ -521,8 +533,6 @@ class ARCSIRun (object):
                 viewAngleImg = viewAngleImgProj
                 finalOutFiles["VIEW_ANGLE"] = viewAngleImgProj
                 print("")
-
-
 
             if prodsToCalc["FOOTPRINT"]:
                 if validMaskImage is None:
@@ -773,7 +783,7 @@ class ARCSIRun (object):
                 if  (not prodsToCalc["CLEARSKY"]) or (prodsToCalc["CLEARSKY"] and propOfClearSky > 0.05):
                     # Interpolate DEM image to output refl image resolution and convert projection to the same as the output image.
                     if (not (demFile == None)) and (outDEMName == ""):
-                        outDEMNameTmp = os.path.join(outFilePath, (outBaseName + "_dem_tmp" + arcsiUtils.getFileExtension(outFormat)))
+                        outDEMNameTmp = os.path.join(outFilePath, (outBaseName + "_demtmp" + arcsiUtils.getFileExtension(outFormat)))
                         rsgislib.imageutils.createCopyImage(radianceImage, outDEMNameTmp, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)
 
                         inDEMDS = gdal.Open(demFile, gdal.GA_ReadOnly)
@@ -786,19 +796,19 @@ class ARCSIRun (object):
 
                         outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
                         print("Output DEM: ", outDEMName)
-                        if fullImgOuts:
-                            rsgislib.imageutils.maskImage(outDEMNameTmp, validMaskImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
+                        rsgislib.imageutils.maskImage(outDEMName, validMaskImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
+
+                        outDEMNameMsk = os.path.join(outFilePath, (outDEMNameTmp + "_demmsk" + arcsiUtils.getFileExtension(outFormat)))
+                        if prodsToCalc["CLEARSKY"]:
+                            rsgislib.imageutils.maskImage(outDEMName, clearskyImage, outDEMNameMsk, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
+                        elif prodsToCalc["CLOUDS"]:
+                            rsgislib.imageutils.maskImage(outDEMName, cloudsImage, outDEMNameMsk, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, [1,2,3])
                         else:
-                            if prodsToCalc["CLEARSKY"]:
-                                rsgislib.imageutils.maskImage(outDEMNameTmp, clearskyImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
-                            elif prodsToCalc["CLOUDS"]:
-                                rsgislib.imageutils.maskImage(outDEMNameTmp, cloudsImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, [1,2])
-                            else:
-                                rsgislib.imageutils.maskImage(outDEMNameTmp, validMaskImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
+                            outDEMNameMsk = outDEMName
 
                         # Remove tmp DEM file.
                         rsgisUtils.deleteFileWithBasename(outDEMNameTmp)
-                        finalOutFiles["IMAGE_DEM"] = topoShadowImage
+                        finalOutFiles["IMAGE_DEM"] = outDEMName
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
@@ -807,7 +817,7 @@ class ARCSIRun (object):
                     # Execute generation of the topographic shadow image
                     if prodsToCalc["TOPOSHADOW"]:
                         outName = outBaseName + "_toposhad" + arcsiUtils.getFileExtension(outFormat)
-                        topoShadowImage = sensorClass.generateTopoDirectShadowMask(outDEMName, outFilePath, outName, outFormat, tmpPath)
+                        topoShadowImage = sensorClass.generateTopoDirectShadowMask(outDEMNameMsk, outFilePath, outName, outFormat, tmpPath)
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.rastergis.populateStats(topoShadowImage, True, True)
@@ -927,17 +937,16 @@ class ARCSIRun (object):
                             calcdOutVals['ARCSI_AOT_VALUE'] = aotVal
 
                         if (demFile == None):
-                            outName = outBaseName + processStageStr + "_rad_sref" + arcsiUtils.getFileExtension(outFormat)
+                            processSREFStr = '_rad_sref'
+                            outName = outBaseName + processStageStr + processSREFStr + arcsiUtils.getFileExtension(outFormat)
                             srefImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImage, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor)
                             if fullImgOuts:
-                                outName = outBaseName + processStageWholeImgStr + "_rad_sref" + arcsiUtils.getFileExtension(outFormat)
+                                outName = outBaseName + processStageWholeImgStr + processSREFStr + arcsiUtils.getFileExtension(outFormat)
                                 sref6SWholeImage = sensorClass.convertImageToSurfaceReflSglParam(radianceImageWhole, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor)
                             calcdOutVals['ARCSI_ELEVATION_VALUE'] = surfaceAltitude
                         else:
                             # Calc Min, Max Elevation for region intersecting with the image.
                             statsElev = rsgislib.imagecalc.getImageStatsInEnv(outDEMName, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
-
-                            #calcdOutVals['ARCSI_AOT_VALUE'] = aotVal
 
                             print("Minimum Elevation = ", statsElev[0])
                             print("Maximum Elevation = ", statsElev[1])
@@ -954,12 +963,14 @@ class ARCSIRun (object):
 
                             if (aotFile == None) or (aotFile == ""):
                                 print("Build an DEM LUT with AOT == " + str(aotVal) + "...")
-                                outName = outBaseName + processStageStr + "_rad_srefdem" + arcsiUtils.getFileExtension(outFormat)
+                                processSREFStr = '_rad_srefdem'
+                                outName = outBaseName + processStageStr + processSREFStr + arcsiUtils.getFileExtension(outFormat)
                                 srefImage, sixsLUTCoeffs = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImage, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev, scaleFactor)
                                 if fullImgOuts:
-                                    outName = outBaseName + processStageWholeImgStr + "_rad_srefdem" + arcsiUtils.getFileExtension(outFormat)
+                                    outName = outBaseName + processStageWholeImgStr + processSREFStr + arcsiUtils.getFileExtension(outFormat)
                                     sref6SWholeImage, sixsLUTCoeffs = sensorClass.convertImageToSurfaceReflDEMElevLUT(radianceImageWhole, outDEMName, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, minElev, maxElev, scaleFactor, sixsLUTCoeffs)
-                                sixsLUTCoeffs = None
+                                calcdOutVals['ARCSI_6S_COEFFICENTS'] = sixsLUTCoeffs
+                                aotLUT = False
                             else:
                                 print("Build an AOT and DEM LUT...")
                                 statsAOT = rsgislib.imagecalc.getImageStatsInEnv(aotFile, 1, -9999, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
@@ -975,12 +986,14 @@ class ARCSIRun (object):
                                 aotRange = (maxAOT - minAOT) / 0.05
                                 numAOTSteps = math.ceil(aotRange) + 1
                                 print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
-                                outName = outBaseName + processStageStr + "_rad_srefdemaot" + arcsiUtils.getFileExtension(outFormat)
+                                processSREFStr = '_rad_srefdemaot'
+                                outName = outBaseName + processStageStr + processSREFStr + arcsiUtils.getFileExtension(outFormat)
                                 srefImage, sixsLUTCoeffs = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImage, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT, scaleFactor)
                                 if fullImgOuts:
-                                    outName = outBaseName + processStageWholeImgStr + "_rad_srefdemaot" + arcsiUtils.getFileExtension(outFormat)
+                                    outName = outBaseName + processStageWholeImgStr + processSREFStr + arcsiUtils.getFileExtension(outFormat)
                                     sref6SWholeImage, sixsLUTCoeffs = sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(radianceImageWhole, outDEMName, aotFile, outFilePath, outName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, minElev, maxElev, minAOT, maxAOT, scaleFactor, sixsLUTCoeffs)
-                                sixsLUTCoeffs = None
+                                calcdOutVals['ARCSI_6S_COEFFICENTS'] = sixsLUTCoeffs
+                                aotLUT = True
 
                         print("Setting Band Names...")
                         sensorClass.setBandNames(srefImage)
@@ -994,13 +1007,42 @@ class ARCSIRun (object):
                             if fullImgOuts:
                                 rsgislib.imageutils.popImageStats(sref6SWholeImage, True, 0.0, True)
                         finalOutFiles["SREF_6S_IMG"] = srefImage
+                        if fullImgOuts:
+                            finalOutFiles["SREF_6S_WHOLE_IMG"] = sref6SWholeImage
                         prodsCalculated["SREF"] = True
                         print("")
+
+                    if prodsToCalc["STDSREF"]:
+                        if sixsLUTCoeffs is None:
+                            raise ARCSIException("To calculate standardised reflectance \'STDSREF\' you need to have a LUT within 6S.\nTherefore, a DEM is required and optional an AOT surface should be calculated.")
+                        if not fullImgOuts:
+                            sref6SWholeImage = None
+                        processSREFStr = processSREFStr + '_stdsref'
+                        outName = outBaseName + processStageStr + processSREFStr + arcsiUtils.getFileExtension(outFormat)
+                        outNameWhole = outBaseName + processStageWholeImgStr + processSREFStr + arcsiUtils.getFileExtension(outFormat)
+                        stdSREFImg, stdSREFWholeImg = sensorClass.convertSREF2StdisedSREF(srefImage, sref6SWholeImage, outDEMName, topoShadowImage, outFilePath, outName, outNameWhole, outFormat, tmpPath, sixsLUTCoeffs, aotLUT, scaleFactor, brdfBeta=1, outIncidenceAngle=0, outExitanceAngle=0)
+
+                        print("Setting Band Names...")
+                        sensorClass.setBandNames(srefImage)
+                        if fullImgOuts:
+                            sensorClass.setBandNames(sref6SWholeImage)
+                        
+                        if calcStatsPy:
+                            print("Calculating Statistics...")
+                            rsgislib.imageutils.popImageStats(stdSREFImg, True, 0.0, True)
+                            if fullImgOuts:
+                                rsgislib.imageutils.popImageStats(stdSREFWholeImg, True, 0.0, True)
+                        finalOutFiles["STD_SREF_IMG"] = stdSREFImg
+                        if fullImgOuts:
+                            finalOutFiles["STD_SREF_WHOLE_IMG"] = stdSREFWholeImg
+                        prodsCalculated["STDSREF"] = True
+                        print("")
+                        
                 else:
                     keys2Del = []
                     for key in prodsToCalc.keys():
                         if prodsToCalc[key] is not prodsCalculated[key]:
-                            if key in ['DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS']:
+                            if key in ['DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'STDSREF', 'TOPOSHADOW']:
                                 keys2Del.append(key)
                     for key in keys2Del:
                         del prodsToCalc[key]
@@ -1008,7 +1050,7 @@ class ARCSIRun (object):
                 keys2Del = []
                 for key in prodsToCalc.keys():
                     if prodsToCalc[key] is not prodsCalculated[key]:
-                        if key in ['CLEARSKY', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS']:
+                        if key in ['CLEARSKY', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'STDSREF', 'TOPOSHADOW']:
                             keys2Del.append(key)
                 for key in keys2Del:
                     del prodsToCalc[key]
@@ -1056,22 +1098,22 @@ class ARCSIRun (object):
         ARCSI command line argument.
         """
         print("Supported Sensors are:")
-        print("\t-----------------------------------------------------------------------------------------------------")
+        print("\t----------------------------------------------------------------------------------------------------------------------------------")
         print("\tSensor        | Shorthand     | Functions")
-        print("\t-----------------------------------------------------------------------------------------------------")
-        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
-        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
-        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
-        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
-        print("\tLandsat 4 TM  | \'ls4tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
-        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
-        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
-        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
-        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
-        print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, METADATA")
-        print("\tWorldView2    | \'wv2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, METADATA")
-        print("\tSPOT5         | \'spot5\'     | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, DOS, TOPOSHADOW, METADATA")
-        print("\t-----------------------------------------------------------------------------------------------------")
+        print("\t----------------------------------------------------------------------------------------------------------------------------------")
+        print("\tLandsat 1 MSS | \'ls1\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, STDSREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 2 MSS | \'ls2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, STDSREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 3 MSS | \'ls3\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, STDSREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 4 MSS | \'ls4mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, STDSREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 4 TM  | \'ls4tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, STDSREF, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 5 MSS | \'ls5mss\'    | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, STDSREF, DOS, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 5 TM  | \'ls5tm\'     | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, STDSREF, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 7 ETM | \'ls7\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, STDSREF, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tLandsat 8     | \'ls8\'       | RAD, TOA, DOSAOT, DDVAOT, DOSAOTSGL, STDSREF, SREF, DOS, THERMAL, TOPOSHADOW, FOOTPRINT, METADATA")
+        print("\tRapideye      | \'rapideye\'  | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, STDSREF, DOS, TOPOSHADOW, METADATA")
+        print("\tWorldView2    | \'wv2\'       | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, STDSREF, DOS, TOPOSHADOW, METADATA")
+        print("\tSPOT5         | \'spot5\'     | RAD, TOA, DOSAOT, DOSAOTSGL, SREF, STDSREF, DOS, TOPOSHADOW, METADATA")
+        print("\t----------------------------------------------------------------------------------------------------------------------------------")
 
     def print2ConsoleListProductDescription(self, product):
         """

@@ -120,6 +120,8 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         try:
             print("Reading header file")
 
+            self.headerFileName = os.path.split(inputHeader)[1]
+            
             arcsiUtils = ARCSIUtils()
 
             hdrExt = os.path.splitext(inputHeader)
@@ -447,6 +449,13 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         Azimuth: N=0, E=90, S=180, W=270.
         """
         return (self.solarAzimuth, self.solarZenith)
+
+    def getSensorViewGeom(self):
+        """
+        Get sensor viewing angles
+        returns (viewAzimuth, viewZenith)
+        """
+        return (self.senorAzimuth, self.senorZenith)
 
     def generateOutputBaseName(self):
         """

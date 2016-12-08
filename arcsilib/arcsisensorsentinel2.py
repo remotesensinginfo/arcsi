@@ -86,6 +86,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         Understands and parses the WorldView2 xml header file
         """
         try:
+            self.headerFileName = os.path.split(inputHeader)[1]
+            
             print("hello world...")
         except Exception as e:
             raise e
@@ -96,6 +98,13 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         Azimuth: N=0, E=90, S=180, W=270.
         """
         return (self.solarAzimuth, self.solarZenith)
+
+    def getSensorViewGeom(self):
+        """
+        Get sensor viewing angles
+        returns (viewAzimuth, viewZenith)
+        """
+        return (0.0, 0.0)
 
     def generateOutputBaseName(self):
         """
