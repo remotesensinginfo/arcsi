@@ -121,7 +121,8 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         try:
             if not self.userSpInputImage is None:
                 raise ARCSIException("Landsat sensor cannot accept a user specified image file - only the images in the header file will be used.")
-
+            self.headerFileName = os.path.split(inputHeader)[1]
+            
             arcsiUtils = ARCSIUtils()
 
             print("Reading header file")
@@ -263,6 +264,13 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         """
         solarAz = rsgislib.imagecalibration.solarangles.getSolarIrrConventionSolarAzimuthFromUSGS(self.solarAzimuth)
         return (solarAz, self.solarZenith)
+
+    def getSensorViewGeom(self):
+        """
+        Get sensor viewing angles
+        returns (viewAzimuth, viewZenith)
+        """
+        return (0.0, 0.0)
 
     def generateOutputBaseName(self):
         """
