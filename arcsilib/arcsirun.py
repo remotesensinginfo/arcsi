@@ -796,9 +796,9 @@ class ARCSIRun (object):
 
                         outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
                         print("Output DEM: ", outDEMName)
-                        rsgislib.imageutils.maskImage(outDEMName, validMaskImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
+                        rsgislib.imageutils.maskImage(outDEMNameTmp, validMaskImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
 
-                        outDEMNameMsk = os.path.join(outFilePath, (outDEMNameTmp + "_demmsk" + arcsiUtils.getFileExtension(outFormat)))
+                        outDEMNameMsk = os.path.join(outFilePath, (outBaseName + "_demmsk" + arcsiUtils.getFileExtension(outFormat)))
                         if prodsToCalc["CLEARSKY"]:
                             rsgislib.imageutils.maskImage(outDEMName, clearskyImage, outDEMNameMsk, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
                         elif prodsToCalc["CLOUDS"]:
