@@ -806,13 +806,13 @@ class ARCSIRun (object):
                         else:
                             outDEMNameMsk = outDEMName
 
+                        # Calculate DEM statistics and set no data value.
+                        rsgislib.imageutils.popImageStats(outDEMNameMsk, True, -32768.0, True)
+                        rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
+
                         # Remove tmp DEM file.
                         rsgisUtils.deleteFileWithBasename(outDEMNameTmp)
                         finalOutFiles["IMAGE_DEM"] = outDEMName
-                        if calcStatsPy:
-                            print("Calculating Statistics...")
-                            rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
-                        print("")
 
                     # Execute generation of the topographic shadow image
                     if prodsToCalc["TOPOSHADOW"]:
@@ -1026,7 +1026,7 @@ class ARCSIRun (object):
                         sensorClass.setBandNames(srefImage)
                         if fullImgOuts:
                             sensorClass.setBandNames(sref6SWholeImage)
-                        
+
                         if calcStatsPy:
                             print("Calculating Statistics...")
                             rsgislib.imageutils.popImageStats(stdSREFImg, True, 0.0, True)
