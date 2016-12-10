@@ -362,7 +362,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         raise ARCSIException("SPOT5 does not have a cloud masking implementation in ARCSI.")
 
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
-        sixsCoeffs = numpy.zeros((5, 3), dtype=numpy.float32)
+        sixsCoeffs = numpy.zeros((5, 6), dtype=numpy.float32)
         # Set up 6S model
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
@@ -393,6 +393,9 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         sixsCoeffs[0,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[0,1] = float(s.outputs.values['coef_xb'])
         sixsCoeffs[0,2] = float(s.outputs.values['coef_xc'])
+        sixsCoeffs[0,3] = float(s.outputs.values['direct_solar_irradiance'])
+        sixsCoeffs[0,4] = float(s.outputs.values['diffuse_solar_irradiance'])
+        sixsCoeffs[0,5] = float(s.outputs.values['environmental_irradiance'])
 
         # Band 2
         s.wavelength = Py6S.Wavelength(0.580, 0.7425, [0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.001700,0.001700,0.022000,0.022000,0.116500,0.116500,0.315300,0.315300,0.533600,0.533600,0.704900,0.704900,0.826400,0.826400,0.902100,0.902100,0.951500,0.951500,0.979600,0.979600,0.994200,0.994200,1.000000,1.000000,0.997300,0.997300,0.981800,0.981800,0.945000,0.945000,0.863200,0.863200,0.717100,0.717100,0.534000,0.534000,0.356000,0.356000,0.222900,0.222900,0.132700,0.132700,0.079200,0.079200,0.047600,0.047600,0.029100,0.029100,0.018000,0.018000,0.011100,0.011100,0.006800,0.006800,0.004200,0.004200,0.002500,0.002500])
@@ -400,6 +403,9 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         sixsCoeffs[1,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[1,1] = float(s.outputs.values['coef_xb'])
         sixsCoeffs[1,2] = float(s.outputs.values['coef_xc'])
+        sixsCoeffs[1,3] = float(s.outputs.values['direct_solar_irradiance'])
+        sixsCoeffs[1,4] = float(s.outputs.values['diffuse_solar_irradiance'])
+        sixsCoeffs[1,5] = float(s.outputs.values['environmental_irradiance'])
 
         # Band 3
         s.wavelength = Py6S.Wavelength(0.750, 0.945, [0.000000,0.000000,0.005400,0.005400,0.016100,0.016100,0.042900,0.042900,0.096600,0.096600,0.183500,0.183500,0.297400,0.297400,0.433700,0.433700,0.565000,0.565000,0.691000,0.691000,0.792200,0.792200,0.873300,0.873300,0.928600,0.928600,0.965000,0.965000,0.989700,0.989700,0.997900,0.997900,1.000000,1.000000,0.991200,0.991200,0.978700,0.978700,0.960700,0.960700,0.940400,0.940400,0.921500,0.921500,0.890800,0.890800,0.869500,0.869500,0.814700,0.814700,0.734400,0.734400,0.612700,0.612700,0.457600,0.457600,0.327200,0.327200,0.216800,0.216800,0.134300,0.134300,0.087400,0.087400,0.058200,0.058200,0.035800,0.035800,0.023700,0.023700,0.016700,0.016700,0.011400,0.011400,0.007800,0.007800,0.005300,0.005300,0.000000])
@@ -407,6 +413,9 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         sixsCoeffs[2,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[2,1] = float(s.outputs.values['coef_xb'])
         sixsCoeffs[2,2] = float(s.outputs.values['coef_xc'])
+        sixsCoeffs[2,3] = float(s.outputs.values['direct_solar_irradiance'])
+        sixsCoeffs[2,4] = float(s.outputs.values['diffuse_solar_irradiance'])
+        sixsCoeffs[2,5] = float(s.outputs.values['environmental_irradiance'])
 
         # Band 4
         s.wavelength = Py6S.Wavelength(1.500, 1.8025, [0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.011100,0.011100,0.015000,0.015000,0.019100,0.019100,0.024800,0.024800,0.030700,0.030700,0.043300,0.043300,0.056100,0.056100,0.087800,0.087800,0.119800,0.119800,0.182900,0.182900,0.246700,0.246700,0.331300,0.331300,0.415500,0.415500,0.513000,0.513000,0.610200,0.610200,0.722900,0.722900,0.835700,0.835700,0.918300,0.918300,1.000000,1.000000,0.994600,0.994600,0.987500,0.987500,0.932100,0.932100,0.878200,0.878200,0.857800,0.857800,0.834700,0.834700,0.859400,0.859400,0.882900,0.882900,0.894700,0.894700,0.905000,0.905000,0.848800,0.848800,0.792500,0.792500,0.685900,0.685900,0.578300,0.578300,0.468300,0.468300,0.359100,0.359100,0.286600,0.286600,0.214300,0.214300,0.171700,0.171700,0.128600,0.128600,0.101200,0.101200,0.073900,0.073900,0.058000,0.058000,0.042400,0.042400,0.034100,0.034100,0.025900,0.025900,0.021500,0.021500,0.017100,0.017100,0.014100,0.014100,0.011200,0.011200,0.009000,0.009000,0.006900,0.006900,0.005500,0.005500,0.004100,0.004100,0.003400,0.003400,0.002600,0.002600,0.002300,0.002300,0.001900,0.001900])
@@ -414,6 +423,9 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         sixsCoeffs[3,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[3,1] = float(s.outputs.values['coef_xb'])
         sixsCoeffs[3,2] = float(s.outputs.values['coef_xc'])
+        sixsCoeffs[3,3] = float(s.outputs.values['direct_solar_irradiance'])
+        sixsCoeffs[3,4] = float(s.outputs.values['diffuse_solar_irradiance'])
+        sixsCoeffs[3,5] = float(s.outputs.values['environmental_irradiance'])
 
         return sixsCoeffs
 
@@ -421,15 +433,15 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         print("Converting to Surface Reflectance")
         outputImage = os.path.join(outputPath, outputName)
 
-        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
+        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX', 'DirIrr', 'DifIrr', 'EnvIrr'])
         imgBandCoeffs = list()
 
         sixsCoeffs = self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
 
-        imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
-        imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
-        imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
-        imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
+        imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2]), DirIrr=float(sixsCoeffs[0,3]), DifIrr=float(sixsCoeffs[0,4]), EnvIrr=float(sixsCoeffs[0,5])))
+        imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2]), DirIrr=float(sixsCoeffs[1,3]), DifIrr=float(sixsCoeffs[1,4]), EnvIrr=float(sixsCoeffs[1,5])))
+        imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2]), DirIrr=float(sixsCoeffs[2,3]), DifIrr=float(sixsCoeffs[2,4]), EnvIrr=float(sixsCoeffs[2,5])))
+        imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2]), DirIrr=float(sixsCoeffs[3,3]), DifIrr=float(sixsCoeffs[3,4]), EnvIrr=float(sixsCoeffs[3,5])))
 
         for band in imgBandCoeffs:
             print(band)
@@ -451,17 +463,17 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         print("LUT has been built.")
 
         elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
-        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
+        Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX', 'DirIrr', 'DifIrr', 'EnvIrr'])
 
         elevCoeffs = list()
         for elevLUT in elev6SCoeffsLUT:
             imgBandCoeffs = list()
             sixsCoeffs = elevLUT.Coeffs
             elevVal = elevLUT.Elev
-            imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
-            imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
-            imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
-            imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
+            imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2]), DirIrr=float(sixsCoeffs[0,3]), DifIrr=float(sixsCoeffs[0,4]), EnvIrr=float(sixsCoeffs[0,5])))
+            imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2]), DirIrr=float(sixsCoeffs[1,3]), DifIrr=float(sixsCoeffs[1,4]), EnvIrr=float(sixsCoeffs[1,5])))
+            imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2]), DirIrr=float(sixsCoeffs[2,3]), DifIrr=float(sixsCoeffs[2,4]), EnvIrr=float(sixsCoeffs[2,5])))
+            imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2]), DirIrr=float(sixsCoeffs[3,3]), DifIrr=float(sixsCoeffs[3,4]), EnvIrr=float(sixsCoeffs[3,5])))
 
             elevCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=imgBandCoeffs))
 
@@ -478,7 +490,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
 
             elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
             aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
-            Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX'])
+            Band6S = collections.namedtuple('Band6SCoeff', ['band', 'aX', 'bX', 'cX', 'DirIrr', 'DifIrr', 'EnvIrr'])
 
             elevAOTCoeffs = list()
             for elevLUT in elevAOT6SCoeffsLUT:
@@ -489,10 +501,10 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
                     sixsCoeffs = aotFeat.Coeffs
                     aotVal = aotFeat.AOT
                     imgBandCoeffs = list()
-                    imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2])))
-                    imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2])))
-                    imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2])))
-                    imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2])))
+                    imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2]), DirIrr=float(sixsCoeffs[0,3]), DifIrr=float(sixsCoeffs[0,4]), EnvIrr=float(sixsCoeffs[0,5])))
+                    imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2]), DirIrr=float(sixsCoeffs[1,3]), DifIrr=float(sixsCoeffs[1,4]), EnvIrr=float(sixsCoeffs[1,5])))
+                    imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2]), DirIrr=float(sixsCoeffs[2,3]), DifIrr=float(sixsCoeffs[2,4]), EnvIrr=float(sixsCoeffs[2,5])))
+                    imgBandCoeffs.append(Band6S(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2]), DirIrr=float(sixsCoeffs[3,3]), DifIrr=float(sixsCoeffs[3,4]), EnvIrr=float(sixsCoeffs[3,5])))
                     aot6SCoeffsOut.append(aotLUTFeat(AOT=float(aotVal), Coeffs=imgBandCoeffs))
                 elevAOTCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=aot6SCoeffsOut))
 
