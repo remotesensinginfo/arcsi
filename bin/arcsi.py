@@ -290,6 +290,12 @@ parser.add_argument("--cs_morphop", type=int, default=21,
                                  help='''When clear-sky regions are being defined this parameter
                                            is the size of the morphological opening operator used
                                            to finalise the result. (Default 21)''')
+parser.add_argument("--checkouts", action='store_false', default=True,
+                    help='''Specifies that the output path should be checked for files with the same base name.
+                    If a file with the same base name is found then processing will not proceed - i.e., files will
+                    not be overwritten.''')
+
+
 
 # Call the parser to parse the arguments.
 args = parser.parse_args()
@@ -547,7 +553,8 @@ else:
                  args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified,
                  args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot,
                  args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug,
-                 args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts)
+                 args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, 
+                 args.cs_morphop, args.fullimgouts, args.checkouts)
 
     runTimer.end(True, "ARCSI took ", " to process the input image. Thank you for using ARCSI.")
     print("\n\n")
