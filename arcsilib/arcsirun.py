@@ -229,9 +229,9 @@ class ARCSIRun (object):
             if checkOutputs:
                 prevOutFiles = glob.glob(os.path.join(outFilePath, outBaseName+'*'))
                 if len(prevOutFiles) > 0:
-                    sys.stderr.write('Error outputs already exist: \'' + inputHeader + '\'')
+                    sys.stderr.write('Error outputs already exist: \'' + inputHeader + '\'\n')
                     for tmpFile in prevOutFiles:
-                        sys.stderr.write('\tFile: \'' + tmpFile + '\'')
+                        sys.stderr.write('\tFile: \'' + tmpFile + '\'\n')
                     raise Exception("Output files already exist and the \'check outputs\' option (--checkouts) was specified so can't continue.")
 
             # Step 4: Find the products which are to be generated.
