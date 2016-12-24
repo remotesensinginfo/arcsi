@@ -79,7 +79,7 @@ class ARCSIBuildCommands (object):
                      atmosozone, atmoswater, aerowater,
                      aerodust, aerooceanic, aerosoot, aot, vis, tmpath,
                      minaot, maxaot, dem, localdos, dosout, simpledos,
-                     scalefac, outwkt, outproj4, projabbv, interp):
+                     scalefac, outwkt, outproj4, projabbv, interp, checkouts):
 
         inputPath = os.path.abspath(inputPath)
         outputFile = os.path.abspath(outputFile)
@@ -164,6 +164,8 @@ class ARCSIBuildCommands (object):
                 cmd = cmd + " --localdos "
             if simpledos:
                 cmd = cmd + " --simpledos "
+            if checkouts:
+                cmd = cmd + " --checkouts "
 
             print(cmd)
             outFile.write(cmd + "\n")
@@ -341,6 +343,11 @@ if __name__ == '__main__':
                         help='''Specifies interpolation algorithm when reprojecting the imagery
                                 (Note. the options are those in gdalwarp).''')
 
+    parser.add_argument("--checkouts", action='store_false', default=True,
+                    help='''Specifies that the output path should be checked for files with the same base name.
+                    If a file with the same base name is found then processing will not proceed - i.e., files will
+                    not be overwritten.''')
+
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
@@ -360,5 +367,5 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, args.aerowater,
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath,
                      args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos,
-                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp)
+                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.checkouts)
 
