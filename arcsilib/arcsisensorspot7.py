@@ -1,8 +1,8 @@
 """
-Module that contains the ARCSIPleiadesSensor class.
+Module that contains the ARCSISPOT7Sensor class.
 """
 ############################################################################
-#  arcsisensorpleiades.py
+#  arcsisensorspot7.py
 #
 #  Copyright 2017 ARCSI.
 #
@@ -22,8 +22,8 @@ Module that contains the ARCSIPleiadesSensor class.
 #  along with ARCSI.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# Purpose:  A class for read the Pleiades sensor header file and applying
-#           the pre-processing operations within ARCSI to the Pleiades
+# Purpose:  A class for read the SPOT7 sensor header file and applying
+#           the pre-processing operations within ARCSI to the SPOT7
 #           datasets.
 #
 # Author: Pete Bunting
@@ -69,23 +69,23 @@ import xml.etree.ElementTree as ET
 import numpy
 # Import the GDAL python module
 import osgeo.gdal as gdal
+# Import the python subprocess module - used to call commands line tools.
+import subprocess
 # Import the RIOS RAT module
 from rios import rat
-# Import the subprocess module
-import subprocess
 
-class ARCSIPleiadesSensor (ARCSIAbstractSensor):
+class ARCSISPOT7Sensor (ARCSIAbstractSensor):
     """
-    A class which represents the Pleiades sensor to read
+    A class which represents the SPOT7 sensor to read
     header parameters and apply data processing operations.
     """
     def __init__(self, debugMode, inputImage):
         ARCSIAbstractSensor.__init__(self, debugMode, inputImage)
-        self.sensor = "PLEIADES"
+        self.sensor = "SPOT7"
         self.fileName = ""
+        self.inputImgType = ""
         self.inputImgFiles = []
         self.tiledInputImg = False
-        self.inputImgType = ''
         self.inputImgProjed = True
         self.b0SolarIrr = 0.0
         self.b1SolarIrr = 0.0
@@ -101,31 +101,14 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         self.b3RadBias = 0.0
         self.acqBitRange = 12
         self.prodBitRange = 12
-        self.inImgNoData = 0.0
-        self.inImgSatVal = 4095
-        self.b0DynAdjBias = 0.0
-        self.b0DynAdjSlope = 0.0
-        self.b0DynAdjMinThres = 0.0
-        self.b0DynAdjMaxThres = 0.0
-        self.b1DynAdjBias = 0.0
-        self.b1DynAdjSlope = 0.0
-        self.b1DynAdjMinThres = 0.0
-        self.b1DynAdjMaxThres = 0.0
-        self.b2DynAdjBias = 0.0
-        self.b2DynAdjSlope = 0.0
-        self.b2DynAdjMinThres = 0.0
-        self.b2DynAdjMaxThres = 0.0
-        self.b3DynAdjBias = 0.0
-        self.b3DynAdjSlope = 0.0
-        self.b3DynAdjMinThres = 0.0
-        self.b3DynAdjMaxThres = 0.0
         self.warpedKEADNImg = ''
         self.origDNImg = ''
         self.createdWarpKEADNImg = False
+        
 
     def extractHeaderParameters(self, inputHeader, wktStr):
         """
-        Understands and parses the Pleiades xml header file
+        Understands and parses the SPOT 7 header file
         """
         try:
             self.headerFileName = os.path.split(inputHeader)[1]
@@ -143,8 +126,8 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
                 raise ARCSIException("Only DIMAP Version 2.0 is supported by this reader; provided with: \'" + dimapVersion + "\'")
 
             metaSensorProfile = topLevelMetaIdent.find('METADATA_PROFILE').text.strip()
-            if not ((metaSensorProfile == 'PHR_SENSOR') or (metaSensorProfile == 'PHR_ORTHO')):
-                raise ARCSIException("Input file is not for Pleiades, \'METADATA_PROFILE\' should be \'PHR_SENSOR\' or \'PHR_ORTHO\'; provided with: \'" + metaSensorProfile + "\'")
+            if not ((metaSensorProfile == 'S7_SENSOR') or (metaSensorProfile == 'S7_ORTHO')):
+                raise ARCSIException("Input file is not for SPOT 7, \'METADATA_PROFILE\' should be \'S7_SENSOR\' or \'S7_ORTHO\'; provided with: \'" + metaSensorProfile + "\'")
             self.inputImgType = metaSensorProfile
 
             topLevelDatasetIdent = root.find('Dataset_Identification')
@@ -245,7 +228,7 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
             # Get coordinate system information
             epsgCode = -1
             if self.inputImgProjed:
-                epsgCode = int(topLevelCoordSystem.find('Projected_CRS').find('PROJECTED_CRS_NAME').text.strip())
+                epsgCode = int(topLevelCoordSystem.find('Projected_CRS').find('PROJECTED_CRS_CODE').text.strip().split('::')[1])
             else:
                 epsgCode = int(topLevelCoordSystem.find('Geodetic_CRS').find('GEODETIC_CRS_CODE').text.strip().split('::')[1])
 
@@ -381,55 +364,6 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
             self.acqBitRange = int(topLevelRadiometricInfo.find('Dynamic_Range').find('ACQUISITION_RANGE').text.strip())
             self.prodBitRange = int(topLevelRadiometricInfo.find('Dynamic_Range').find('PRODUCT_RANGE').text.strip())
 
-            # If 8 bit product then read dynamic adjustment
-            if self.prodBitRange == 8:
-                b0BandAdjTag = None
-                b1BandAdjTag = None
-                b2BandAdjTag = None
-                b3BandAdjTag = None
-                bandAdjTags = topLevelRadiometricInfo.find('Dynamic_Adjustment').find('Band_Adjustment_List')
-                for child in bandAdjTags:
-                    if child.tag == 'Band_Adjustment':
-                        bandID = child.find('BAND_ID').text.strip()
-                        if bandID == 'B0':
-                            b0BandAdjTag = child
-                        elif bandID == 'B1':
-                            b1BandAdjTag = child
-                        elif bandID == 'B2':
-                            b2BandAdjTag = child
-                        elif bandID == 'B3':
-                            b3BandAdjTag = child
-
-                if b0BandAdjTag == None:
-                    raise ARCSIException("Did not find B0 band adjustment tag")
-                if b1BandAdjTag == None:
-                    raise ARCSIException("Did not find B1 band adjustment tag")
-                if b2BandAdjTag == None:
-                    raise ARCSIException("Did not find B2 band adjustment tag")
-                if b3BandAdjTag == None:
-                    raise ARCSIException("Did not find B3 band adjustment tag")
-
-                self.b0DynAdjBias = float(b0BandAdjTag.find('BIAS').text.strip())
-                self.b0DynAdjSlope = float(b0BandAdjTag.find('SLOPE').text.strip())
-                self.b0DynAdjMinThres = float(b0BandAdjTag.find('MIN_THRESHOLD').text.strip())
-                self.b0DynAdjMaxThres = float(b0BandAdjTag.find('MAX_THRESHOLD').text.strip())
-                self.b1DynAdjBias = float(b1BandAdjTag.find('BIAS').text.strip())
-                self.b1DynAdjSlope = float(b1BandAdjTag.find('SLOPE').text.strip())
-                self.b1DynAdjMinThres = float(b1BandAdjTag.find('MIN_THRESHOLD').text.strip())
-                self.b1DynAdjMaxThres = float(b1BandAdjTag.find('MAX_THRESHOLD').text.strip())
-                self.b2DynAdjBias = float(b2BandAdjTag.find('BIAS').text.strip())
-                self.b2DynAdjSlope = float(b2BandAdjTag.find('SLOPE').text.strip())
-                self.b2DynAdjMinThres = float(b2BandAdjTag.find('MIN_THRESHOLD').text.strip())
-                self.b2DynAdjMaxThres = float(b2BandAdjTag.find('MAX_THRESHOLD').text.strip())
-                self.b3DynAdjBias = float(b3BandAdjTag.find('BIAS').text.strip())
-                self.b3DynAdjSlope = float(b3BandAdjTag.find('SLOPE').text.strip())
-                self.b3DynAdjMinThres = float(b3BandAdjTag.find('MIN_THRESHOLD').text.strip())
-                self.b3DynAdjMaxThres = float(b3BandAdjTag.find('MAX_THRESHOLD').text.strip())
-
-            # Find the no data and saturation pixel values.
-            self.inImgNoData = 0.0
-            self.inImgSatVal = 4095
-
             rastDisTags = topLevelRasterData.find('Raster_Display')
             for child in rastDisTags:
                 if child.tag == 'Special_Value':
@@ -459,7 +393,7 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
 
     def generateOutputBaseName(self):
         """
-        Customises the generic name for the Pleiades sensor
+        Customises the generic name for the SPOT7 sensor
         """
         outname = self.defaultGenBaseOutFileName()
         if self.prodBitRange == 8:
@@ -475,7 +409,7 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         return imageDataPresent
 
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
-        raise ARCSIException("Pleiades does not provide any image masks, do not use the MASK option.")
+        raise ARCSIException("SPOT7 does not provide any image masks, do not use the MASK option.")
 
     def imgNeedMosaicking(self):
         return self.tiledInputImg
@@ -488,11 +422,11 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         outputImage = os.path.join(outputPath, outputReflName)
 
         bandDefnSeq = list()
-        pdsBand = collections.namedtuple('Band', ['bandName', 'bandIndex', 'bias', 'gain'])
-        bandDefnSeq.append(pdsBand(bandName="Blue", bandIndex=1, bias=self.b0RadBias, gain=self.b0RadGain))
-        bandDefnSeq.append(pdsBand(bandName="Green", bandIndex=2, bias=self.b1RadBias, gain=self.b1RadGain))
-        bandDefnSeq.append(pdsBand(bandName="Red", bandIndex=3, bias=self.b2RadBias, gain=self.b2RadGain))
-        bandDefnSeq.append(pdsBand(bandName="NIR", bandIndex=4, bias=self.b3RadBias, gain=self.b3RadGain))
+        spotBand = collections.namedtuple('Band', ['bandName', 'bandIndex', 'bias', 'gain'])
+        bandDefnSeq.append(spotBand(bandName="Blue", bandIndex=1, bias=self.b0RadBias, gain=self.b0RadGain))
+        bandDefnSeq.append(spotBand(bandName="Green", bandIndex=2, bias=self.b1RadBias, gain=self.b1RadGain))
+        bandDefnSeq.append(spotBand(bandName="Red", bandIndex=3, bias=self.b2RadBias, gain=self.b2RadGain))
+        bandDefnSeq.append(spotBand(bandName="NIR", bandIndex=4, bias=self.b3RadBias, gain=self.b3RadGain))
         rsgislib.imagecalibration.spot5ToRadiance(self.fileName, outputImage, outFormat, bandDefnSeq)
 
         return outputImage, None
@@ -501,12 +435,12 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         print("Generate Saturation Image")
         outputImage = os.path.join(outputPath, outputName)
 
-        pdsBand = collections.namedtuple('Band', ['bandName', 'fileName', 'bandIndex', 'satVal'])
-        bandDefnSeq = list()
-        bandDefnSeq.append(pdsBand(bandName="Blue", fileName=self.fileName, bandIndex=1, satVal=self.inImgSatVal))
-        bandDefnSeq.append(pdsBand(bandName="Green", fileName=self.fileName, bandIndex=2, satVal=self.inImgSatVal))
-        bandDefnSeq.append(pdsBand(bandName="Red", fileName=self.fileName, bandIndex=3, satVal=self.inImgSatVal))
-        bandDefnSeq.append(pdsBand(bandName="NIR", fileName=self.fileName, bandIndex=4, satVal=self.inImgSatVal))
+        spotBand = collections.namedtuple('Band', ['bandName', 'fileName', 'bandIndex', 'satVal'])
+        bandDefnSeq = list()        
+        bandDefnSeq.append(spotBand(bandName="Blue", fileName=self.fileName, bandIndex=1, satVal=self.inImgSatVal))
+        bandDefnSeq.append(spotBand(bandName="Green", fileName=self.fileName, bandIndex=2, satVal=self.inImgSatVal))
+        bandDefnSeq.append(spotBand(bandName="Red", fileName=self.fileName, bandIndex=3, satVal=self.inImgSatVal))
+        bandDefnSeq.append(spotBand(bandName="NIR", fileName=self.fileName, bandIndex=4, satVal=self.inImgSatVal))
 
         rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
 
@@ -549,7 +483,7 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         return outputImage
 
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
-        raise ARCSIException("Cloud Masking Not Implemented for Pleiades.")
+        raise ARCSIException("SPOT6 does not have a cloud masking implementation in ARCSI.")
 
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((4, 6), dtype=numpy.float32)
@@ -883,4 +817,5 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName('KEA')
                 gdalDriver.Delete(self.warpedKEADNImg)
+
 

@@ -82,38 +82,33 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
     def __init__(self, debugMode, inputImage):
         ARCSIAbstractSensor.__init__(self, debugMode, inputImage)
         self.sensor = "SPOT6"
-
         self.fileName = ""
-        self.mission = ""
-        self.missionIdx = ""
-        self.instrument = ""
-        self.instrumentIdx = ""
-        self.acquIncidAngle = 0.0
-        self.acquViewAngle = 0.0
-
-        self.b1Bias = 0.0
-        self.b2Bias = 0.0
-        self.b3Bias = 0.0
-        self.b4Bias = 0.0
-
-        self.b1Gain = 0.0
-        self.b2Gain = 0.0
-        self.b3Gain = 0.0
-        self.b4Gain = 0.0
-
-        self.b1SolarIrradiance = 0.0
-        self.b2SolarIrradiance = 0.0
-        self.b3SolarIrradiance = 0.0
-        self.b4SolarIrradiance = 0.0
-
-        self.numXPxl = 0
-        self.numYPxl = 0
-
-        self.inImgHasGCPs = False
+        self.inputImgType = ""
+        self.inputImgFiles = []
+        self.tiledInputImg = False
+        self.inputImgProjed = True
+        self.b0SolarIrr = 0.0
+        self.b1SolarIrr = 0.0
+        self.b2SolarIrr = 0.0
+        self.b3SolarIrr = 0.0
+        self.b0RadGain = 0.0
+        self.b0RadBias = 0.0
+        self.b1RadGain = 0.0
+        self.b1RadBias = 0.0
+        self.b2RadGain = 0.0
+        self.b2RadBias = 0.0
+        self.b3RadGain = 0.0
+        self.b3RadBias = 0.0
+        self.acqBitRange = 12
+        self.prodBitRange = 12
+        self.warpedKEADNImg = ''
+        self.origDNImg = ''
+        self.createdWarpKEADNImg = False
+        
 
     def extractHeaderParameters(self, inputHeader, wktStr):
         """
-        Understands and parses the RapidEye metadata.xml header file
+        Understands and parses the SPOT 6 header file
         """
         try:
             self.headerFileName = os.path.split(inputHeader)[1]
@@ -121,144 +116,263 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
             print("Reading header file")
             tree = ET.parse(inputHeader)
             root = tree.getroot()
+            
+            topLevelMetaIdent = root.find('Metadata_Identification')
+            if topLevelMetaIdent == None:
+                raise ARCSIException("Cannot open top level section \'Metadata_Identification\'")
 
-            #for child in root:
-            #    print(child.tag, child.attrib)
+            dimapVersion = topLevelMetaIdent.find('METADATA_FORMAT').attrib['version'].strip()
+            if dimapVersion != '2.0':
+                raise ARCSIException("Only DIMAP Version 2.0 is supported by this reader; provided with: \'" + dimapVersion + "\'")
 
-            dimapVersion = root.find('Metadata_Id').find('METADATA_FORMAT').attrib['version']
-            if dimapVersion != '1.1':
-                print('DIMAP version is ' + dimapVersion)
-                raise ARCSIException("Only DIMAP Version 1.1 is supported by this reader.")
+            metaSensorProfile = topLevelMetaIdent.find('METADATA_PROFILE').text.strip()
+            if not ((metaSensorProfile == 'S6_SENSOR') or (metaSensorProfile == 'S6_ORTHO')):
+                raise ARCSIException("Input file is not for SPOT 6, \'METADATA_PROFILE\' should be \'S6_SENSOR\' or \'S6_ORTHO\'; provided with: \'" + metaSensorProfile + "\'")
+            self.inputImgType = metaSensorProfile
 
-            self.mission = root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('MISSION').text.strip()
-            self.missionIdx = root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('MISSION_INDEX').text.strip()
-            self.instrument = root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('INSTRUMENT').text.strip()
-            self.instrumentIdx = root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('INSTRUMENT_INDEX').text.strip()
+            topLevelDatasetIdent = root.find('Dataset_Identification')
+            if topLevelDatasetIdent == None:
+                raise ARCSIException("Cannot open top level section \'Dataset_Identification\'")
 
-            if (self.mission != "SPOT") or (self.missionIdx != "5"):
-                print("Mission = " + self.mission)
-                print("Mission Index= " + self.missionIdx)
-                raise ARCSIException("Only the SPOT 5 mission is supported")
+            topLevelDatasetContent = root.find('Dataset_Content')
+            if topLevelDatasetContent == None:
+                raise ARCSIException("Cannot open top level section \'Dataset_Content\'")
 
-            if (self.instrument != "HRG") or (self.instrumentIdx != "2"):
-                print("Instrument = " + self.instrument)
-                print("Instrument Index= " + self.instrumentIdx)
-                raise ARCSIException("Only the HRG version 2 instrument is supported.")
+            topLevelProductInfo = root.find('Product_Information')
+            if topLevelProductInfo == None:
+                raise ARCSIException("Cannot open top level section \'Product_Information\'")
 
-            frameCorners = root.find('Dataset_Frame').findall('Vertex')
-            count = 0
-            for vertex in frameCorners:
-                if count == 0:
-                    self.latTL = float(vertex.find('FRAME_LAT').text.strip())
-                    self.lonTL = float(vertex.find('FRAME_LON').text.strip())
-                elif count == 1:
-                    self.latTR = float(vertex.find('FRAME_LAT').text.strip())
-                    self.lonTR = float(vertex.find('FRAME_LON').text.strip())
-                elif count == 2:
-                    self.latBR = float(vertex.find('FRAME_LAT').text.strip())
-                    self.lonBR = float(vertex.find('FRAME_LON').text.strip())
-                    self.numXPxl = int(vertex.find('FRAME_COL').text.strip())
-                    self.numYPxl = int(vertex.find('FRAME_ROW').text.strip())
-                else:
-                    self.latBL = float(vertex.find('FRAME_LAT').text.strip())
-                    self.lonBL = float(vertex.find('FRAME_LON').text.strip())
-                count = count + 1
+            topLevelCoordSystem = root.find('Coordinate_Reference_System')
+            if topLevelCoordSystem == None:
+                raise ARCSIException("Cannot open top level section \'Coordinate_Reference_System\'")
 
-            if count != 4:
-                print("Count == " + str(count))
-                raise ARCSIException("The number of vertex's found was incorrect so the corners of the scene have not been correctly defined.")
+            topLevelGeoposition= root.find('Geoposition')
+            if topLevelGeoposition == None:
+                raise ARCSIException("Cannot open top level section \'Geoposition\'")
 
-            self.latCentre = float(root.find('Dataset_Frame').find('Scene_Center').find('FRAME_LAT').text.strip())
-            self.lonCentre = float(root.find('Dataset_Frame').find('Scene_Center').find('FRAME_LON').text.strip())
+            topLevelProcessInfo = root.find('Processing_Information')
+            if topLevelProcessInfo == None:
+                raise ARCSIException("Cannot open top level section \'Processing_Information\'")
 
-            self.pxlXRes = (self.lonTR - self.lonTL)/float(self.numXPxl)
-            self.pxlYRes = (self.latTL - self.latBL)/float(self.numYPxl)
+            topLevelRasterData = root.find('Raster_Data')
+            if topLevelRasterData == None:
+                raise ARCSIException("Cannot open top level section \'Raster_Data\'")
 
-            print("TL: " + str(self.lonTL) + "," + str(self.latTL))
-            print("TR: " + str(self.lonTR) + "," + str(self.latTR))
-            print("BR: " + str(self.lonBR) + "," + str(self.latBR))
-            print("BL: " + str(self.lonBL) + "," + str(self.latBL))
-            print("Centre Pt: " + str(self.lonCentre) + "," + str(self.latCentre))
+            topLevelRadiometricInfo = root.find('Radiometric_Data')
+            if topLevelRadiometricInfo == None:
+                raise ARCSIException("Cannot open top level section \'Radiometric_Data\'")
 
-            epsgCode = int(root.find('Coordinate_Reference_System').find('Horizontal_CS').find('HORIZONTAL_CS_CODE').text.strip().split(":")[1])
-            sceneProj = osr.SpatialReference()
-            sceneProj.ImportFromEPSG(epsgCode)
-            self.inWKT = sceneProj.ExportToWkt()
+            topLevelGeometricInfo = root.find('Geometric_Data')
+            if topLevelGeometricInfo == None:
+                raise ARCSIException("Cannot open top level section \'Geometric_Data\'")
 
-            # Get date and time of the acquisition
-            acDate = root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('IMAGING_DATE').text.strip().split('-')
-            acTime = root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('IMAGING_TIME').text.strip().split(':')
-            self.acquisitionTime = datetime.datetime(int(acDate[0]), int(acDate[1]), int(acDate[2]), int(acTime[0]), int(acTime[1]), int(acTime[2]))
-            print("Aq Time = " + str(self.acquisitionTime))
+            topLevelQualityAssess = root.find('Quality_Assessment')
+            if topLevelQualityAssess == None:
+                raise ARCSIException("Cannot open top level section \'Quality_Assessment\'")
 
-            self.solarZenith = 90-float(root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('SUN_ELEVATION').text.strip())
-            self.solarAzimuth = float(root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('SUN_AZIMUTH').text.strip())
+            topLevelQualityAssess = root.find('Quality_Assessment')
+            if topLevelQualityAssess == None:
+                raise ARCSIException("Cannot open top level section \'Quality_Assessment\'")
 
-            self.acquIncidAngle = float(root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('INCIDENCE_ANGLE').text.strip())
-            print("self.acquIncidAngle: ", self.acquIncidAngle)
-            self.acquViewAngle = float(root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('VIEWING_ANGLE').text.strip())
-            print("self.acquViewAngle: ", self.acquViewAngle)
-
-            self.senorZenith = self.acquViewAngle
-            print("self.senorZenith: ", self.senorZenith)
-            self.senorAzimuth = self.acquIncidAngle
-            print("self.senorAzimuth: ", self.senorAzimuth)
-
+            topLevelDataSources = root.find('Dataset_Sources')
+            if topLevelDataSources == None:
+                raise ARCSIException("Cannot open top level section \'Dataset_Sources\'")
+            
+            # Get image file.
             filesDIR = os.path.dirname(inputHeader)
             if not self.userSpInputImage is None:
                 self.fileName = os.path.abspath(self.userSpInputImage)
             else:
-                self.fileName = os.path.join(filesDIR, root.find('Data_Access').find('Data_File').find('DATA_FILE_PATH').attrib['href'])
-            print("self.fileName = " + self.fileName)
-
-            spectralBandInfo = root.find('Image_Interpretation').findall('Spectral_Band_Info')
-            for bandInfo in spectralBandInfo:
-                if bandInfo.find('BAND_DESCRIPTION').text.strip() == 'XS1':
-                    self.b1Bias = float(bandInfo.find('PHYSICAL_BIAS').text.strip())
-                    self.b1Gain = float(bandInfo.find('PHYSICAL_GAIN').text.strip())
-                elif bandInfo.find('BAND_DESCRIPTION').text.strip() == 'XS2':
-                    self.b2Bias = float(bandInfo.find('PHYSICAL_BIAS').text.strip())
-                    self.b2Gain = float(bandInfo.find('PHYSICAL_GAIN').text.strip())
-                elif bandInfo.find('BAND_DESCRIPTION').text.strip() == 'XS3':
-                    self.b3Bias = float(bandInfo.find('PHYSICAL_BIAS').text.strip())
-                    self.b3Gain = float(bandInfo.find('PHYSICAL_GAIN').text.strip())
-                elif bandInfo.find('BAND_DESCRIPTION').text.strip() == 'SWIR':
-                    self.b4Bias = float(bandInfo.find('PHYSICAL_BIAS').text.strip())
-                    self.b4Gain = float(bandInfo.find('PHYSICAL_GAIN').text.strip())
+                imgFileTags = topLevelRasterData.find('Data_Access').find('Data_Files')
+                imgFiles = list()
+                for child in imgFileTags:
+                    if child.tag == 'Data_File':
+                        imgFiles.append(os.path.join(filesDIR, imgFileTags.find('Data_File').find('DATA_FILE_PATH').attrib['href'].strip()))
+                if len(imgFiles) == 0:
+                    raise ARCSIException("Cannot find the input file.")
+                elif len(imgFiles) == 1:
+                    self.fileName = imgFiles[0]
+                    self.tiledInputImg = False
                 else:
-                    print("Band Description = " + bandInfo.find('BAND_DESCRIPTION').text.strip())
-                    raise ARCSIException("Image band description has not be recognised.")
-            print("Gains and Bias' found.")
+                    self.inputImgFiles = imgFiles
+                    self.tiledInputImg = True
 
-            #for child in root.find('Data_Strip').find('Sensor_Calibration').find('Solar_Irradiance'):
-            #    print(child.tag, child.attrib)
+            # Get acquasition time
+            locGeoValsTag = None
+            for child in topLevelGeometricInfo.find('Use_Area'):
+                if child.tag == 'Located_Geometric_Values':
+                    if child.find('LOCATION_TYPE').text.strip() == 'Center':
+                        locGeoValsTag = child
+                        break
+            if locGeoValsTag == None:
+                raise ARCSIException("Could not find \'Located_Geometric_Values\' for the centre of the image.")
 
-            spectralIrrInfo = root.find('Data_Strip').find('Sensor_Calibration').find('Solar_Irradiance').findall('Band_Solar_Irradiance')
-            for spectralIrr in spectralIrrInfo:
-                if spectralIrr.find('BAND_INDEX').text.strip() == '1':
-                    self.b1SolarIrradiance = float(spectralIrr.find('SOLAR_IRRADIANCE_VALUE').text.strip())
-                elif spectralIrr.find('BAND_INDEX').text.strip() == '2':
-                    self.b2SolarIrradiance = float(spectralIrr.find('SOLAR_IRRADIANCE_VALUE').text.strip())
-                elif spectralIrr.find('BAND_INDEX').text.strip() == '3':
-                    self.b3SolarIrradiance = float(spectralIrr.find('SOLAR_IRRADIANCE_VALUE').text.strip())
-                elif spectralIrr.find('BAND_INDEX').text.strip() == '4':
-                    self.b4SolarIrradiance = float(spectralIrr.find('SOLAR_IRRADIANCE_VALUE').text.strip())
-                else:
-                    print("Band Index = " + spectralIrr.find('BAND_INDEX').text.strip())
-                    raise ARCSIException("Image band index has not be recognised.")
-            print("Solar Irradiance values found...")
+            tmpAcquasitionTime = locGeoValsTag.find('TIME').text.strip()
+            tmpAcquasitionTime = tmpAcquasitionTime.replace('Z', '')
+            self.acquisitionTime = datetime.datetime.strptime(tmpAcquasitionTime, "%Y-%m-%dT%H:%M:%S.%f")
 
-            dataset = gdal.Open(self.fileName, gdal.GA_ReadOnly)
-            if not dataset is None:
-                if dataset.GetGCPCount() > 0:
-                    self.inImgHasGCPs = True
-                else:
-                    self.inImgHasGCPs = False
-                dataset = None
+            # Get acquasition parameters - solar/view angles
+            self.solarZenith = 90-float(locGeoValsTag.find('Solar_Incidences').find('SUN_ELEVATION').text.strip())
+            self.solarAzimuth = float(locGeoValsTag.find('Solar_Incidences').find('SUN_AZIMUTH').text.strip())
+            self.senorZenith = 0.0 ## TODO: Not sure what to set this too!!
+            self.senorAzimuth = float(locGeoValsTag.find('Acquisition_Angles').find('AZIMUTH_ANGLE').text.strip())
+
+            self.inputImgProjed = True
+            if topLevelCoordSystem.find('Projected_CRS') == None:
+                self.inputImgProjed = False
+                if topLevelCoordSystem.find('Geodetic_CRS') == None:
+                    raise ARCSIException("Could not find \'Projected_CRS\' or \'Geodetic_CRS\' therefore can't setup projection information.")
             else:
-                print("Could not open image to set band names: ", imageFile)
+                self.inputImgProjed = True
 
+            # Get coordinate system information
+            epsgCode = -1
+            if self.inputImgProjed:
+                epsgCode = int(topLevelCoordSystem.find('Projected_CRS').find('PROJECTED_CRS_CODE').text.strip().split('::')[1])
+            else:
+                epsgCode = int(topLevelCoordSystem.find('Geodetic_CRS').find('GEODETIC_CRS_CODE').text.strip().split('::')[1])
 
+            if epsgCode > 0:
+                inProj = osr.SpatialReference()
+                inProj.ImportFromEPSG(epsgCode)
+                if self.inWKT == "":
+                    self.inWKT = inProj.ExportToWkt()
+            else:
+                raise ARCSIException("EPSG code was not defined and therefore cannot defined the coordinate system and projection.")
+
+            # Get BBOX
+            tlTag = None
+            trTag = None
+            blTag = None
+            brTag = None
+            for child in topLevelDatasetContent.find('Dataset_Extent'):
+                if child.tag == 'Vertex':
+                    row = int(child.find('ROW').text.strip())
+                    col = int(child.find('COL').text.strip())
+                    if (row == 1) and (col == 1):
+                        tlTag = child
+                    elif (row == 1) and (col > 1):
+                        trTag = child
+                    elif (row > 1) and (col == 1):
+                        blTag = child
+                    elif (row > 1) and (col > 1):
+                        brTag = child
+                    else:
+                        raise ARCSIException("Something strange has happened when parsing the header file, cannot find where vertex is located.")
+
+            if tlTag == None:
+                raise ARCSIException("Could not find the TL vertex tag.")
+            if trTag == None:
+                raise ARCSIException("Could not find the TR vertex tag.")
+            if blTag == None:
+                raise ARCSIException("Could not find the BL vertex tag.")
+            if brTag == None:
+                raise ARCSIException("Could not find the BR vertex tag.")
+
+            self.latTL = float(tlTag.find('LAT').text.strip())
+            self.lonTL = float(tlTag.find('LON').text.strip())
+            self.latTR = float(trTag.find('LAT').text.strip())
+            self.lonTR = float(trTag.find('LON').text.strip())
+            self.latBL = float(blTag.find('LAT').text.strip())
+            self.lonBL = float(blTag.find('LON').text.strip())
+            self.latBR = float(brTag.find('LAT').text.strip())
+            self.lonBR = float(brTag.find('LON').text.strip())
+            self.latCentre = float(topLevelDatasetContent.find('Dataset_Extent').find('Center').find('LAT').text.strip())
+            self.lonCentre = float(topLevelDatasetContent.find('Dataset_Extent').find('Center').find('LON').text.strip())
+
+            if self.inputImgProjed:
+                self.xTL = float(tlTag.find('X').text.strip())
+                self.yTL = float(tlTag.find('Y').text.strip())
+                self.xTR = float(trTag.find('X').text.strip())
+                self.yTR = float(trTag.find('Y').text.strip())
+                self.xBL = float(blTag.find('X').text.strip())
+                self.yBL = float(blTag.find('Y').text.strip())
+                self.xBR = float(brTag.find('X').text.strip())
+                self.yBR = float(brTag.find('Y').text.strip())
+                self.xCentre = float(topLevelDatasetContent.find('Dataset_Extent').find('Center').find('X').text.strip())
+                self.yCentre = float(topLevelDatasetContent.find('Dataset_Extent').find('Center').find('Y').text.strip())
+            
+            # Find Radiometric Tags
+            b0BandRadTag = None
+            b1BandRadTag = None
+            b2BandRadTag = None
+            b3BandRadTag = None
+            b0SolarIrrTag = None
+            b1SolarIrrTag = None
+            b2SolarIrrTag = None
+            b3SolarIrrTag = None
+
+            bandMeasTag = topLevelRadiometricInfo.find('Radiometric_Calibration').find('Instrument_Calibration').find('Band_Measurement_List')
+            for child in bandMeasTag:
+                if child.tag == 'Band_Radiance':
+                    bandID = child.find('BAND_ID').text.strip()
+                    if bandID == 'B0':
+                        b0BandRadTag = child
+                    elif bandID == 'B1':
+                        b1BandRadTag = child
+                    elif bandID == 'B2':
+                        b2BandRadTag = child
+                    elif bandID == 'B3':
+                        b3BandRadTag = child
+
+                elif child.tag == 'Band_Solar_Irradiance':
+                    bandID = child.find('BAND_ID').text.strip()
+                    if bandID == 'B0':
+                        b0SolarIrrTag = child
+                    elif bandID == 'B1':
+                        b1SolarIrrTag = child
+                    elif bandID == 'B2':
+                        b2SolarIrrTag = child
+                    elif bandID == 'B3':
+                        b3SolarIrrTag = child
+
+            # Get Solar Irradiance Values
+            if b0SolarIrrTag == None:
+                raise ARCSIException("Did not find B0 Solar Irradiance value")
+            if b1SolarIrrTag == None:
+                raise ARCSIException("Did not find B1 Solar Irradiance value")
+            if b2SolarIrrTag == None:
+                raise ARCSIException("Did not find B2 Solar Irradiance value")
+            if b3SolarIrrTag == None:
+                raise ARCSIException("Did not find B3 Solar Irradiance value")
+
+            self.b0SolarIrr = float(b0SolarIrrTag.find('VALUE').text.strip())
+            self.b1SolarIrr = float(b1SolarIrrTag.find('VALUE').text.strip())
+            self.b2SolarIrr = float(b2SolarIrrTag.find('VALUE').text.strip())
+            self.b3SolarIrr = float(b3SolarIrrTag.find('VALUE').text.strip())
+
+            # Get band gain / bias values 
+            if b0BandRadTag == None:
+                raise ARCSIException("Did not find B0 radiance gain / bias")
+            if b1BandRadTag == None:
+                raise ARCSIException("Did not find B1 radiance gain / bias")
+            if b2BandRadTag == None:
+                raise ARCSIException("Did not find B2 radiance gain / bias")
+            if b3BandRadTag == None:
+                raise ARCSIException("Did not find B3 radiance gain / bias")
+
+            self.b0RadGain = float(b0BandRadTag.find('GAIN').text.strip())
+            self.b0RadBias = float(b0BandRadTag.find('BIAS').text.strip())
+            self.b1RadGain = float(b1BandRadTag.find('GAIN').text.strip())
+            self.b1RadBias = float(b1BandRadTag.find('BIAS').text.strip())
+            self.b2RadGain = float(b2BandRadTag.find('GAIN').text.strip())
+            self.b2RadBias = float(b2BandRadTag.find('BIAS').text.strip())
+            self.b3RadGain = float(b3BandRadTag.find('GAIN').text.strip())
+            self.b3RadBias = float(b3BandRadTag.find('BIAS').text.strip())
+
+            # Find the bit ranges of the products and acquasition
+            self.acqBitRange = int(topLevelRadiometricInfo.find('Dynamic_Range').find('ACQUISITION_RANGE').text.strip())
+            self.prodBitRange = int(topLevelRadiometricInfo.find('Dynamic_Range').find('PRODUCT_RANGE').text.strip())
+
+            rastDisTags = topLevelRasterData.find('Raster_Display')
+            for child in rastDisTags:
+                if child.tag == 'Special_Value':
+                    if child.find('SPECIAL_VALUE_TEXT').text.strip() == 'NODATA':
+                        self.inImgNoData = int(child.find('SPECIAL_VALUE_COUNT').text.strip())
+                    elif child.find('SPECIAL_VALUE_TEXT').text.strip() == 'SATURATED':
+                        self.inImgSatVal = int(child.find('SPECIAL_VALUE_COUNT').text.strip())
+
+            print("Processing Input File: ", self.fileName)
 
         except Exception as e:
             raise e
@@ -282,6 +396,8 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         Customises the generic name for the SPOT6 sensor
         """
         outname = self.defaultGenBaseOutFileName()
+        if self.prodBitRange == 8:
+            outname = outname + '_8bitDN'
         return outname
 
     def expectedImageDataPresent(self):
@@ -295,25 +411,23 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("SPOT6 does not provide any image masks, do not use the MASK option.")
 
+    def imgNeedMosaicking(self):
+        return self.tiledInputImg
+
     def mosaicImageTiles(self):
         raise ARCSIException("Image data does not need mosaicking")
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
         outputImage = os.path.join(outputPath, outputReflName)
+
         bandDefnSeq = list()
-
-        spot6Band = collections.namedtuple('SPOT6Band', ['bandName', 'bandIndex', 'bias', 'gain'])
-        bandDefnSeq.append(spot6Band(bandName="NIR", bandIndex=3, bias=self.b1Bias, gain=self.b1Gain))
-        bandDefnSeq.append(spot6Band(bandName="Red", bandIndex=2, bias=self.b2Bias, gain=self.b2Gain))
-        bandDefnSeq.append(spot6Band(bandName="Green", bandIndex=1, bias=self.b3Bias, gain=self.b3Gain))
-        bandDefnSeq.append(spot6Band(bandName="SWIR", bandIndex=4, bias=self.b4Bias, gain=self.b4Gain))
+        spotBand = collections.namedtuple('Band', ['bandName', 'bandIndex', 'bias', 'gain'])
+        bandDefnSeq.append(spotBand(bandName="Blue", bandIndex=1, bias=self.b0RadBias, gain=self.b0RadGain))
+        bandDefnSeq.append(spotBand(bandName="Green", bandIndex=2, bias=self.b1RadBias, gain=self.b1RadGain))
+        bandDefnSeq.append(spotBand(bandName="Red", bandIndex=3, bias=self.b2RadBias, gain=self.b2RadGain))
+        bandDefnSeq.append(spotBand(bandName="NIR", bandIndex=4, bias=self.b3RadBias, gain=self.b3RadGain))
         rsgislib.imagecalibration.spot5ToRadiance(self.fileName, outputImage, outFormat, bandDefnSeq)
-
-        if self.inImgHasGCPs:
-            arcsiUtils = ARCSIUtils()
-            arcsiUtils.copyGCPs(self.fileName, outputImage)
-            rsgislib.imageutils.assignSpatialInfo(outputImage, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0)
 
         return outputImage, None
 
@@ -321,25 +435,35 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         print("Generate Saturation Image")
         outputImage = os.path.join(outputPath, outputName)
 
-        spot6Band = collections.namedtuple('SPOT6Band', ['bandName', 'fileName', 'bandIndex', 'satVal'])
-        bandDefnSeq = list()
-        bandDefnSeq.append(spot6Band(bandName="NIR", fileName=self.fileName, bandIndex=1, satVal=255.0))
-        bandDefnSeq.append(spot6Band(bandName="Red", fileName=self.fileName, bandIndex=2, satVal=255.0))
-        bandDefnSeq.append(spot6Band(bandName="Green", fileName=self.fileName, bandIndex=3, satVal=255.0))
-        bandDefnSeq.append(spot6Band(bandName="SWIR", fileName=self.fileName, bandIndex=4, satVal=255.0))
+        spotBand = collections.namedtuple('Band', ['bandName', 'fileName', 'bandIndex', 'satVal'])
+        bandDefnSeq = list()        
+        bandDefnSeq.append(spotBand(bandName="Blue", fileName=self.fileName, bandIndex=1, satVal=self.inImgSatVal))
+        bandDefnSeq.append(spotBand(bandName="Green", fileName=self.fileName, bandIndex=2, satVal=self.inImgSatVal))
+        bandDefnSeq.append(spotBand(bandName="Red", fileName=self.fileName, bandIndex=3, satVal=self.inImgSatVal))
+        bandDefnSeq.append(spotBand(bandName="NIR", fileName=self.fileName, bandIndex=4, satVal=self.inImgSatVal))
 
         rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
-
-        if self.inImgHasGCPs:
-            arcsiUtils = ARCSIUtils()
-            arcsiUtils.copyGCPs(self.fileName, outputImage)
-            rsgislib.imageutils.assignSpatialInfo(outputImage, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0)
 
         return outputImage
 
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         print("Generate valid image mask")
+        # Test input image, if it is .jp2 then warp to KEA so processing can proceed.
+        inFileExt = os.path.splitext(self.fileName)[1]
+        if inFileExt.lower() == '.jp2':
+            inFileName = os.path.splitext(os.path.basename(self.fileName))[0]
+            self.warpedKEADNImg = os.path.join(outputPath, inFileName+'.kea')
+            cmd = 'gdalwarp -of KEA -overwrite -r cubic -srcnodata ' + str(self.inImgNoData) + ' -dstnodata ' + str(self.inImgNoData) + ' "' + self.fileName + '" "' + self.warpedKEADNImg + '"'
+            try:
+                subprocess.call(cmd, shell=True)
+            except OSError as e:
+                raise ARCSIException('Could not warp image: ' + cmd)
+            self.origDNImg = self.fileName
+            self.fileName = self.warpedKEADNImg
+            self.createdWarpKEADNImg = True
+
         outputImage = os.path.join(outputPath, outputMaskName)
+        rsgislib.imageutils.genValidMask(inimages=[self.fileName], outimage=outputImage, format=outFormat, nodata=self.inImgNoData)
         return outputImage
 
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
@@ -350,24 +474,19 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         outputImage = os.path.join(outputPath, outputName)
         solarIrradianceVals = list()
         IrrVal = collections.namedtuple('SolarIrradiance', ['irradiance'])
-        solarIrradianceVals.append(IrrVal(irradiance=self.b1SolarIrradiance))
-        solarIrradianceVals.append(IrrVal(irradiance=self.b2SolarIrradiance))
-        solarIrradianceVals.append(IrrVal(irradiance=self.b3SolarIrradiance))
-        solarIrradianceVals.append(IrrVal(irradiance=self.b4SolarIrradiance))
+        solarIrradianceVals.append(IrrVal(irradiance=self.b0SolarIrr))
+        solarIrradianceVals.append(IrrVal(irradiance=self.b1SolarIrr))
+        solarIrradianceVals.append(IrrVal(irradiance=self.b2SolarIrr))
+        solarIrradianceVals.append(IrrVal(irradiance=self.b3SolarIrr))
+
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
-
-        if self.inImgHasGCPs:
-            arcsiUtils = ARCSIUtils()
-            arcsiUtils.copyGCPs(self.fileName, outputImage)
-            rsgislib.imageutils.assignSpatialInfo(outputImage, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0)
-
         return outputImage
 
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("SPOT6 does not have a cloud masking implementation in ARCSI.")
 
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
-        sixsCoeffs = numpy.zeros((5, 6), dtype=numpy.float32)
+        sixsCoeffs = numpy.zeros((4, 6), dtype=numpy.float32)
         # Set up 6S model
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
@@ -392,8 +511,8 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
             s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromRadiance(200)
         s.aot550 = aotVal
 
-        # Band 1
-        s.wavelength = Py6S.Wavelength(0.450, 0.650, [0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.007200,0.007200,0.054000,0.054000,0.178800,0.178800,0.371900,0.371900,0.557100,0.557100,0.557100,0.696000,0.696000,0.795900,0.795900,0.865400,0.865400,0.920800,0.920800,0.962700,0.962700,0.983800,0.983800,1.000000,1.000000,0.996200,0.996200,0.978300,0.978300,0.949700,0.949700,0.904500,0.904500,0.846800,0.846800,0.789500,0.789500,0.722900,0.722900,0.661100,0.661100,0.593700,0.593700,0.525600,0.525600,0.456500,0.456500,0.377600,0.377600,0.294300,0.294300,0.205300,0.205300,0.132300,0.132300,0.076700,0.076700,0.041900,0.041900,0.022000,0.022000,0.011700,0.011700,0.006700,0.006700,0.003900,0.003900,0.000000,0.000000,0.000000])
+        # Band 1 - Blue
+        s.wavelength = Py6S.Wavelength(0.45, 0.51, [0.6457, 0.6825, 0.7193, 0.7561, 0.7929, 0.8001, 0.8073, 0.8145, 0.8217, 0.8353, 0.8489, 0.8624, 0.8760, 0.8862, 0.8964, 0.9066, 0.9168, 0.9277, 0.9387, 0.9496, 0.9606, 0.8384, 0.7161, 0.5939, 0.4717])
         s.run()
         sixsCoeffs[0,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[0,1] = float(s.outputs.values['coef_xb'])
@@ -402,8 +521,8 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         sixsCoeffs[0,4] = float(s.outputs.values['diffuse_solar_irradiance'])
         sixsCoeffs[0,5] = float(s.outputs.values['environmental_irradiance'])
 
-        # Band 2
-        s.wavelength = Py6S.Wavelength(0.580, 0.7425, [0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.001700,0.001700,0.022000,0.022000,0.116500,0.116500,0.315300,0.315300,0.533600,0.533600,0.704900,0.704900,0.826400,0.826400,0.902100,0.902100,0.951500,0.951500,0.979600,0.979600,0.994200,0.994200,1.000000,1.000000,0.997300,0.997300,0.981800,0.981800,0.945000,0.945000,0.863200,0.863200,0.717100,0.717100,0.534000,0.534000,0.356000,0.356000,0.222900,0.222900,0.132700,0.132700,0.079200,0.079200,0.047600,0.047600,0.029100,0.029100,0.018000,0.018000,0.011100,0.011100,0.006800,0.006800,0.004200,0.004200,0.002500,0.002500])
+        # Band 2 - Green
+        s.wavelength = Py6S.Wavelength(0.510, 0.580, [0.1314, 0.2879, 0.4444, 0.6009, 0.75740, 0.76330, 0.7692, 0.7751, 0.7809, 0.7959, 0.8109, 0.8258, 0.8408, 0.8498, 0.8588, 0.8678, 0.8768, 0.8722, 0.8675, 0.8628, 0.8582, 0.8914, 0.9246, 0.9579, 0.9911, 0.9614, 0.9316, 0.9018, 0.8721])
         s.run()
         sixsCoeffs[1,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[1,1] = float(s.outputs.values['coef_xb'])
@@ -412,8 +531,8 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         sixsCoeffs[1,4] = float(s.outputs.values['diffuse_solar_irradiance'])
         sixsCoeffs[1,5] = float(s.outputs.values['environmental_irradiance'])
 
-        # Band 3
-        s.wavelength = Py6S.Wavelength(0.750, 0.945, [0.000000,0.000000,0.005400,0.005400,0.016100,0.016100,0.042900,0.042900,0.096600,0.096600,0.183500,0.183500,0.297400,0.297400,0.433700,0.433700,0.565000,0.565000,0.691000,0.691000,0.792200,0.792200,0.873300,0.873300,0.928600,0.928600,0.965000,0.965000,0.989700,0.989700,0.997900,0.997900,1.000000,1.000000,0.991200,0.991200,0.978700,0.978700,0.960700,0.960700,0.940400,0.940400,0.921500,0.921500,0.890800,0.890800,0.869500,0.869500,0.814700,0.814700,0.734400,0.734400,0.612700,0.612700,0.457600,0.457600,0.327200,0.327200,0.216800,0.216800,0.134300,0.134300,0.087400,0.087400,0.058200,0.058200,0.035800,0.035800,0.023700,0.023700,0.016700,0.016700,0.011400,0.011400,0.007800,0.007800,0.005300,0.005300,0.000000])
+        # Band 3 - Red
+        s.wavelength = Py6S.Wavelength(0.350000, 1.347500, [0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000001,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000002,0.000003,0.000001,0.000001,0.000001,0.000002,0.000001,0.000001,0.000001,0.000001,0.000001,0.000002,0.000003,0.000002,0.000003,0.000002,0.000002,0.000002,0.000001,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000001,0.000001,0.000001,0.000001,0.000001,0.000007,0.000013,0.000025,0.000041,0.000063,0.000123,0.000220,0.000628,0.001380,0.004867,0.015002,0.095566,0.244827,0.596071,0.805405,0.872776,0.881036,0.927928,0.953189,0.965042,0.967019,0.965588,0.958258,0.955500,0.953447,0.955801,0.963907,0.970358,0.974797,0.987526,0.995433,0.999085,0.994134,0.983694,0.986727,0.885280,0.693925,0.291823,0.100695,0.020441,0.007152,0.001914,0.000951,0.000404,0.000232,0.000102,0.000065,0.000027,0.000018,0.000014,0.000018,0.000013,0.000014,0.000013,0.000013,0.000011,0.000008,0.000003,0.000004,0.000002,0.000001,0.000001,0.000000,0.000001,0.000001,0.000003,0.000004,0.000010,0.000009,0.000007,0.000009,0.000007,0.000005,0.000005,0.000002,0.000002,0.000001,0.000002,0.000001,0.000001,0.000001,0.000014,0.000015,0.000013,0.000016,0.000011,0.000013,0.000011,0.000008,0.000009,0.000008,0.000008,0.000004,0.000011,0.000004,0.000007,0.000007,0.000006,0.000006,0.000008,0.000007,0.000003,0.000007,0.000006,0.000007,0.000005,0.000007,0.000009,0.000011,0.000007,0.000009,0.000004,0.000004,0.000009,0.000006,0.000007,0.000007,0.000004,0.000006,0.000005,0.000005,0.000006,0.000005,0.000004,0.000004,0.000004,0.000004,0.000003,0.000004,0.000003,0.000003,0.000003,0.000003,0.000003,0.000003,0.000002,0.000002,0.000002,0.000002,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000000,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000000,0.000001,0.000001,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000])
         s.run()
         sixsCoeffs[2,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[2,1] = float(s.outputs.values['coef_xb'])
@@ -422,8 +541,8 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         sixsCoeffs[2,4] = float(s.outputs.values['diffuse_solar_irradiance'])
         sixsCoeffs[2,5] = float(s.outputs.values['environmental_irradiance'])
 
-        # Band 4
-        s.wavelength = Py6S.Wavelength(1.500, 1.8025, [0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.011100,0.011100,0.015000,0.015000,0.019100,0.019100,0.024800,0.024800,0.030700,0.030700,0.043300,0.043300,0.056100,0.056100,0.087800,0.087800,0.119800,0.119800,0.182900,0.182900,0.246700,0.246700,0.331300,0.331300,0.415500,0.415500,0.513000,0.513000,0.610200,0.610200,0.722900,0.722900,0.835700,0.835700,0.918300,0.918300,1.000000,1.000000,0.994600,0.994600,0.987500,0.987500,0.932100,0.932100,0.878200,0.878200,0.857800,0.857800,0.834700,0.834700,0.859400,0.859400,0.882900,0.882900,0.894700,0.894700,0.905000,0.905000,0.848800,0.848800,0.792500,0.792500,0.685900,0.685900,0.578300,0.578300,0.468300,0.468300,0.359100,0.359100,0.286600,0.286600,0.214300,0.214300,0.171700,0.171700,0.128600,0.128600,0.101200,0.101200,0.073900,0.073900,0.058000,0.058000,0.042400,0.042400,0.034100,0.034100,0.025900,0.025900,0.021500,0.021500,0.017100,0.017100,0.014100,0.014100,0.011200,0.011200,0.009000,0.009000,0.006900,0.006900,0.005500,0.005500,0.004100,0.004100,0.003400,0.003400,0.002600,0.002600,0.002300,0.002300,0.001900,0.001900])
+        # Band 4 - NIR
+        s.wavelength = Py6S.Wavelength(0.350000, 1.347500, [0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000002,0.000004,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000001,0.000001,0.000000,0.000000,0.000001,0.000001,0.000001,0.000001,0.000002,0.000000,0.000000,0.000001,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000001,0.000000,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000002,0.000002,0.000003,0.000005,0.000006,0.000005,0.000004,0.000004,0.000004,0.000005,0.000006,0.000007,0.000010,0.000016,0.000026,0.000044,0.000065,0.000106,0.000149,0.000256,0.000375,0.000713,0.001183,0.002886,0.005210,0.012687,0.022741,0.058860,0.107139,0.260204,0.453897,0.759967,0.912456,0.995805,1.000000,0.988907,0.984506,0.972934,0.962395,0.941139,0.933343,0.919382,0.911682,0.897600,0.886046,0.871191,0.867420,0.844284,0.837202,0.838036,0.842575,0.835657,0.833975,0.842548,0.832789,0.818604,0.815395,0.806711,0.814738,0.794161,0.783077,0.767313,0.750939,0.739271,0.736832,0.734145,0.715699,0.697141,0.684957,0.658635,0.654340,0.632471,0.622861,0.609120,0.600083,0.590914,0.572770,0.507112,0.427640,0.275174,0.179263,0.073805,0.037563,0.013815,0.006654,0.002625,0.001930,0.001306,0.001077,0.000917,0.000914,0.000798,0.000755,0.000727,0.000806,0.000701,0.000666,0.000603,0.000647,0.000281,0.000273,0.000004,0.000003,0.000003,0.000002,0.000002,0.000002,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000001,0.000000,0.000001,0.000001,0.000001,0.000000,0.000001,0.000000,0.000001,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000])
         s.run()
         sixsCoeffs[3,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[3,1] = float(s.outputs.values['coef_xb'])
@@ -431,6 +550,7 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         sixsCoeffs[3,3] = float(s.outputs.values['direct_solar_irradiance'])
         sixsCoeffs[3,4] = float(s.outputs.values['diffuse_solar_irradiance'])
         sixsCoeffs[3,5] = float(s.outputs.values['environmental_irradiance'])
+
 
         return sixsCoeffs
 
@@ -442,7 +562,6 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         imgBandCoeffs = list()
 
         sixsCoeffs = self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF)
-
         imgBandCoeffs.append(Band6S(band=1, aX=float(sixsCoeffs[0,0]), bX=float(sixsCoeffs[0,1]), cX=float(sixsCoeffs[0,2]), DirIrr=float(sixsCoeffs[0,3]), DifIrr=float(sixsCoeffs[0,4]), EnvIrr=float(sixsCoeffs[0,5])))
         imgBandCoeffs.append(Band6S(band=2, aX=float(sixsCoeffs[1,0]), bX=float(sixsCoeffs[1,1]), cX=float(sixsCoeffs[1,2]), DirIrr=float(sixsCoeffs[1,3]), DifIrr=float(sixsCoeffs[1,4]), EnvIrr=float(sixsCoeffs[1,5])))
         imgBandCoeffs.append(Band6S(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2]), DirIrr=float(sixsCoeffs[2,3]), DifIrr=float(sixsCoeffs[2,4]), EnvIrr=float(sixsCoeffs[2,5])))
@@ -451,12 +570,6 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         for band in imgBandCoeffs:
             print(band)
         rsgislib.imagecalibration.apply6SCoeffSingleParam(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, imgBandCoeffs)
-
-        if self.inImgHasGCPs:
-            arcsiUtils = ARCSIUtils()
-            arcsiUtils.copyGCPs(self.fileName, outputImage)
-            rsgislib.imageutils.assignSpatialInfo(outputImage, 0.0, 0.0, 1.0, -1.0, 0.0, 0.0)
-
         return outputImage
 
     def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor, elevCoeffs=None):
@@ -542,8 +655,8 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         s.atmos_corr = Py6S.AtmosCorr.AtmosCorrLambertianFromRadiance(200)
         s.aot550 = aotVal
 
-        # Band 2 (Red!)
-        s.wavelength = Py6S.Wavelength(0.580, 0.7425, [0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.000000,0.001700,0.001700,0.022000,0.022000,0.116500,0.116500,0.315300,0.315300,0.533600,0.533600,0.704900,0.704900,0.826400,0.826400,0.902100,0.902100,0.951500,0.951500,0.979600,0.979600,0.994200,0.994200,1.000000,1.000000,0.997300,0.997300,0.981800,0.981800,0.945000,0.945000,0.863200,0.863200,0.717100,0.717100,0.534000,0.534000,0.356000,0.356000,0.222900,0.222900,0.132700,0.132700,0.079200,0.079200,0.047600,0.047600,0.029100,0.029100,0.018000,0.018000,0.011100,0.011100,0.006800,0.006800,0.004200,0.004200,0.002500,0.002500])
+        # Band Blue
+        s.wavelength = Py6S.Wavelength(0.45, 0.51, [0.6457, 0.6825, 0.7193, 0.7561, 0.7929, 0.8001, 0.8073, 0.8145, 0.8217, 0.8353, 0.8489, 0.8624, 0.8760, 0.8862, 0.8964, 0.9066, 0.9168, 0.9277, 0.9387, 0.9496, 0.9606, 0.8384, 0.7161, 0.5939, 0.4717])
         s.run()
         aX = float(s.outputs.values['coef_xa'])
         bX = float(s.outputs.values['coef_xb'])
@@ -556,10 +669,12 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         return outDist
 
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
-        raise ARCSIException("SPOT6 does not provide an implement of a method to derive AOT from DDV.")
+        print("Not implemented\n")
+        sys.exit()
 
     def estimateImageToAODUsingDDV(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
-        raise ARCSIException("SPOT6 does not provide an implement of a method to derive AOT from DDV.")
+        print("Not implemented\n")
+        sys.exit()
 
     def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl):
         try:
@@ -569,43 +684,50 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
             tmpBaseName = os.path.splitext(outputName)[0]
             imgExtension = arcsiUtils.getFileExtension(outFormat)
 
-            dosGreenImage = ""
-            minObjSize = 5
+            # Define Band Numbers
+            blueBand = 1
+            redBand = 3
+            nirNamd = 4
+            segBands = [1,2,3,4]
+
+            dosBlueImage = ""
+            minObjSize = 3
             darkPxlPercentile = 0.01
             blockSize = 1000
             if simpleDOS:
-                outputDOSBlueName = tmpBaseName + "DOSGreen" + imgExtension
-                dosGreenImage, bandOff = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, 1)
+                outputDOSBlueName = tmpBaseName + "DOSBlue" + imgExtension
+                dosBlueImage, bandOff = self.convertImageBandToReflectanceSimpleDarkSubtract(inputTOAImage, outputPath, outputDOSBlueName, outFormat, dosOutRefl, blueBand)
             elif globalDOS:
-                dosGreenImage = self.performDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Green", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
+                dosBlueImage = self.performDOSOnSingleBand(inputTOAImage, blueBand, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, dosOutRefl)
             else:
-                dosGreenImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Green", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
+                dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, blueBand, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
 
+                
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
-            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalformat="KEA", numClusters=40, minPxls=10, bands=[5,4,1], processInMem=True)
+            rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalformat="KEA", numClusters=40, minPxls=10, bands=segBands, processInMem=True)
 
             stats2CalcTOA = list()
             stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanElev"))
             rsgislib.rastergis.populateRATWithStats(inputDEMFile, thresImageClumpsFinal, stats2CalcTOA)
 
             stats2CalcTOA = list()
-            stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanB1DOS"))
-            rsgislib.rastergis.populateRATWithStats(dosGreenImage, thresImageClumpsFinal, stats2CalcTOA)
+            stats2CalcTOA.append(rsgislib.rastergis.BandAttStats(band=blueBand, meanField="MeanBlueDOS"))
+            rsgislib.rastergis.populateRATWithStats(dosBlueImage, thresImageClumpsFinal, stats2CalcTOA)
 
             stats2CalcRad = list()
-            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=1, meanField="MeanB1RAD"))
-            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=3, meanField="MeanB3RAD"))
-            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=2, meanField="MeanB2RAD"))
+            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=blueBand, meanField="MeanBlueRAD"))
+            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=nirNamd, meanField="MeanNIRRAD"))
+            stats2CalcRad.append(rsgislib.rastergis.BandAttStats(band=redBand, meanField="MeanRedRAD"))
             rsgislib.rastergis.populateRATWithStats(inputRADImage, thresImageClumpsFinal, stats2CalcRad)
 
             ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
             Histogram = rat.readColumn(ratDS, "Histogram")
             MeanElev = rat.readColumn(ratDS, "MeanElev")
 
-            MeanB5RAD = rat.readColumn(ratDS, "MeanB3RAD")
-            MeanB3RAD = rat.readColumn(ratDS, "MeanB2RAD")
+            MeanNIRRAD = rat.readColumn(ratDS, "MeanNIRRAD")
+            MeanRedRAD = rat.readColumn(ratDS, "MeanRedRAD")
 
-            radNDVI = (MeanB3RAD - MeanB2RAD)/(MeanB3RAD + MeanB2RAD)
+            radNDVI = (MeanNIRRAD - MeanRedRAD)/(MeanNIRRAD + MeanRedRAD)
 
             selected = Histogram * 2
             selected[...] = 0
@@ -617,9 +739,9 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
             rsgislib.rastergis.selectClumpsOnGrid(thresImageClumpsFinal, "Selected", "PredictAOTFor", "Eastings", "Northings", "MeanB1DOS", "min", 20, 20)
 
             ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
-            MeanB1DOS = rat.readColumn(ratDS, "MeanB1DOS")
-            MeanB1DOS = MeanB1DOS / 1000
-            MeanB1RAD = rat.readColumn(ratDS, "MeanB1RAD")
+            MeanBlueDOS = rat.readColumn(ratDS, "MeanBlueDOS")
+            MeanBlueDOS = MeanBlueDOS / 1000
+            MeanBlueRAD = rat.readColumn(ratDS, "MeanBlueRAD")
             PredictAOTFor = rat.readColumn(ratDS, "PredictAOTFor")
 
             numAOTValTests = int(math.ceil((aotValMax - aotValMin)/0.05))+1
@@ -639,16 +761,13 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
                     print("Predicting AOD for Segment ", i)
                     for j in range(numAOTValTests):
                         cAOT = aotValMin + (0.05 * j)
-                        cDist = self.run6SToOptimiseAODValue(cAOT, MeanB1RAD[i], MeanB1DOS[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i]/1000)
+                        cDist = self.run6SToOptimiseAODValue(cAOT, MeanBlueRAD[i], MeanBlueDOS[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i]/1000)
                         if j == 0:
                             minAOT = cAOT
                             minDist = cDist
                         elif cDist < minDist:
                             minAOT = cAOT
                             minDist = cDist
-                    #predAOTArgs = (MinB1RAD[i], MeanB1DOS[i], aeroProfile, atmosProfile, grdRefl, MeanElev[i]/1000)
-                    #res = minimize(self.run6SToOptimiseAODValue, minAOT, method='nelder-mead', options={'maxiter': 20, 'xtol': 0.001, 'disp': True}, args=predAOTArgs)
-                    #aotVals[i] = res.x[0]
                     aotVals[i] = minAOT
                     print("IDENTIFIED AOT: ", aotVals[i])
                 else:
@@ -669,7 +788,7 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
                 gdalDriver.Delete(thresImageClumpsFinal)
-                gdalDriver.Delete(dosGreenImage)
+                gdalDriver.Delete(dosBlueImage)
 
             return outputAOTImage
         except Exception as e:
@@ -677,19 +796,26 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
 
     def estimateSingleAOTFromDOS(self, radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl):
         try:
-            return self.estimateSingleAOTFromDOSBandImpl(radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl, 2)
+            blueBand = 1
+            return self.estimateSingleAOTFromDOSBandImpl(radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl, blueBand)
         except Exception as e:
             raise
 
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)
         if not dataset is None:
-            dataset.GetRasterBand(1).SetDescription("Green")
-            dataset.GetRasterBand(2).SetDescription("Red")
-            dataset.GetRasterBand(3).SetDescription("NIR")
-            dataset.GetRasterBand(4).SetDescription("SWIR")
+            dataset.GetRasterBand(1).SetDescription("Blue")
+            dataset.GetRasterBand(2).SetDescription("Green")
+            dataset.GetRasterBand(3).SetDescription("Red")
+            dataset.GetRasterBand(4).SetDescription("NIR")
             dataset = None
         else:
             print("Could not open image to set band names: ", imageFile)
+
+    def cleanFollowProcessing(self):
+        if self.createdWarpKEADNImg:
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName('KEA')
+                gdalDriver.Delete(self.warpedKEADNImg)
 
 

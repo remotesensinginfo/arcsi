@@ -371,6 +371,9 @@ class ARCSISensorFactory(object):
         elif sensor == 'spot6':
             from arcsilib.arcsisensorspot6 import ARCSISPOT6Sensor
             sensorClass = ARCSISPOT6Sensor(debugMode, inputImage)
+        elif sensor == 'spot7':
+            from arcsilib.arcsisensorspot7 import ARCSISPOT7Sensor
+            sensorClass = ARCSISPOT7Sensor(debugMode, inputImage)
         elif sensor == 'pleiades':
             from arcsilib.arcsisensorpleiades import ARCSIPleiadesSensor
             sensorClass = ARCSIPleiadesSensor(debugMode, inputImage)
