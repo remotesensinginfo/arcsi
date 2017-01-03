@@ -8,8 +8,8 @@ from distutils.version import LooseVersion
 import os
 
 ARCSI_VERSION_MAJOR = 1
-ARCSI_VERSION_MINOR = 0
-ARCSI_VERSION_PATCH = 1
+ARCSI_VERSION_MINOR = 1
+ARCSI_VERSION_PATCH = 0
 
 ARCSI_VERSION = str(ARCSI_VERSION_MAJOR) + "."  + str(ARCSI_VERSION_MINOR) + "." + str(ARCSI_VERSION_PATCH)
 ARCSI_VERSION_OBJ = LooseVersion(ARCSI_VERSION)
@@ -21,7 +21,7 @@ ARCSI_SUPPORT_EMAIL = "rsgislib-support@googlegroups.com"
 
 ARCSI_WEBSITE = "http://www.rsgislib.org/arcsi"
 
-ARCSI_SENSORS_LIST = ['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm', 'ls5mss', 'ls5tm', 'ls7', 'ls8', 'rapideye', 'wv2', 'spot5', 'sen2']
+ARCSI_SENSORS_LIST = ['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm', 'ls5mss', 'ls5tm', 'ls7', 'ls8', 'rapideye', 'wv2', 'spot5', 'sen2', 'wv3', 'spot6', 'pleiades']
 ARCSI_PRODUCTS_LIST = ['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'CLEARSKY', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'STDSREF', 'DOS', 'THERMAL', 'TOPOSHADOW', 'FOOTPRINT', 'METADATA']
 ARCSI_ARCHIVE_EXE_LIST = [".tar.gz", ".tgz", ".TAR.GZ", ".TGZ",  ".tar", ".TAR",  ".zip", ".ZIP", ".tar.bz", ".TAR.BZ", ".tar.bz2", ".TAR.BZ2"]
 

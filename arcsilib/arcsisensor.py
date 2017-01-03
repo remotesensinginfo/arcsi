@@ -535,8 +535,8 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def generateImageSaturationMask(self, outputPath, outputName, outFormat): pass
 
-    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
-        return None
+    @abstractmethod
+    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat): pass
 
     def generateImageFootprint(self, validMaskImage, outputPath, outputName):
         print("Creating Vector Footprint...")

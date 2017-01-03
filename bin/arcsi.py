@@ -290,7 +290,7 @@ parser.add_argument("--cs_morphop", type=int, default=21,
                                  help='''When clear-sky regions are being defined this parameter
                                            is the size of the morphological opening operator used
                                            to finalise the result. (Default 21)''')
-parser.add_argument("--checkouts", action='store_false', default=True,
+parser.add_argument("--checkouts", action='store_true', default=False,
                     help='''Specifies that the output path should be checked for files with the same base name.
                     If a file with the same base name is found then processing will not proceed - i.e., files will
                     not be overwritten.''')

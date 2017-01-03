@@ -1,10 +1,10 @@
 """
-Module that contains the ARCSISPOT5Sensor class.
+Module that contains the ARCSISPOT6Sensor class.
 """
 ############################################################################
-#  arcsisensorspot5.py
+#  arcsisensorspot6.py
 #
-#  Copyright 2014 ARCSI.
+#  Copyright 2017 ARCSI.
 #
 #  ARCSI: 'Atmospheric and Radiometric Correction of Satellite Imagery'
 #
@@ -22,13 +22,13 @@ Module that contains the ARCSISPOT5Sensor class.
 #  along with ARCSI.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# Purpose:  A class for read the SPOT5 sensor header file and applying
-#           the pre-processing operations within ARCSI to the SPOT5
+# Purpose:  A class for read the SPOT6 sensor header file and applying
+#           the pre-processing operations within ARCSI to the SPOT6
 #           datasets.
 #
 # Author: Pete Bunting
 # Email: pfb@aber.ac.uk
-# Date: 07/10/2014
+# Date: 03/01/2017
 # Version: 1.0
 #
 # History:
@@ -74,14 +74,14 @@ import subprocess
 # Import the RIOS RAT module
 from rios import rat
 
-class ARCSISPOT5Sensor (ARCSIAbstractSensor):
+class ARCSISPOT6Sensor (ARCSIAbstractSensor):
     """
-    A class which represents the RapidEye sensor to read
+    A class which represents the SPOT6 sensor to read
     header parameters and apply data processing operations.
     """
     def __init__(self, debugMode, inputImage):
         ARCSIAbstractSensor.__init__(self, debugMode, inputImage)
-        self.sensor = "SPOT5"
+        self.sensor = "SPOT6"
 
         self.fileName = ""
         self.mission = ""
@@ -279,7 +279,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
 
     def generateOutputBaseName(self):
         """
-        Customises the generic name for the SPOT5 sensor
+        Customises the generic name for the SPOT6 sensor
         """
         outname = self.defaultGenBaseOutFileName()
         return outname
@@ -293,7 +293,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         return imageDataPresent
 
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
-        raise ARCSIException("SPOT5 does not provide any image masks, do not use the MASK option.")
+        raise ARCSIException("SPOT6 does not provide any image masks, do not use the MASK option.")
 
     def mosaicImageTiles(self):
         raise ARCSIException("Image data does not need mosaicking")
@@ -303,11 +303,11 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         outputImage = os.path.join(outputPath, outputReflName)
         bandDefnSeq = list()
 
-        spot5Band = collections.namedtuple('SPOT5Band', ['bandName', 'bandIndex', 'bias', 'gain'])
-        bandDefnSeq.append(spot5Band(bandName="NIR", bandIndex=3, bias=self.b1Bias, gain=self.b1Gain))
-        bandDefnSeq.append(spot5Band(bandName="Red", bandIndex=2, bias=self.b2Bias, gain=self.b2Gain))
-        bandDefnSeq.append(spot5Band(bandName="Green", bandIndex=1, bias=self.b3Bias, gain=self.b3Gain))
-        bandDefnSeq.append(spot5Band(bandName="SWIR", bandIndex=4, bias=self.b4Bias, gain=self.b4Gain))
+        spot6Band = collections.namedtuple('SPOT6Band', ['bandName', 'bandIndex', 'bias', 'gain'])
+        bandDefnSeq.append(spot6Band(bandName="NIR", bandIndex=3, bias=self.b1Bias, gain=self.b1Gain))
+        bandDefnSeq.append(spot6Band(bandName="Red", bandIndex=2, bias=self.b2Bias, gain=self.b2Gain))
+        bandDefnSeq.append(spot6Band(bandName="Green", bandIndex=1, bias=self.b3Bias, gain=self.b3Gain))
+        bandDefnSeq.append(spot6Band(bandName="SWIR", bandIndex=4, bias=self.b4Bias, gain=self.b4Gain))
         rsgislib.imagecalibration.spot5ToRadiance(self.fileName, outputImage, outFormat, bandDefnSeq)
 
         if self.inImgHasGCPs:
@@ -321,12 +321,12 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         print("Generate Saturation Image")
         outputImage = os.path.join(outputPath, outputName)
 
-        spot5Band = collections.namedtuple('SPOT5Band', ['bandName', 'fileName', 'bandIndex', 'satVal'])
+        spot6Band = collections.namedtuple('SPOT6Band', ['bandName', 'fileName', 'bandIndex', 'satVal'])
         bandDefnSeq = list()
-        bandDefnSeq.append(spot5Band(bandName="NIR", fileName=self.fileName, bandIndex=1, satVal=255.0))
-        bandDefnSeq.append(spot5Band(bandName="Red", fileName=self.fileName, bandIndex=2, satVal=255.0))
-        bandDefnSeq.append(spot5Band(bandName="Green", fileName=self.fileName, bandIndex=3, satVal=255.0))
-        bandDefnSeq.append(spot5Band(bandName="SWIR", fileName=self.fileName, bandIndex=4, satVal=255.0))
+        bandDefnSeq.append(spot6Band(bandName="NIR", fileName=self.fileName, bandIndex=1, satVal=255.0))
+        bandDefnSeq.append(spot6Band(bandName="Red", fileName=self.fileName, bandIndex=2, satVal=255.0))
+        bandDefnSeq.append(spot6Band(bandName="Green", fileName=self.fileName, bandIndex=3, satVal=255.0))
+        bandDefnSeq.append(spot6Band(bandName="SWIR", fileName=self.fileName, bandIndex=4, satVal=255.0))
 
         rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
 
@@ -364,7 +364,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         return outputImage
 
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
-        raise ARCSIException("SPOT5 does not have a cloud masking implementation in ARCSI.")
+        raise ARCSIException("SPOT6 does not have a cloud masking implementation in ARCSI.")
 
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((5, 6), dtype=numpy.float32)
@@ -556,10 +556,10 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         return outDist
 
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
-        raise ARCSIException("SPOT5 does not provide an implement of a method to derive AOT from DDV.")
+        raise ARCSIException("SPOT6 does not provide an implement of a method to derive AOT from DDV.")
 
     def estimateImageToAODUsingDDV(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
-        raise ARCSIException("SPOT5 does not provide an implement of a method to derive AOT from DDV.")
+        raise ARCSIException("SPOT6 does not provide an implement of a method to derive AOT from DDV.")
 
     def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl):
         try:
