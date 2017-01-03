@@ -79,7 +79,7 @@ class ARCSIBuildCommands (object):
                      atmosozone, atmoswater, aerowater,
                      aerodust, aerooceanic, aerosoot, aot, vis, tmpath,
                      minaot, maxaot, dem, localdos, dosout, simpledos,
-                     scalefac, outwkt, outproj4, projabbv, interp, checkouts):
+                     scalefac, outwkt, outproj4, projabbv, interp, checkouts, fullimgouts):
 
         inputPath = os.path.abspath(inputPath)
         outputFile = os.path.abspath(outputFile)
@@ -166,7 +166,9 @@ class ARCSIBuildCommands (object):
                 cmd = cmd + " --simpledos "
             if checkouts:
                 cmd = cmd + " --checkouts "
-
+            if fullimgouts:
+                cmd = cmd + " --fullimgouts "
+                
             print(cmd)
             outFile.write(cmd + "\n")
         outFile.flush()
@@ -206,7 +208,12 @@ if __name__ == '__main__':
     # Define the argument for specifying the image file format.
     parser.add_argument("-f", "--format", type=str,
                         help='''Specify the image output format (GDAL name).''')
-
+    
+    # Define the argument stating that alongsided the masked products should none masked products.
+    parser.add_argument("--fullimgouts", action='store_true', default=False,
+                    help='''If set then alongside the masked outputs (e.g., clouds) then SREF (DOS and/or modelled) 
+                            versions of the full images (i.e., without mask applied) will also be outputted.''')
+    
     parser.add_argument("--outpath", type=str,
                         help='''Specifiy the output directory for the products from ARCSI.''')
 
@@ -367,5 +374,5 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, args.aerowater,
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath,
                      args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos,
-                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.checkouts)
+                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.checkouts, args.fullimgouts)
 

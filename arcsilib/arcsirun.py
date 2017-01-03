@@ -1089,8 +1089,12 @@ class ARCSIRun (object):
             sensorClass.cleanFollowProcessing()
 
         except ARCSIException as e:
+            print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
+            print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
             print("Error: {}".format(e), file=sys.stderr)
         except Exception as e:
+            print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
+            print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
             print("Error: {}".format(e), file=sys.stderr)
         finally:
             failedProdsList = []
@@ -1099,10 +1103,11 @@ class ARCSIRun (object):
                 if prodsToCalc[key] is not prodsCalculated[key]:
                     failedProdsList.append(key)
             if len(failedProdsList) > 0:
-                print("Error: The following products were not generated:",file=sys.stderr)
-                print(" ".join(failedProdsList),file=sys.stderr)
-
-            
+                print("Error: The following products were not generated:", file=sys.stderr)
+                print(" ".join(failedProdsList), file=sys.stderr)
+                print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
+                print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
+                print('\n\n', file=sys.stderr) # Put gap into output log to easier to see where one ends and the next starts.
 
 
     def print2ConsoleListSensors(self):
