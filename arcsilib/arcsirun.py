@@ -45,10 +45,14 @@ import sys
 import subprocess
 # Import the OS python module
 import os
+# Import the os.path module
+import os.path
 # Import the time module
 import time
 # Import the copy module
 import copy
+# Import the glob module
+import glob
 # Import ARCSI library
 import arcsilib
 # Import the ARCSI exception class
@@ -144,7 +148,8 @@ class ARCSIRun (object):
             atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal,
             aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT,
             demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor,
-            initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts):
+            initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts,
+            checkOutputs):
         """
         A function contains the main flow of the software
         """
@@ -219,6 +224,15 @@ class ARCSIRun (object):
                 if not projAbbv is None:
                     outBaseNameProj = outBaseName + "_" + str(projAbbv)
             print("Image Base Name: " + outBaseName + "\n")
+
+            # Check whether output files for this input already exist - if checkOutputs is True.
+            if checkOutputs:
+                prevOutFiles = glob.glob(os.path.join(outFilePath, outBaseName+'*'))
+                if len(prevOutFiles) > 0:
+                    sys.stderr.write('Error outputs already exist: \'' + inputHeader + '\'\n')
+                    for tmpFile in prevOutFiles:
+                        sys.stderr.write('\tFile: \'' + tmpFile + '\'\n')
+                    raise Exception("Output files already exist and the \'check outputs\' option (--checkouts) was specified so can't continue.")
 
             # Step 4: Find the products which are to be generated.
             prodsToCalc["RAD"] = False
@@ -1075,8 +1089,12 @@ class ARCSIRun (object):
             sensorClass.cleanFollowProcessing()
 
         except ARCSIException as e:
+            print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
+            print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
             print("Error: {}".format(e), file=sys.stderr)
         except Exception as e:
+            print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
+            print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
             print("Error: {}".format(e), file=sys.stderr)
         finally:
             failedProdsList = []
@@ -1085,10 +1103,11 @@ class ARCSIRun (object):
                 if prodsToCalc[key] is not prodsCalculated[key]:
                     failedProdsList.append(key)
             if len(failedProdsList) > 0:
-                print("Error: The following products were not generated:",file=sys.stderr)
-                print(" ".join(failedProdsList),file=sys.stderr)
-
-            
+                print("Error: The following products were not generated:", file=sys.stderr)
+                print(" ".join(failedProdsList), file=sys.stderr)
+                print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
+                print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
+                print('\n\n', file=sys.stderr) # Put gap into output log to easier to see where one ends and the next starts.
 
 
     def print2ConsoleListSensors(self):
