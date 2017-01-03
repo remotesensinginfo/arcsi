@@ -365,6 +365,15 @@ class ARCSISensorFactory(object):
         elif sensor == 'sen2':
             from arcsilib.arcsisensorsentinel2 import ARCSISentinel2Sensor
             sensorClass = ARCSISentinel2Sensor(debugMode, inputImage)
+        elif sensor == 'wv3':
+            from arcsilib.arcsisensorworldview3 import ARCSIWorldView3Sensor
+            sensorClass = ARCSIWorldView3Sensor(debugMode, inputImage)
+        elif sensor == 'spot6':
+            from arcsilib.arcsisensorspot6 import ARCSISPOT6Sensor
+            sensorClass = ARCSISPOT6Sensor(debugMode, inputImage)
+        elif sensor == 'pleiades':
+            from arcsilib.arcsisensorpleiades import ARCSIPleiadesSensor
+            sensorClass = ARCSIPleiadesSensor(debugMode, inputImage)
         else:
             raise ARCSIException("Could not get a class representing the sensor specified from the factory.")
 

@@ -22,8 +22,8 @@ Module that contains the ARCSISentinel2Sensor class.
 #  along with ARCSI.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# Purpose:  A class for read the WorldView2 sensor header file and applying
-#           the pre-processing operations within ARCSI to the WorldView2
+# Purpose:  A class for read the Sentinel-2 sensor header file and applying
+#           the pre-processing operations within ARCSI to the Sentinel-2
 #           datasets.
 #
 # Author: Pete Bunting
@@ -140,6 +140,11 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
     def generateImageSaturationMask(self, outputPath, outputName, outFormat):
         print("Generate Saturation Image")
         raise ARCSIException("Not Implemented")
+
+    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
+        print("Generate valid image mask")
+        outputImage = os.path.join(outputPath, outputMaskName)
+        return outputImage
 
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         raise ARCSIException("Not Implemented")

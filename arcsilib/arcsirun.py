@@ -219,7 +219,7 @@ class ARCSIRun (object):
                 print("")
 
             # Step 3: Get Output Image Base Name.
-            if outBaseName is None:
+            if (outBaseName is None) or (outBaseName is ""):
                 outBaseName = sensorClass.generateOutputBaseName()
                 if not projAbbv is None:
                     outBaseNameProj = outBaseName + "_" + str(projAbbv)
@@ -470,14 +470,16 @@ class ARCSIRun (object):
             outName = outBaseName + "_valid" + arcsiUtils.getFileExtension(outFormat)
             viewAngleImg = os.path.join(outFilePath, outBaseName + "_viewangle" + arcsiUtils.getFileExtension(outFormat))
             validMaskImage = sensorClass.generateValidImageDataMask(outFilePath, outName, viewAngleImg, outFormat)
+            if not os.path.exists(viewAngleImg):
+                viewAngleImg = None
             if not validMaskImage is None:
                 rsgislib.rastergis.populateStats(validMaskImage, True, True)
-            if not viewAngleImg is "":
+            if not viewAngleImg is None:
                 rsgislib.imageutils.popImageStats(viewAngleImg, usenodataval=True, nodataval=99999, calcpyramids=True)
             print("")
-            if (not validMaskImage is None):
+            if not validMaskImage is None:
                 finalOutFiles["VALID_MASK"] = validMaskImage
-            if not viewAngleImg is "":
+            if not viewAngleImg is None:
                 finalOutFiles["VIEW_ANGLE"] = viewAngleImg
 
             if reproject and (not validMaskImage is None):
@@ -1037,9 +1039,9 @@ class ARCSIRun (object):
                         stdSREFImg, stdSREFWholeImg = sensorClass.convertSREF2StdisedSREF(srefImage, sref6SWholeImage, outDEMName, topoShadowImage, outFilePath, outName, outNameWhole, outFormat, tmpPath, sixsLUTCoeffs, aotLUT, scaleFactor, brdfBeta=1, outIncidenceAngle=0, outExitanceAngle=0)
 
                         print("Setting Band Names...")
-                        sensorClass.setBandNames(srefImage)
+                        sensorClass.setBandNames(stdSREFImg)
                         if fullImgOuts:
-                            sensorClass.setBandNames(sref6SWholeImage)
+                            sensorClass.setBandNames(stdSREFWholeImg)
 
                         if calcStatsPy:
                             print("Calculating Statistics...")
@@ -1090,11 +1092,13 @@ class ARCSIRun (object):
 
         except ARCSIException as e:
             print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
-            print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
+            if outBaseName is not None:
+                print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
             print("Error: {}".format(e), file=sys.stderr)
         except Exception as e:
             print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
-            print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
+            if outBaseName is not None:
+                print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
             print("Error: {}".format(e), file=sys.stderr)
         finally:
             failedProdsList = []
@@ -1106,7 +1110,8 @@ class ARCSIRun (object):
                 print("Error: The following products were not generated:", file=sys.stderr)
                 print(" ".join(failedProdsList), file=sys.stderr)
                 print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
-                print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
+                if outBaseName is not None:
+                    print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
                 print('\n\n', file=sys.stderr) # Put gap into output log to easier to see where one ends and the next starts.
 
 

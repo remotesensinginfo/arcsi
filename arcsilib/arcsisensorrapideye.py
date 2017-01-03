@@ -512,6 +512,11 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
 
         return outputImage
 
+    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
+        print("Generate valid image mask")
+        outputImage = os.path.join(outputPath, outputMaskName)
+        return outputImage
+
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         raise ARCSIException("There are no thermal bands...")
 
