@@ -823,7 +823,8 @@ class ARCSIRun (object):
                             outDEMNameMsk = outDEMName
 
                         # Calculate DEM statistics and set no data value.
-                        rsgislib.imageutils.popImageStats(outDEMNameMsk, True, -32768.0, True)
+                        if prodsToCalc["CLEARSKY"] or prodsToCalc["CLOUDS"]:
+                            rsgislib.imageutils.popImageStats(outDEMNameMsk, True, -32768.0, True)
                         rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
 
                         # Remove tmp DEM file.

@@ -51,6 +51,8 @@ import datetime
 # Import the GDAL/OGR spatial reference library
 from osgeo import osr
 from osgeo import ogr
+# Import the OS module
+import os
 # Import OS path module for manipulating the file system
 import os.path
 # Import the RSGISLib Image Calibration Module.
@@ -101,9 +103,9 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         self.b3RadBias = 0.0
         self.acqBitRange = 12
         self.prodBitRange = 12
-        self.warpedKEADNImg = ''
+        self.copiedKEADNImg = ''
         self.origDNImg = ''
-        self.createdWarpKEADNImg = False
+        self.createdCopyKEADNImg = False
         
 
     def extractHeaderParameters(self, inputHeader, wktStr):
@@ -183,6 +185,8 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
             if not self.userSpInputImage is None:
                 self.fileName = os.path.abspath(self.userSpInputImage)
             else:
+                if self.inputImgType == 'S6_SENSOR':
+                    raise ARCSIException("You need to input an ortho-rectified product. Orthorectific / register your data and then use --imagefile to process this image file.")
                 imgFileTags = topLevelRasterData.find('Data_Access').find('Data_Files')
                 imgFiles = list()
                 for child in imgFileTags:
@@ -449,18 +453,49 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         print("Generate valid image mask")
         # Test input image, if it is .jp2 then warp to KEA so processing can proceed.
+        # Also set whether input file has projection correctly defined. If not, copy to KEA to proceed.
+        arcsiUtils = ARCSIUtils()
+        lclWktStr = arcsiUtils.getWKTProjFromImage(self.fileName)
         inFileExt = os.path.splitext(self.fileName)[1]
         if inFileExt.lower() == '.jp2':
             inFileName = os.path.splitext(os.path.basename(self.fileName))[0]
-            self.warpedKEADNImg = os.path.join(outputPath, inFileName+'.kea')
-            cmd = 'gdalwarp -of KEA -overwrite -r cubic -srcnodata ' + str(self.inImgNoData) + ' -dstnodata ' + str(self.inImgNoData) + ' "' + self.fileName + '" "' + self.warpedKEADNImg + '"'
+            self.copiedKEADNImg = os.path.join(outputPath, inFileName+'.kea')
+            # Check input projection is defined if not define from header information.
+            projCmd = ''
+            createdWKTFile = False
+            wktFileName = ''
+            if (lclWktStr == '') or (lclWktStr == None):
+                uidStr = arcsiUtils.uidGenerator()
+                wktFileName = os.path.join(outputPath, uidStr+'_wkt.wkt')
+                arcsiUtils.writeText2File(self.inWKT, wktFileName)
+                createdWKTFile = True
+                projCmd = ' -s_srs ' + wktFileName + ' -t_srs ' + wktFileName
+            cmd = 'gdalwarp -of KEA -overwrite -r cubic ' + projCmd + ' -srcnodata ' + str(self.inImgNoData) + ' -dstnodata ' + str(self.inImgNoData) + ' "' + self.fileName + '" "' + self.copiedKEADNImg + '"'
             try:
                 subprocess.call(cmd, shell=True)
             except OSError as e:
                 raise ARCSIException('Could not warp image: ' + cmd)
             self.origDNImg = self.fileName
-            self.fileName = self.warpedKEADNImg
-            self.createdWarpKEADNImg = True
+            self.fileName = self.copiedKEADNImg
+            self.createdCopyKEADNImg = True
+            if createdWKTFile:
+                os.remove(wktFileName)
+        elif (lclWktStr == '') or (lclWktStr == None):
+            # Copy input file and defined projection if not define from header information.
+            inFileName = os.path.splitext(os.path.basename(self.fileName))[0]
+            self.copiedKEADNImg = os.path.join(outputPath, inFileName+'.kea')
+            uidStr = arcsiUtils.uidGenerator()
+            wktFileName = os.path.join(outputPath, uidStr+'_wkt.wkt')
+            arcsiUtils.writeText2File(self.inWKT, wktFileName)
+            cmd = 'gdal_translate -of KEA -a_nodata ' + str(self.inImgNoData) + ' -a_srs ' + wktFileName + ' "' + self.fileName + '" "' + self.copiedKEADNImg + '"'
+            try:
+                subprocess.call(cmd, shell=True)
+            except OSError as e:
+                raise ARCSIException('Could not translate image: ' + cmd)
+            os.remove(wktFileName)
+            self.origDNImg = self.fileName
+            self.fileName = self.copiedKEADNImg
+            self.createdCopyKEADNImg = True
 
         outputImage = os.path.join(outputPath, outputMaskName)
         rsgislib.imageutils.genValidMask(inimages=[self.fileName], outimage=outputImage, format=outFormat, nodata=self.inImgNoData)
@@ -813,9 +848,10 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
             print("Could not open image to set band names: ", imageFile)
 
     def cleanFollowProcessing(self):
-        if self.createdWarpKEADNImg:
+        if self.createdCopyKEADNImg:
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName('KEA')
-                gdalDriver.Delete(self.warpedKEADNImg)
+                gdalDriver.Delete(self.copiedKEADNImg)
+            self.fileName = self.origDNImg
 
 
