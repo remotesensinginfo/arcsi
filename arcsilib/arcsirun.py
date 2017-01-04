@@ -659,7 +659,6 @@ class ARCSIRun (object):
                         + '-te ' + str(projImgBBOX['MinX']) + ' ' + str(projImgBBOX['MinY']) + ' ' + str(projImgBBOX['MaxX']) + ' ' + str(projImgBBOX['MaxY']) \
                         + ' -r ' + interpAlgor + ' -tap -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
                         + thermalRadImage + ' ' + outThermRadImagePath
-                        #print(cmd)
                         try:
                             subprocess.call(cmd, shell=True)
                         except OSError as e:

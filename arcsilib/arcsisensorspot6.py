@@ -59,6 +59,10 @@ import os.path
 import rsgislib.imagecalibration
 # Import the RSGISLib Image Calculation Module
 import rsgislib.imagecalc
+# Import the RSGISLib Image Utilities Module
+import rsgislib.imageutils
+# Import the RSGISLib Vector Utilities Module
+import rsgislib.vectorutils
 # Import the collections module
 import collections
 # Import the py6s module for running 6S from python.
@@ -106,6 +110,8 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         self.copiedKEADNImg = ''
         self.origDNImg = ''
         self.createdCopyKEADNImg = False
+        self.cloudsMask = None
+        self.roiMask = None
         
 
     def extractHeaderParameters(self, inputHeader, wktStr):
@@ -376,6 +382,17 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
                     elif child.find('SPECIAL_VALUE_TEXT').text.strip() == 'SATURATED':
                         self.inImgSatVal = int(child.find('SPECIAL_VALUE_COUNT').text.strip())
 
+            for child in topLevelQualityAssess:
+                if 'Cloud_Cotation' in child.find('MEASURE_NAME').text.strip():
+                    self.cloudsMask = os.path.join(filesDIR, child.find('Quality_Mask').find('Component').find('COMPONENT_PATH').attrib['href'].strip())
+                elif 'Area_Of_Interest' in child.find('MEASURE_NAME').text.strip():
+                    self.roiMask = os.path.join(filesDIR, child.find('Quality_Mask').find('Component').find('COMPONENT_PATH').attrib['href'].strip())
+            
+            if not os.path.exists(self.cloudsMask):
+                self.cloudsMask = None
+            if not os.path.exists(self.roiMask):
+                self.roiMask = None
+
             print("Processing Input File: ", self.fileName)
 
         except Exception as e:
@@ -440,7 +457,8 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         outputImage = os.path.join(outputPath, outputName)
 
         spotBand = collections.namedtuple('Band', ['bandName', 'fileName', 'bandIndex', 'satVal'])
-        bandDefnSeq = list()        
+        bandDefnSeq = list()
+        self.inImgSatVal = float(self.inImgSatVal)
         bandDefnSeq.append(spotBand(bandName="Blue", fileName=self.fileName, bandIndex=1, satVal=self.inImgSatVal))
         bandDefnSeq.append(spotBand(bandName="Green", fileName=self.fileName, bandIndex=2, satVal=self.inImgSatVal))
         bandDefnSeq.append(spotBand(bandName="Red", fileName=self.fileName, bandIndex=3, satVal=self.inImgSatVal))
@@ -518,7 +536,29 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         return outputImage
 
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
-        raise ARCSIException("SPOT6 does not have a cloud masking implementation in ARCSI.")
+        outputCloudMaskImg = os.path.join(outputPath, outputName)
+        if self.cloudsMask == None:
+            rsgislib.imageutils.createCopyImage(inputReflImage, outputCloudMaskImg, 1, 0, outFormat, rsgislib.TYPE_8UINT)
+        else:
+            haveVecClouds = False
+            tmpVectorDS = ogr.Open(self.cloudsMask)
+            if tmpVectorDS != None:
+                inVectorLayer = tmpVectorDS.GetLayer()
+                if inVectorLayer != None:
+                    if inVectorLayer.GetFeatureCount() > 0:
+                        haveVecClouds = True
+                    else:
+                        haveVecClouds = False
+                else:
+                    haveVecClouds = False
+            else:
+                haveVecClouds = False
+            if haveVecClouds:
+                rsgislib.vectorutils.rasterise2Image(self.cloudsMask, inputReflImage, outputCloudMaskImg, gdalFormat=outFormat, burnVal=1)
+                rsgislib.rastergis.populateStats(clumps=outputCloudMaskImg, addclrtab=True, calcpyramids=True, ignorezero=True, ratband=1)
+            else:
+                rsgislib.imageutils.createCopyImage(inputReflImage, outputCloudMaskImg, 1, 0, outFormat, rsgislib.TYPE_8UINT)
+        return outputCloudMaskImg
 
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((4, 6), dtype=numpy.float32)
