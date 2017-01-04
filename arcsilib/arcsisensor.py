@@ -467,7 +467,7 @@ class ARCSIAbstractSensor (object):
         return False
 
     @abstractmethod
-    def mosaicImageTiles(self): pass
+    def mosaicImageTiles(self, outputPath): pass
 
     def hasThermal(self):
         return False
