@@ -755,7 +755,6 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         """Used as part of the optimastion for identifying values of AOD"""
         print("Testing AOD Val: ", aotVal,)
         s = Py6S.SixS()
-
         s.atmos_profile = atmosProfile
         s.aero_profile = aeroProfile
         s.ground_reflectance = grdRefl
