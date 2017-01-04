@@ -583,7 +583,7 @@ class ARCSIAbstractSensor (object):
         outDatasource = driver.CreateDataSource(outShpLayerNamePath+ ".shp")
         raster_srs = osr.SpatialReference()
         raster_srs.ImportFromWkt(ratDataset.GetProjectionRef())
-        outLayer = outDatasource.CreateLayer(outShpLayerNamePath, srs=raster_srs) #ratDataset.GetProjection()
+        outLayer = outDatasource.CreateLayer(outShpLayerNamePath, srs=raster_srs)
 
         fieldYearDefn = ogr.FieldDefn('Year', ogr.OFTInteger)
         fieldYearDefn.SetWidth(6)
@@ -634,11 +634,9 @@ class ARCSIAbstractSensor (object):
         print("Create and Add Polygons...")
         for i in range(numFeats):
             wktStr = "POLYGON((" + str(minXXValsSub[i]) + " " + str(minXYValsSub[i]) + ", " + str(maxYXValsSub[i]) + " " + str(maxYYValsSub[i]) + ", " + str(maxXXValsSub[i]) + " " + str(maxXYValsSub[i]) + ", " + str(minYXValsSub[i]) + " " + str(minYYValsSub[i]) + ", " + str(minXXValsSub[i]) + " " + str(minXYValsSub[i]) + "))"
-            #print(str(i) + ": " + wktStr)
             poly = ogr.CreateGeometryFromWkt(wktStr)
             feat = ogr.Feature( outLayer.GetLayerDefn())
             feat.SetGeometry(poly)
-            #print(
             feat.SetField("Year", self.acquisitionTime.year)
             feat.SetField("Month", self.acquisitionTime.month)
             feat.SetField("Day", self.acquisitionTime.day)
@@ -840,15 +838,12 @@ class ARCSIAbstractSensor (object):
     def calcDarkTargetOffsetsForBand(self, inputTOAImage, offsetImage, band, outFormat, histBinWidth, minObjSize, darkPxlPercentile, tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg):
         print("Band: ", band)
         bandHist = rsgislib.imagecalc.getHistogram(inputTOAImage, band, histBinWidth, False, 1, 10000)
-        #print(bandHist)
         sumPxls = numpy.sum(bandHist[0])
-        #print("Total Num Pixels: ", sumPxls)
         findTargets = True
 
         while findTargets:
             findTargets = False
             numPxlThreshold = sumPxls * darkPxlPercentile #0.001 # 1th percentile
-            #print("Number of pixels = ", numPxlThreshold)
 
             pxlThreshold = 0
             pxlCount = 0
@@ -1071,7 +1066,6 @@ class ARCSIAbstractSensor (object):
             for i in range(len(out)):
                 minVal = numpy.min(block[i])
                 maxVal = numpy.max(block[i])
-                #print("Band: ", i+1, " Min = ", minVal, " Max = ", maxVal)
                 if ((maxVal - minVal) > 5):
                     data = block[i].flatten()
                     data = data[data != 0]
@@ -1085,9 +1079,6 @@ class ARCSIAbstractSensor (object):
                         histo, histoBins = numpy.histogram(data, bins=numBins, range=(float(minVal), float(maxVal)))
                         numValues = numpy.sum(histo)
                         numValsPercentile = math.floor(numValues * darkPxlPercentile)
-                        #print("Num Values: ", numValues, " percentile: ", numValsPercentile)
-                        #print("Histo: ", histo)
-                        #print("Bins: ", histoBins)
                         binValCount = 0
                         threshold = 0.0
                         for n in range(histo.shape[0]):
@@ -1096,7 +1087,6 @@ class ARCSIAbstractSensor (object):
                             else:
                                 binValCount =  binValCount + histo[n]
                                 threshold = histoBins[n+1]
-                        #print("Threshold = ", threshold)
                         out[i, ((block[i] <= threshold) & (block[i] > 0))] = 1
                     else:
                         out[i,...] = 0
@@ -1282,8 +1272,6 @@ class ARCSIAbstractSensor (object):
 
             maxObjSizeArrIdx = numpy.where(Histogram == numpy.max(Histogram))
 
-            #print("maxObjSizeArrIdx = ", maxObjSizeArrIdx[0][0])
-
             reflTOA = MeanTOARefl[maxObjSizeArrIdx][0]
             reflDOS = reflTOA - bandOff
             if reflDOS < dosOutRefl:
@@ -1291,11 +1279,6 @@ class ARCSIAbstractSensor (object):
             reflDOS = reflDOS/1000
             radVal = MeanRad[maxObjSizeArrIdx][0]
             elevVal = MeanElev[maxObjSizeArrIdx][0]
-
-            #print("reflTOA = ", reflTOA)
-            #print("reflDOS = ", reflDOS)
-            #print("radVal = ", radVal)
-            #print("elevVal = ", elevVal)
 
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
