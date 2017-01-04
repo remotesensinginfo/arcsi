@@ -464,7 +464,7 @@ class ARCSIRun (object):
 
             if sensorClass.imgNeedMosaicking():
                 print("Mosacking Input Image Tiles.")
-                sensorClass.mosaicImageTiles()
+                sensorClass.mosaicImageTiles(outFilePath)
 
             # Get the valid image data maskImage
             outName = outBaseName + "_valid" + arcsiUtils.getFileExtension(outFormat)

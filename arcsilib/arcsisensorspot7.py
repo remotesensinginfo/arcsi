@@ -435,8 +435,10 @@ class ARCSISPOT7Sensor (ARCSIAbstractSensor):
     def imgNeedMosaicking(self):
         return self.tiledInputImg
 
-    def mosaicImageTiles(self):
-        raise ARCSIException("Image data does not need mosaicking")
+    def mosaicImageTiles(self, outputPath):
+        baseName = self.generateOutputBaseName()
+        self.fileName = os.path.join(outputPath, baseName+'_mosic.kea')
+        imageutils.createImageMosaic(self.inputImgFiles, self.fileName, self.inImgNoData, 0, 1, 0, 'KEA', rsgislib.imageutils.getRSGISLibDataType(self.inputImgFiles[0]))
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -896,5 +898,9 @@ class ARCSISPOT7Sensor (ARCSIAbstractSensor):
                 gdalDriver = gdal.GetDriverByName('KEA')
                 gdalDriver.Delete(self.copiedKEADNImg)
             self.fileName = self.origDNImg
+        if self.tiledInputImg:
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName('KEA')
+                gdalDriver.Delete(self.fileName)
 
 

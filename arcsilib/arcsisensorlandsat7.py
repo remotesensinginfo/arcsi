@@ -548,7 +548,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
 
         return imageDataPresent
 
-    def mosaicImageTiles(self):
+    def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
 
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):

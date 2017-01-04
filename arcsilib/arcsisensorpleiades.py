@@ -461,7 +461,7 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
                 self.cloudsMask = None
             if not os.path.exists(self.roiMask):
                 self.roiMask = None
-            
+
             print("Processing Input File: ", self.fileName)
 
         except Exception as e:
@@ -504,8 +504,10 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
     def imgNeedMosaicking(self):
         return self.tiledInputImg
 
-    def mosaicImageTiles(self):
-        raise ARCSIException("Image data does not need mosaicking")
+    def mosaicImageTiles(self, outputPath):
+        baseName = self.generateOutputBaseName()
+        self.fileName = os.path.join(outputPath, baseName+'_mosic.kea')
+        imageutils.createImageMosaic(self.inputImgFiles, self.fileName, self.inImgNoData, 0, 1, 0, 'KEA', rsgislib.imageutils.getRSGISLibDataType(self.inputImgFiles[0]))
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -1006,4 +1008,7 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
                 gdalDriver = gdal.GetDriverByName('KEA')
                 gdalDriver.Delete(self.copiedKEADNImg)
             self.fileName = self.origDNImg
-
+        if self.tiledInputImg:
+            if not self.debugMode:
+                gdalDriver = gdal.GetDriverByName('KEA')
+                gdalDriver.Delete(self.fileName)
