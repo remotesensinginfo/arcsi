@@ -98,6 +98,15 @@ class ARCSIUtils (object):
             raise e
         return outList
 
+    def writeText2File(self, textStr, outFile):
+        try:
+            f = open(outFile, 'w')
+            f.write(str(textStr)+'\n')
+            f.flush()
+            f.close()
+        except Exception as e:
+            raise e
+
     def stringTokenizer(self, line, delimiter):
         tokens = list()
         token = str()
@@ -155,7 +164,6 @@ class ARCSIUtils (object):
         outVar = None
         try:
             outVar = os.environ[var]
-            #print(outVar)
         except Exception:
             outVar = None
         return outVar
@@ -166,6 +174,17 @@ class ARCSIUtils (object):
             band = ds.GetRasterBand(bandnum + 1)
             band.SetMetadataItem('LAYER_TYPE', 'thematic')
         ds = None
+
+    def hasGCPs(self, imageFile):
+        ds = gdal.Open(imageFile, gdal.GA_ReadOnly)
+        if ds == None:
+            raise ARCSIException("Could not open the imageFile.")
+        numGCPs = ds.GetGCPCount()
+        hasGCPs = False
+        if numGCPs > 0:
+            hasGCPs = True
+        ds = None
+        return hasGCPs
 
     def copyGCPs(self, srcImg, destImg):
         srcDS = gdal.Open(srcImg, gdal.GA_ReadOnly)
@@ -185,6 +204,20 @@ class ARCSIUtils (object):
         srcDS = None
         destDS = None
 
+    def getWKTProjFromImage(self, inImg):
+        rasterDS = gdal.Open(inImg, gdal.GA_ReadOnly)
+        if rasterDS == None:
+            raise ARCSIException('Could not open raster image: \'' + inImg+ '\'')
+        projStr = rasterDS.GetProjection()
+        rasterDS = None
+        return projStr
+
+    def uidGenerator(self, size=6):
+        import uuid
+        randomStr = str(uuid.uuid4())
+        randomStr = randomStr.replace("-","")
+        return randomStr[0:size]
+
     def isNumber(self, strVal):
         try:
             float(strVal) # for int, long and float
@@ -197,7 +230,6 @@ class ARCSIUtils (object):
 
     def str2Float(self, strVal, errVal=None):
         strVal = str(strVal).strip()
-        #print("IN: " + strVal)
         outFloat = 0.0
         try:
             outFloat = float(strVal)
@@ -206,7 +238,6 @@ class ARCSIUtils (object):
                 outFloat = float(errVal)
             else:
                 raise ARCSIException("could not convert string to float: \'" + strVal + '\'.')
-        #print("Out: " + str(outFloat))
         return outFloat
 
     def str2Int(self, strVal, errVal=None):
