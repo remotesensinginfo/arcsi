@@ -515,7 +515,7 @@ class ARCSIRun (object):
                 finalOutFiles["VALID_MASK"] = validMaskImageProj
                 print("")
 
-            if reproject and (not viewAngleImg is ""):
+            if reproject and ((not viewAngleImg is "") and (not viewAngleImg is None)):
                 if not pxlResDefd:
                     viewAngleImgDS = gdal.Open(viewAngleImg, gdal.GA_ReadOnly)
                     if viewAngleImgDS is None:

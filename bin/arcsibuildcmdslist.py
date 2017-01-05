@@ -350,7 +350,7 @@ if __name__ == '__main__':
                         help='''Specifies interpolation algorithm when reprojecting the imagery
                                 (Note. the options are those in gdalwarp).''')
 
-    parser.add_argument("--checkouts", action='store_false', default=True,
+    parser.add_argument("--checkouts", action='store_true', default=False,
                     help='''Specifies that the output path should be checked for files with the same base name.
                     If a file with the same base name is found then processing will not proceed - i.e., files will
                     not be overwritten.''')
