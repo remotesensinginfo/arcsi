@@ -133,7 +133,9 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                 tree = ET.parse(inputHeader)
                 root = tree.getroot()
 
-                rapideyeUrl = '{http://schemas.rapideye.de/products/productMetadataGeocorrected}'
+                hdrVersion = root.attrib['version'].strip() # 1.2.1 when this was implemented but the version was not changed when moved to plantlabs schema URL.
+                schemaURL = root.attrib['{http://www.w3.org/2001/XMLSchema-instance}schemaLocation'].strip().split()[0]
+                rapideyeUrl = '{'+schemaURL+'}'
                 metaDataProperty = root.find('{http://www.opengis.net/gml}metaDataProperty')
                 eoMetaData = metaDataProperty.find(rapideyeUrl+'EarthObservationMetaData')
                 if eoMetaData is None:
@@ -195,7 +197,11 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     try:
                         self.acquisitionTime = datetime.datetime.strptime(timeStr, "%Y-%m-%dT%H:%M:%S")
                     except Exception as e:
-                        raise e
+                        try:
+                            timeStrTmp = timeStr.split('+')[0]
+                            self.acquisitionTime = datetime.datetime.strptime(timeStrTmp, "%Y-%m-%dT%H:%M:%S.%f")
+                        except Exception as e:
+                            raise e
                 #print("self.acquisitionTime: ", self.acquisitionTime)
 
                 metadata = root.find('{http://www.opengis.net/gml}metaDataProperty').find(rapideyeUrl+'EarthObservationMetaData')
@@ -311,7 +317,6 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                 self.yCentre = 0.0
 
             elif (hdrExt.lower() == '.json') or (hdrExt.lower() == 'json'):
-                print('File has a JSON header -- ***** WARNING parsing this header format is largely untested *****')
                 with open(inputHeader, 'r') as f:
                     jsonStrData = f.read()
                 reHdrInfo = json.loads(jsonStrData)
@@ -515,6 +520,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         print("Generate valid image mask")
         outputImage = os.path.join(outputPath, outputMaskName)
+        rsgislib.imageutils.genValidMask(inimages=[self.fileName], outimage=outputImage, format=outFormat, nodata=0.0)
         return outputImage
 
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
