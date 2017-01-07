@@ -465,6 +465,13 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         outputImage = os.path.join(outputPath, outputMaskName)
         inImages = [self.band1File, self.band2File, self.band3File, self.band4File, self.band5File, self.band6File, self.band7File, self.band10File, self.band11File]
         rsgislib.imageutils.genValidMask(inimages=inImages, outimage=tmpValidPxlMsk, format='KEA', nodata=0.0)
+        rsgislib.rastergis.populateStats(tmpValidPxlMsk, True, False, True)
+        # Check there is valid data
+        ratDS = gdal.Open(tmpValidPxlMsk, gdal.GA_ReadOnly)
+        Histogram = rat.readColumn(ratDS, "Histogram")
+        ratDS = None
+        if Histogram.shape[0] < 2:
+            raise ARCSIException("There is no valid data in this image.")
         if not os.path.exists(viewAngleImg):
             rsgislib.rastergis.spatialExtent(clumps=tmpValidPxlMsk, minXX='MinXX', minXY='MinXY', maxXX='MaxXX', maxXY='MaxXY', minYX='MinYX', minYY='MinYY', maxYX='MaxYX', maxYY='MaxYY', ratband=1)
             rsgislib.imagecalibration.calcNadirImgViewAngle(tmpValidPxlMsk, viewAngleImg, 'KEA', 705000.0, 'MinXX', 'MinXY', 'MaxXX', 'MaxXY', 'MinYX', 'MinYY', 'MaxYX', 'MaxYY')
