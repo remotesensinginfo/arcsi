@@ -149,7 +149,7 @@ class ARCSIRun (object):
             aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT,
             demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor,
             initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts,
-            checkOutputs):
+            checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother):
         """
         A function contains the main flow of the software
         """
@@ -722,7 +722,10 @@ class ARCSIRun (object):
             if prodsToCalc["CLOUDS"]:
                 outName = outBaseName + "_clouds" + arcsiUtils.getFileExtension(outFormat)
                 if cloudMaskUsrImg == None:
-                    cloudsImage = sensorClass.generateCloudMask(toaImage, saturateImage, thermalBrightImage, validMaskImage, outFilePath, outName, outFormat, tmpPath, scaleFactor)
+                    if classmlclouds:
+                        cloudsImage = sensorClass.generateCloudMaskML(toaImage, validMaskImage, outFilePath, outName, outFormat, tmpPath, cloudtrainclouds, cloudtrainother, numCores=1)
+                    else:
+                        cloudsImage = sensorClass.generateCloudMask(toaImage, saturateImage, thermalBrightImage, validMaskImage, outFilePath, outName, outFormat, tmpPath, scaleFactor)
                     if calcStatsPy:
                         print("Calculating Statistics...")
                         rsgislib.rastergis.populateStats(cloudsImage, False, True)

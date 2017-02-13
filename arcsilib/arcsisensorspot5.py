@@ -366,6 +366,9 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("SPOT5 does not have a cloud masking implementation in ARCSI.")
 
+    def createCloudMaskDataArray(self, inImgDataArr):
+        return inImgDataArr
+
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((4, 6), dtype=numpy.float32)
         # Set up 6S model
