@@ -114,6 +114,14 @@ parser.add_argument("--imagefile", type=str,
 # Define the argument for specifying the input cloud mask image file - overrides calculating a cloud mask.
 parser.add_argument("--cloudmask", type=str,
                     help='''Specify an input cloud mask image file, overrides ARCSI calculating its own cloud mask.''')
+# Define the argument for specifying a HDF5 file with training samples for classifying clouds using the generic cloud 
+# masking process using the extra random forest algorithm.
+parser.add_argument("--cloudtrainclouds", type=str,
+                    help='''Specify a hdf5 file with the training for classifying clouds.''')
+# Define the argument for specifying a HDF5 file with training samples for classifying non-clouds using the generic cloud 
+# masking process using the extra random forest algorithm.
+parser.add_argument("--cloudtrainother", type=str,
+                    help='''Specify a hdf5 file with the training for classifying non-clouds''')
 # Define the argument for specifying the sensor.
 parser.add_argument("-s", "--sensor", choices=ARCSI_SENSORS_LIST,
                     help='''Specify the sensor being processed.''')
@@ -294,6 +302,10 @@ parser.add_argument("--checkouts", action='store_true', default=False,
                     help='''Specifies that the output path should be checked for files with the same base name.
                     If a file with the same base name is found then processing will not proceed - i.e., files will
                     not be overwritten.''')
+parser.add_argument("--classmlclouds", action='store_true', default=False,
+                    help='''Specifies that the generic machine learning based clouds classification process
+                    should be used. Note. --cloudtrainclouds and --cloudtrainother need to be specified if this 
+                    option is used. ''')
 
 
 
@@ -367,6 +379,12 @@ else:
             sys.exit()
         elif args.projabbv == None:
             print("WARNING: It is recommended that a projection abbreviation or acronym is provided (--projabbv)...")
+
+    if args.classmlclouds:
+        if (args.cloudtrainclouds == None) or (args.cloudtrainother == None):
+            print("Error: If --classmlclouds if specified then --cloudtrainclouds and --cloudtrainother are also required.\n")
+            parser.print_help()
+            sys.exit()
 
     needAOD = False
     needAODMinMax = False
@@ -554,7 +572,7 @@ else:
                  args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot,
                  args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug,
                  args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, 
-                 args.cs_morphop, args.fullimgouts, args.checkouts)
+                 args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother)
 
     runTimer.end(True, "ARCSI took ", " to process the input image. Thank you for using ARCSI.")
     print("\n\n")

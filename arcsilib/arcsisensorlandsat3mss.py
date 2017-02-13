@@ -386,6 +386,28 @@ class ARCSILandsat3MSSSensor (ARCSIAbstractSensor):
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("Cloud Masking Not Implemented for LS3 MSS.")
 
+    def createCloudMaskDataArray(self, inImgDataArr):
+        # Calc Whiteness
+        meanArr = numpy.mean(inImgDataArr, axis=1)
+        whitenessArr = numpy.absolute((inImgDataArr[...,0] - meanArr)/meanArr) + numpy.absolute((inImgDataArr[...,1] - meanArr)/meanArr) + numpy.absolute((inImgDataArr[...,2] - meanArr)/meanArr) + numpy.absolute((inImgDataArr[...,3] - meanArr)/meanArr)
+        # Calc NDVI
+        ndvi = (inImgDataArr[...,3] - inImgDataArr[...,1]) / (inImgDataArr[...,3] + inImgDataArr[...,1])
+        
+        # Create and populate the output array.
+        inShape = inImgDataArr.shape
+        outShape = [inShape[0], inShape[1]+3]    
+        outArr = numpy.zeros(outShape, dtype=float)
+        
+        for i in range(inShape[1]):
+            outArr[...,i] = inImgDataArr[...,i]
+        
+        idx = inShape[1]
+        outArr[...,idx] = meanArr
+        outArr[...,idx+1] = whitenessArr
+        outArr[...,idx+2] = ndvi
+        
+        return outArr
+
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((4, 6), dtype=numpy.float32)
         # Set up 6S model

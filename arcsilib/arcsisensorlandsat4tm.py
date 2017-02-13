@@ -478,6 +478,10 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
         except Exception as e:
             raise e
 
+    def createCloudMaskDataArray(self, inImgDataArr):
+        return inImgDataArr
+
+
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((6, 6), dtype=numpy.float32)
         # Set up 6S model

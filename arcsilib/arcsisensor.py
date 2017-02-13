@@ -87,6 +87,8 @@ from osgeo import osr
 from .arcsiutils import ARCSIUtils
 # Import OS path module for manipulating the file system
 import os.path
+# Import the python OS module
+import os
 # Import the numpy module
 import numpy
 # Import the RIOS RAT library
@@ -103,6 +105,12 @@ import scipy.interpolate
 import json
 # Import shutil module
 import shutil
+# Import scikit-learn classification 
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import ExtraTreesClassifier
+# Import HDF5 python binding.
+import h5py
+
 
 class ARCSIAbstractSensor (object):
     """
@@ -694,6 +702,203 @@ class ARCSIAbstractSensor (object):
 
     @abstractmethod
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor): pass
+
+    @abstractmethod
+    def createCloudMaskDataArray(self, inImgDataArr): pass
+
+    def generateCloudMaskML(self, inputReflImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, cloudTrainFile, otherTrainFile, numCores=1):
+        """
+        A function to generate a cloud mask using Extra Random Forest...
+        """
+        outCloudMask = os.path.join(outputPath, outputName)
+
+        basename = os.path.splitext(os.path.basename(inputReflImage))[0]
+        imgTmpDIR = os.path.join(tmpPath, basename)
+        if os.path.exists(imgTmpDIR):
+             shutil.rmtree(imgTmpDIR, ignore_errors=True)
+        os.makedirs(imgTmpDIR)
+        
+        numVals = 0
+        numVars = 0
+        
+        fH5 = h5py.File(cloudTrainFile)
+        inCloudData = fH5['DATA/DATA']
+        cloudTrainDataArr = self.createCloudMaskDataArray(inCloudData)
+        numInVars = inCloudData.shape[1]
+        fH5.close()
+        
+        fH5 = h5py.File(otherTrainFile)
+        inOtherData = fH5['DATA/DATA']
+        otherTrainDataArr = self.createCloudMaskDataArray(inOtherData)
+        fH5.close()
+            
+        if cloudTrainDataArr.shape[1] is not otherTrainDataArr.shape[1]:
+            raise Exception("The number of variables is different between the cloud and other class training samples.")
+            
+        numVars = cloudTrainDataArr.shape[1]
+        numVals = cloudTrainDataArr.shape[0] + otherTrainDataArr.shape[0]
+        
+        dataArr = numpy.zeros([numVals, numVars], dtype=float)
+        classArr = numpy.zeros([numVals], dtype=int)
+        
+        dataArr[0:cloudTrainDataArr.shape[0]] = cloudTrainDataArr
+        classArr[0:cloudTrainDataArr.shape[0]] = 1
+        
+        dataArr[cloudTrainDataArr.shape[0]:cloudTrainDataArr.shape[0]+otherTrainDataArr.shape[0]] = otherTrainDataArr
+        classArr[cloudTrainDataArr.shape[0]:cloudTrainDataArr.shape[0]+otherTrainDataArr.shape[0]] = 2
+        
+        searchSampleCloud = math.floor(cloudTrainDataArr.shape[0] * 0.2)
+        searchSampleOther = math.floor(otherTrainDataArr.shape[0] * 0.2)
+        
+        numSampVals = searchSampleCloud + searchSampleOther
+        
+        dataSampArr = numpy.zeros([numSampVals, numVars], dtype=float)
+        classSampArr = numpy.zeros([numSampVals], dtype=int)
+        
+        sampleCloudIdxs = numpy.random.randint(0, high=cloudTrainDataArr.shape[0], size=searchSampleCloud)
+        dataSampArr[0:searchSampleCloud] = cloudTrainDataArr[sampleCloudIdxs]
+        classSampArr[0:searchSampleCloud] = 1
+        
+        sampleOtherIdxs = numpy.random.randint(0, high=otherTrainDataArr.shape[0], size=searchSampleOther)
+        dataSampArr[searchSampleCloud:searchSampleCloud+searchSampleOther] = otherTrainDataArr[sampleOtherIdxs]
+        classSampArr[searchSampleCloud:searchSampleCloud+searchSampleOther] = 2
+        
+        cloudTrainDataArr = None
+        otherTrainDataArr = None
+
+        print("Optimising Classifier Parameters")
+        gridSearch=GridSearchCV(ExtraTreesClassifier(bootstrap=True, n_jobs=numCores), {'n_estimators':[10,50,100,200,500], 'criterion':['gini','entropy'], 'max_features':[2,3,'sqrt','log2',None]})
+        gridSearch.fit(dataSampArr, classSampArr)
+        if not gridSearch.refit:
+            raise Exception("Grid Search did no find a fit therefore failed...")
+        print("Best score was {} and has parameters {}.".format(gridSearch.best_score_, gridSearch.best_params_))
+
+        dataSampArr = None
+        classSampArr = None
+
+        # Get the best classifier    
+        skClassifier = gridSearch.best_estimator_
+        skClassifier.oob_score = True
+        
+        print('Training Classifier')
+        skClassifier.fit(dataArr, classArr)
+        print("Completed")
+        
+        print('Calc Classifier Accuracy')
+        accVal = skClassifier.score(dataArr, classArr)
+        print('Classifier Train Score = {}%'.format(round(accVal*100, 2)))
+        oobScore = skClassifier.oob_score_
+        print('Classifier Out of Bag = {}%'.format(round(oobScore*100, 2)))  
+
+        print('Applying Classification')
+        initSceneClass = os.path.join(imgTmpDIR, basename+'_initSceneClass.kea')
+        reader = ImageReader([inputValidImg, inputReflImage], windowxsize=200, windowysize=200)
+        writer = None
+        for (info, blocks) in reader:
+            validImgBlock, toaImgBlock = blocks
+            outClassVals = numpy.zeros_like(validImgBlock, dtype=numpy.uint32)
+            if numpy.any(validImgBlock == 1):
+                # Flatten
+                outClassVals = outClassVals.flatten()
+                imgMaskVals = validImgBlock.flatten()
+                
+                # flatten bands individually.
+                imgData2Class = numpy.zeros((outClassVals.shape[0], numInVars), dtype=numpy.float)
+                classVarsIdx = 0
+                for i in range(toaImgBlock.shape[0]):
+                    imgData2Class[...,classVarsIdx] = toaImgBlock[i].flatten()
+                    classVarsIdx = classVarsIdx + 1
+                
+                # Mask
+                ID = numpy.arange(imgMaskVals.shape[0])
+                imgData2Class = imgData2Class[imgMaskVals==1]
+                ID = ID[imgMaskVals==1]
+                
+                # Calc extra columns
+                classVars = self.createCloudMaskDataArray(imgData2Class)
+                
+                # Apply classifier
+                predClass = skClassifier.predict(classVars)
+                
+                # Sort out the output
+                outClassVals[ID] = predClass
+                outClassVals = numpy.expand_dims(outClassVals.reshape((validImgBlock.shape[1],validImgBlock.shape[2])), axis=0)
+            if writer is None:
+                writer = ImageWriter(initSceneClass, info=info, firstblock=outClassVals, drivername='KEA')
+            else:
+                writer.write(outClassVals)
+        writer.close(calcStats=False)
+        print('Finished Classification')
+        rsgislib.rastergis.populateStats(clumps=initSceneClass, addclrtab=True, calcpyramids=True, ignorezero=True)
+        
+        ## Check there are clouds!
+        ratDataset = gdal.Open(initSceneClass, gdal.GA_Update)
+        Histogram = rat.readColumn(ratDataset, 'Histogram')
+        ratDataset = None
+        
+        if Histogram.shape[0] < 2:
+            # make output the valid image with all valid area a pixel value of 1.
+            rsgislib.imagecalc.imageMath(inputValidImg, outCloudMask, 'b1==1?1:0', 'KEA', rsgislib.TYPE_8UINT)
+            rsgislib.rastergis.populateStats(clumps=outCloudMask, addclrtab=True, calcpyramids=True, ignorezero=True)
+        else:
+            totPxls = Histogram[1] + Histogram[2]
+            propCloud = float(Histogram[1]) / float(totPxls)
+            propOther = float(Histogram[2]) / float(totPxls)
+            
+            if propCloud > 0.98:
+                # 98% clouds - make it all cloud.
+                rsgislib.imagecalc.imageMath(inputValidImg, outCloudMask, 'b1==1?1:0', 'KEA', rsgislib.TYPE_8UINT)
+                rsgislib.rastergis.populateStats(clumps=outCloudMask, addclrtab=True, calcpyramids=True, ignorezero=True)
+            elif propOther > 0.99:
+                # 99% not cloud don't consider cloud.
+                rsgislib.imagecalc.imageMath(inputValidImg, outCloudMask, 'b1==1?0:0', 'KEA', rsgislib.TYPE_8UINT)
+                rsgislib.rastergis.populateStats(clumps=outCloudMask, addclrtab=True, calcpyramids=True, ignorezero=True)
+            else:
+                # Else. Tidy up the cloud regions and export.
+                initCloudClass = os.path.join(imgTmpDIR, basename+'_initCloudClass.kea')
+                rsgislib.imagecalc.imageMath(initSceneClass, initCloudClass, 'b1==1?1:0', 'KEA', rsgislib.TYPE_8UINT)
+                rsgislib.rastergis.populateStats(clumps=initCloudClass, addclrtab=True, calcpyramids=True, ignorezero=True)
+                
+                initCloudClassClumps = os.path.join(imgTmpDIR, basename+'_initclouds_clumps.kea')
+                rsgislib.segmentation.clump(initCloudClass, initCloudClassClumps, 'KEA', False, 0, False)
+                rsgislib.rastergis.populateStats(clumps=initCloudClassClumps, addclrtab=True, calcpyramids=True, ignorezero=True)
+                
+                initCloudClassClumpsRMSmall = os.path.join(imgTmpDIR, basename+'_initclouds_clumps_rmsmall.kea')
+                rsgislib.segmentation.rmSmallClumps(initCloudClassClumps, initCloudClassClumpsRMSmall, 5, 'KEA')
+                rsgislib.rastergis.populateStats(clumps=initCloudClassClumpsRMSmall, addclrtab=True, calcpyramids=True, ignorezero=True)
+                    
+                cloudsRmSmallClass = os.path.join(imgTmpDIR, basename+'_CloudsRmSmallClass.kea')
+                rsgislib.imagecalc.imageMath(initCloudClassClumpsRMSmall, cloudsRmSmallClass, 'b1>0?1:0', 'KEA', rsgislib.TYPE_8UINT)
+                rsgislib.rastergis.populateStats(clumps=cloudsRmSmallClass, addclrtab=True, calcpyramids=True, ignorezero=True)
+                
+                dist2Clouds = os.path.join(imgTmpDIR, basename+'_dist2Clouds.kea')
+                rsgislib.imagecalc.calcDist2ImgVals(cloudsRmSmallClass, dist2Clouds, 1, valsImgBand=1, gdalFormat='KEA', maxDist=20, noDataVal=20, unitGEO=False)
+                rsgislib.imageutils.popImageStats(dist2Clouds, usenodataval=True, nodataval=0, calcpyramids=True)
+                
+                rsgislib.imagecalc.imageMath(dist2Clouds, outCloudMask, 'b1<5?1:0', 'KEA', rsgislib.TYPE_8UINT)
+                rsgislib.rastergis.populateStats(clumps=outCloudMask, addclrtab=True, calcpyramids=True, ignorezero=True)
+        
+        ratDataset = gdal.Open(outCloudMask, gdal.GA_Update)
+        Red = rat.readColumn(ratDataset, 'Red')
+        Green = rat.readColumn(ratDataset, 'Green')
+        Blue = rat.readColumn(ratDataset, 'Blue')
+        
+        Red[...] = 0
+        Green[...] = 0
+        Blue[...] = 0
+        
+        Red[1] = 0
+        Green[1] = 0
+        Blue[1] = 255
+        
+        rat.writeColumn(ratDataset, "Red", Red)
+        rat.writeColumn(ratDataset, "Green", Green)
+        rat.writeColumn(ratDataset, "Blue", Blue)
+        ratDataset = None
+    
+        shutil.rmtree(imgTmpDIR, ignore_errors=True)
+
+        return outCloudMask
 
     def generateClearSkyMask(self, cloudsImg, inputValidImg, outputPath, outputName, outFormat, tmpPath,  initClearSkyRegionDist=3000, initClearSkyRegionMinSize=3000, finalClearSkyRegionDist=1000, morphSize=21):
         try:

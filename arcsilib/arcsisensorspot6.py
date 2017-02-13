@@ -562,6 +562,9 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
                 rsgislib.imageutils.createCopyImage(inputReflImage, outputCloudMaskImg, 1, 0, outFormat, rsgislib.TYPE_8UINT)
         return outputCloudMaskImg
 
+    def createCloudMaskDataArray(self, inImgDataArr):
+        return inImgDataArr
+
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((4, 6), dtype=numpy.float32)
         # Set up 6S model
