@@ -79,7 +79,7 @@ class ARCSIBuildCommands (object):
                      atmosozone, atmoswater, aerowater,
                      aerodust, aerooceanic, aerosoot, aot, vis, tmpath,
                      minaot, maxaot, dem, localdos, dosout, simpledos,
-                     scalefac, outwkt, outproj4, projabbv, interp, checkouts, fullimgouts
+                     scalefac, outwkt, outproj4, projabbv, interp, checkouts, fullimgouts,
                      classmlclouds, cloudtrainclouds, cloudtrainother):
 
         inputPath = os.path.abspath(inputPath)
