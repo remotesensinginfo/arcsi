@@ -813,6 +813,14 @@ class ARCSIAbstractSensor (object):
                 ID = numpy.arange(imgMaskVals.shape[0])
                 imgData2Class = imgData2Class[imgMaskVals==1]
                 ID = ID[imgMaskVals==1]
+
+                # Check data in Finite
+                ID = ID[numpy.isfinite(imgData2Class).all(axis=1)]
+                imgData2Class = imgData2Class[numpy.isfinite(imgData2Class).all(axis=1)]
+                
+                # Check for input with all zeros.
+                ID = ID[(imgData2Class!=0).all(axis=1)]
+                imgData2Class = imgData2Class[(imgData2Class!=0).all(axis=1)]
                 
                 # Calc extra columns
                 classVars = self.createCloudMaskDataArray(imgData2Class)
