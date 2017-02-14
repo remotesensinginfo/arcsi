@@ -767,7 +767,7 @@ class ARCSIAbstractSensor (object):
         otherTrainDataArr = None
 
         print("Optimising Classifier Parameters")
-        gridSearch=GridSearchCV(ExtraTreesClassifier(bootstrap=True, n_jobs=numCores), {'n_estimators':[10,50,100,200,500], 'criterion':['gini','entropy'], 'max_features':[2,3,'sqrt','log2',None]})
+        gridSearch=GridSearchCV(ExtraTreesClassifier(bootstrap=True, n_jobs=numCores), {'n_estimators':[50,100,200,500], 'criterion':['gini','entropy'], 'max_features':[2,3,'sqrt','log2',None]})
         gridSearch.fit(dataSampArr, classSampArr)
         if not gridSearch.refit:
             raise Exception("Grid Search did no find a fit therefore failed...")
@@ -822,14 +822,16 @@ class ARCSIAbstractSensor (object):
                 ID = ID[(imgData2Class!=0).all(axis=1)]
                 imgData2Class = imgData2Class[(imgData2Class!=0).all(axis=1)]
                 
-                # Calc extra columns
-                classVars = self.createCloudMaskDataArray(imgData2Class)
-                
-                # Apply classifier
-                predClass = skClassifier.predict(classVars)
-                
-                # Sort out the output
-                outClassVals[ID] = predClass
+                if imgData2Class.shape[0] > 0:
+                    # Calc extra columns
+                    classVars = self.createCloudMaskDataArray(imgData2Class)
+                    
+                    # Apply classifier
+                    predClass = skClassifier.predict(classVars)
+                    
+                    # Sort out the output
+                    outClassVals[ID] = predClass
+                # Reshape output for writing output file.
                 outClassVals = numpy.expand_dims(outClassVals.reshape((validImgBlock.shape[1],validImgBlock.shape[2])), axis=0)
             if writer is None:
                 writer = ImageWriter(initSceneClass, info=info, firstblock=outClassVals, drivername='KEA')
