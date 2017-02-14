@@ -393,6 +393,6 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, args.aerowater,
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath,
                      args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos,
-                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.checkouts, args.fullimgouts
+                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.checkouts, args.fullimgouts,
                      args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother)
 
