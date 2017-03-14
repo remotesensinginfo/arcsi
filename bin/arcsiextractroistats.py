@@ -35,6 +35,10 @@
 #
 ############################################################################
 
+# Import updated print function into python 2.7
+from __future__ import print_function
+# Import updated division operator into python 2.7
+from __future__ import division
 # Import the glob module.
 import glob
 # Import python system library
