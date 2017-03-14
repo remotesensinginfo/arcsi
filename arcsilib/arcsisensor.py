@@ -35,6 +35,10 @@ Module that contains the ARCSIAbstractSensor class.
 #
 ############################################################################
 
+# Import updated print function into python 2.7
+from __future__ import print_function
+# Import updated division operator into python 2.7
+from __future__ import division
 # import abstract base class stuff
 from abc import ABCMeta, abstractmethod
 # Import the datetime module

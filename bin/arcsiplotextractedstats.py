@@ -35,6 +35,10 @@
 #
 ############################################################################
 
+# Import updated print function into python 2.7
+from __future__ import print_function
+# Import updated division operator into python 2.7
+from __future__ import division
 # Import python system library
 import sys
 #Import the python file paths module
