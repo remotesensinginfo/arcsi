@@ -40,10 +40,6 @@ Module that contains the ARCSISolarIrradiance Class.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 # Import the numpy library
 import numpy
 # Import the ARCSI exception class

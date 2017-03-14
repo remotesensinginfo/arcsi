@@ -36,10 +36,6 @@ Module that contains the ARCSISPOT6Sensor class.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 # import abstract base class stuff
 from .arcsisensor import ARCSIAbstractSensor
 # Import the ARCSI exception class
