@@ -50,10 +50,6 @@ sensors (i.e., Landsat 1, Landsat 2 ... Landsat 8 etc).
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
 # Import the python os.path module
 import os.path
 # Import the python os module
@@ -245,7 +241,7 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif filePrefix3 == 'LC8':
+            elif (filePrefix3 == 'LC8') or (filePrefix3 == 'LC08'):
                 outputFileDIR = os.path.join(outputDir, "LS8")
                 if (not createdLS8DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
