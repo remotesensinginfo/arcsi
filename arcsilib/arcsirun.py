@@ -149,7 +149,7 @@ class ARCSIRun (object):
             aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT,
             demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor,
             initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts,
-            checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother):
+            checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg):
         """
         A function contains the main flow of the software
         """
@@ -462,6 +462,11 @@ class ARCSIRun (object):
             print('Checking Input Images are valid')
             sensorClass.checkInputImageValid()
 
+            # Check if bands need resampling
+            if sensorClass.inImgsDiffRes():
+                sensorClass.resampleImgRes(outFilePath, resample2LowResImg)
+
+            # Check if the image data needs mosaicking.
             if sensorClass.imgNeedMosaicking():
                 print("Mosacking Input Image Tiles.")
                 sensorClass.mosaicImageTiles(outFilePath)

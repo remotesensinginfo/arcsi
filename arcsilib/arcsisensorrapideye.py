@@ -185,10 +185,10 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                 #print("self.solarZenith: ", self.solarZenith)
                 self.solarAzimuth = float(eoAcquParams.find('{http://earth.esa.int/opt}illuminationAzimuthAngle').text.strip())
                 #print("self.solarAzimuth: ", self.solarAzimuth)
-                self.senorZenith = self.acquCraftViewAngle
-                #print("self.senorZenith: ", self.senorZenith)
-                self.senorAzimuth = self.acquAzimuthAngle
-                #print("self.senorAzimuth: ", self.senorAzimuth)
+                self.sensorZenith = self.acquCraftViewAngle
+                #print("self.sensorZenith: ", self.sensorZenith)
+                self.sensorAzimuth = self.acquAzimuthAngle
+                #print("self.sensorAzimuth: ", self.sensorAzimuth)
                 timeStr = eoAcquParams.find(rapideyeUrl+'acquisitionDateTime').text.strip()
                 timeStr = timeStr.replace('Z', '')
                 try:
@@ -344,10 +344,10 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     #print("self.solarZenith: ", self.solarZenith)
                     self.solarAzimuth = arcsiUtils.str2Float(reHdrInfo['properties']['sun']['azimuth'])
                     #print("self.solarAzimuth: ", self.solarAzimuth)
-                    self.senorZenith = self.acquCraftViewAngle
-                    #print("self.senorZenith: ", self.senorZenith)
-                    self.senorAzimuth = self.acquAzimuthAngle
-                    #print("self.senorAzimuth: ", self.senorAzimuth)
+                    self.sensorZenith = self.acquCraftViewAngle
+                    #print("self.sensorZenith: ", self.sensorZenith)
+                    self.sensorAzimuth = self.acquAzimuthAngle
+                    #print("self.sensorAzimuth: ", self.sensorAzimuth)
                 else:
                     raise ARCSIException("JSON Header is not expect format for RapidEye.")
 
@@ -460,7 +460,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         Get sensor viewing angles
         returns (viewAzimuth, viewZenith)
         """
-        return (self.senorAzimuth, self.senorZenith)
+        return (self.sensorAzimuth, self.sensorZenith)
 
     def generateOutputBaseName(self):
         """
@@ -489,6 +489,9 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
 
     def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
+
+    def resampleImgRes(self, outputPath, resampleToLowResImg):
+        raise ARCSIException("Image data does not need resampling")
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -583,8 +586,8 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
@@ -744,8 +747,8 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0

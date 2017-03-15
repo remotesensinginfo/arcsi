@@ -149,8 +149,8 @@ class ARCSIAbstractSensor (object):
         self.inWKT = ""
         self.solarZenith = 0.0
         self.solarAzimuth = 0.0
-        self.senorZenith = 0.0
-        self.senorAzimuth = 0.0
+        self.sensorZenith = 0.0
+        self.sensorAzimuth = 0.0
         self.epsgCodes = dict()
         self.epsgCodes["WGS84UTM1N"] = 32601
         self.epsgCodes["WGS84UTM2N"] = 32602
@@ -348,8 +348,8 @@ class ARCSIAbstractSensor (object):
         acqDict['Time'] = acqTimeDict
         acqDict['SolarZenith'] = self.solarZenith
         acqDict['SolarAzimuth'] = self.solarAzimuth
-        acqDict['SenorZenith'] = self.senorZenith
-        acqDict['SenorAzimuth'] = self.senorAzimuth
+        acqDict['sensorZenith'] = self.sensorZenith
+        acqDict['sensorAzimuth'] = self.sensorAzimuth
 
         locDict = dict()
         locGeogDict = dict()
@@ -474,8 +474,14 @@ class ARCSIAbstractSensor (object):
     def imgNeedMosaicking(self):
         return False
 
+    def inImgsDiffRes(self):
+        return False
+
     @abstractmethod
     def mosaicImageTiles(self, outputPath): pass
+
+    @abstractmethod
+    def resampleImgRes(self, outputPath, resampleToLowResImg): pass
 
     def hasThermal(self):
         return False
@@ -651,8 +657,8 @@ class ARCSIAbstractSensor (object):
             feat.SetField("BaseName", self.generateOutputBaseName())
             feat.SetField("SolZen", self.solarZenith)
             feat.SetField("SolAzi", self.solarAzimuth)
-            feat.SetField("SenZen", self.senorZenith)
-            feat.SetField("SenAzi", self.senorAzimuth)
+            feat.SetField("SenZen", self.sensorZenith)
+            feat.SetField("SenAzi", self.sensorAzimuth)
             feat.SetField("CenLat", self.latCentre)
             feat.SetField("CenLon", self.lonCentre)
 
