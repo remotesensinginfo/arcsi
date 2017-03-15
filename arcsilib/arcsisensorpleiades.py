@@ -242,8 +242,8 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
             # Get acquasition parameters - solar/view angles
             self.solarZenith = 90-float(locGeoValsTag.find('Solar_Incidences').find('SUN_ELEVATION').text.strip())
             self.solarAzimuth = float(locGeoValsTag.find('Solar_Incidences').find('SUN_AZIMUTH').text.strip())
-            self.senorZenith = 0.0 ## TODO: Not sure what to set this too!!
-            self.senorAzimuth = float(locGeoValsTag.find('Acquisition_Angles').find('AZIMUTH_ANGLE').text.strip())
+            self.sensorZenith = 0.0 ## TODO: Not sure what to set this too!!
+            self.sensorAzimuth = float(locGeoValsTag.find('Acquisition_Angles').find('AZIMUTH_ANGLE').text.strip())
 
             self.inputImgProjed = True
             if topLevelCoordSystem.find('Projected_CRS') == None:
@@ -479,7 +479,7 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         Get sensor viewing angles
         returns (viewAzimuth, viewZenith)
         """
-        return (self.senorAzimuth, self.senorZenith)
+        return (self.sensorAzimuth, self.sensorZenith)
 
     def generateOutputBaseName(self):
         """
@@ -508,6 +508,9 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         baseName = self.generateOutputBaseName()
         self.fileName = os.path.join(outputPath, baseName+'_mosic.kea')
         imageutils.createImageMosaic(self.inputImgFiles, self.fileName, self.inImgNoData, 0, 1, 0, 'KEA', rsgislib.imageutils.getRSGISLibDataType(self.inputImgFiles[0]))
+
+    def resampleImgRes(self, outputPath, resampleToLowResImg):
+        raise ARCSIException("Image data does not need resampling")
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -642,8 +645,8 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
@@ -830,8 +833,8 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0

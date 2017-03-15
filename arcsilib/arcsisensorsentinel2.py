@@ -71,6 +71,23 @@ import numpy
 import osgeo.gdal as gdal
 # Import the RIOS RAT module
 from rios import rat
+# Import the glob tool
+import glob
+
+
+class ARCSISen2SpectralBandObj(object):
+    """
+    This is a class to store the information associated with a Sentinel-2 image band.
+    """
+    def __init__(self, phyBandName=None, bandID=None, imgRes=0.0, wvLenMin=0.0, wvLenMax=0.0, wvLenCen=0.0, respFuncStep=1.0, respFunc=list()):
+        self.phyBandName = phyBandName
+        self.bandID = bandID
+        self.imgRes = imgRes
+        self.wvLenMin = wvLenMin
+        self.wvLenMax = wvLenMax
+        self.wvLenCen = wvLenCen
+        self.respFuncStep = respFuncStep
+        self.respFunc = respFunc
 
 class ARCSISentinel2Sensor (ARCSIAbstractSensor):
     """
@@ -80,15 +97,382 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
     def __init__(self, debugMode, inputImage):
         ARCSIAbstractSensor.__init__(self, debugMode, inputImage)
         self.sensor = "SEN2"
+        self.sen2FileBaseDIR = ''
+        self.processingLevel = ''
+        self.processingBaseline = ''
+        self.spacecraftName = ''
+        self.dataTakeType = ''
+        self.orbitNumber = ''
+        self.orbitDirection = ''
+
+        self.sen2ImgB01 = ''
+        self.sen2ImgB02 = ''
+        self.sen2ImgB03 = ''
+        self.sen2ImgB04 = ''
+        self.sen2ImgB05 = ''
+        self.sen2ImgB06 = ''
+        self.sen2ImgB07 = ''
+        self.sen2ImgB08A = ''
+        self.sen2ImgB08 = ''
+        self.sen2ImgB09 = ''
+        self.sen2ImgB10 = ''
+        self.sen2ImgB11 = ''
+        self.sen2ImgB12 = ''
+        self.sen2ImgTCI = ''
+
+        self.inNoDataVal = 0
+        self.inSatDataVal = 65535
+        self.quantificationVal = 10000
+
+        self.physicalGain_B0 = 0.0
+        self.physicalGain_B1 = 0.0
+        self.physicalGain_B2 = 0.0
+        self.physicalGain_B3 = 0.0
+        self.physicalGain_B4 = 0.0
+        self.physicalGain_B5 = 0.0
+        self.physicalGain_B6 = 0.0
+        self.physicalGain_B7 = 0.0
+        self.physicalGain_B8 = 0.0
+        self.physicalGain_B9 = 0.0
+        self.physicalGain_B10 = 0.0
+        self.physicalGain_B11 = 0.0
+        self.physicalGain_B12 = 0.0
+
+        self.reflConvert_U = 0.0
+        self.esun_B0 = 0.0
+        self.esun_B1 = 0.0
+        self.esun_B2 = 0.0
+        self.esun_B3 = 0.0
+        self.esun_B4 = 0.0
+        self.esun_B5 = 0.0
+        self.esun_B6 = 0.0
+        self.esun_B7 = 0.0
+        self.esun_B8 = 0.0
+        self.esun_B9 = 0.0
+        self.esun_B10 = 0.0
+        self.esun_B11 = 0.0
+        self.esun_B12 = 0.0
+
+        self.specBandInfo = dict()
+
+        self.uniqueTileID = ''
 
     def extractHeaderParameters(self, inputHeader, wktStr):
         """
-        Understands and parses the WorldView2 xml header file
+        Understands and parses the Sentinel-2 xml header file
         """
         try:
+            arcsiUtils = ARCSIUtils()
+            inputHeader = os.path.abspath(inputHeader)
             self.headerFileName = os.path.split(inputHeader)[1]
+            self.sen2FileBaseDIR = os.path.split(inputHeader)[0]
             
-            print("hello world...")
+            print("Reading header file")
+            tree = ET.parse(inputHeader)
+            root = tree.getroot()
+
+            generalInfoTag = root.find('{https://psd-14.sentinel2.eo.esa.int/PSD/User_Product_Level-1C.xsd}General_Info')
+            if generalInfoTag == None:
+                raise ARCSIException("Cannot open top level section \'General_Info\' - is this really a Sentinel-2 image file?")
+
+            productInfoTag = generalInfoTag.find('Product_Info')
+            if productInfoTag == None:
+                raise ARCSIException("Cannot open \'General_Info\' section \'Product_Info\' - is this really a Sentinel-2 image file?")
+
+            productType = productInfoTag.find('PRODUCT_TYPE').text.strip()
+            if (productType == None) or (productType == ''):
+                raise ARCSIException("Cannot find the product type - is this really a Sentinel-2 image file?")
+            elif productType != 'S2MSI1C':
+                raise ARCSIException("Expecting Sentinel-2 product type \'S2MSI1C\'")
+            else:
+                print("Found Sentinel-2 image file product \'S2MSI1C\'")
+
+            self.processingLevel = productInfoTag.find('PROCESSING_LEVEL').text.strip()
+            self.processingBaseline = productInfoTag.find('PROCESSING_BASELINE').text.strip()
+
+            datatakeTag = productInfoTag.find('Datatake')
+            if datatakeTag == None:
+                raise ARCSIException("Cannot open \'Product_Info\' section \'Datatake\'")
+
+            acqTimeStr = datatakeTag.find('DATATAKE_SENSING_START').text.strip()
+            acqTimeStr = acqTimeStr.replace('Z', '')
+            self.acquisitionTime = datetime.datetime.strptime(acqTimeStr, "%Y-%m-%dT%H:%M:%S.%f")
+
+            self.spacecraftName = datatakeTag.find('SPACECRAFT_NAME').text.strip()
+            self.dataTakeType = datatakeTag.find('DATATAKE_TYPE').text.strip()
+            self.orbitNumber = datatakeTag.find('SENSING_ORBIT_NUMBER').text.strip()
+            self.orbitDirection = datatakeTag.find('SENSING_ORBIT_DIRECTION').text.strip()
+
+            prodURI = productInfoTag.find('PRODUCT_URI').text.strip()
+            self.uniqueTileID = prodURI.split('_')[5]
+
+
+            # Get the input image band file names.
+            granuleListTag = productInfoTag.find('Product_Organisation').find('Granule_List')
+            granulesTagsLst = list()
+            for granuleLstChild in granuleListTag:
+                if granuleLstChild.tag == 'Granule':
+                    granulesTagsLst.append(granuleLstChild)
+
+            if len(granulesTagsLst) != 1:
+                raise ARCSIException("Only expecting a single granule within the file... The input image you have provided is not supported by ARCSI - please report so we can add support.")
+
+            granuleTag = granulesTagsLst[0]
+            for granuleChild in granuleTag:
+                if granuleChild.tag == 'IMAGE_FILE':
+                    imgFile = granuleChild.text.strip()
+                    tmpFiles = glob.glob(os.path.join(self.sen2FileBaseDIR, imgFile+'*'))
+                    if len(tmpFiles) == 1:
+                        if 'B01' in imgFile:
+                            self.sen2ImgB01 = tmpFiles[0]
+                        elif 'B02' in imgFile:
+                            self.sen2ImgB02 = tmpFiles[0]
+                        elif 'B03' in imgFile:
+                            self.sen2ImgB03 = tmpFiles[0]
+                        elif 'B04' in imgFile:
+                            self.sen2ImgB04 = tmpFiles[0]
+                        elif 'B05' in imgFile:
+                            self.sen2ImgB05 = tmpFiles[0]
+                        elif 'B06' in imgFile:
+                            self.sen2ImgB06 = tmpFiles[0]
+                        elif 'B07' in imgFile:
+                            self.sen2ImgB07 = tmpFiles[0]
+                        elif 'B8A' in imgFile:
+                            self.sen2ImgB08A = tmpFiles[0]
+                        elif 'B08' in imgFile:
+                            self.sen2ImgB08 = tmpFiles[0]
+                        elif 'B09' in imgFile:
+                            self.sen2ImgB09 = tmpFiles[0]
+                        elif 'B10' in imgFile:
+                            self.sen2ImgB10 = tmpFiles[0]
+                        elif 'B11' in imgFile:
+                            self.sen2ImgB11 = tmpFiles[0]
+                        elif 'B12' in imgFile:
+                            self.sen2ImgB12 = tmpFiles[0]
+                        elif 'TCI' in imgFile:
+                            self.sen2ImgTCI = tmpFiles[0]
+                        else:
+                            raise ARCSIException("Could not associated image file with an expected image band: " + imgFile)
+                    else:
+                        raise ARCSIException("Could not file image file for: " + imgFile)
+
+            productImgCharTag = generalInfoTag.find('Product_Image_Characteristics')
+            if productImgCharTag == None:
+                raise ARCSIException("Cannot open \'General_Info\' section \'Product_Image_Characteristics\'")
+
+            specialValsTagsLst = list()
+            quantificationValTag = None
+            reflectanceConversionTag = None
+            spectralInfoListTag = None
+            physicalGainsTagsLst = list()
+            for prodImgCharChild in productImgCharTag:
+                if prodImgCharChild.tag == 'Special_Values':
+                    specialValsTagsLst.append(prodImgCharChild)
+                elif prodImgCharChild.tag == 'QUANTIFICATION_VALUE':
+                    quantificationValTag = prodImgCharChild
+                elif prodImgCharChild.tag == 'Reflectance_Conversion':
+                    reflectanceConversionTag = prodImgCharChild
+                elif prodImgCharChild.tag == 'Spectral_Information_List':
+                    spectralInfoListTag = prodImgCharChild
+                elif prodImgCharChild.tag == 'PHYSICAL_GAINS':
+                    physicalGainsTagsLst.append(prodImgCharChild)
+
+            # Parse out the input no data and saturation value.
+            for tag in specialValsTagsLst:
+                if tag.find('SPECIAL_VALUE_TEXT').text.strip() == 'NODATA':
+                    self.inNoDataVal = arcsiUtils.str2Int(tag.find('SPECIAL_VALUE_INDEX').text.strip())
+                elif tag.find('SPECIAL_VALUE_TEXT').text.strip() == 'SATURATED':
+                    self.inSatDataVal = arcsiUtils.str2Int(tag.find('SPECIAL_VALUE_INDEX').text.strip())
+
+            # Get the Quantification value.
+            self.quantificationVal = arcsiUtils.str2Float(quantificationValTag.text.strip())
+
+            # Get the Physical Gain values.
+            for physGainTag in physicalGainsTagsLst:
+                if physGainTag.attrib['bandId'] == '0':
+                    self.physicalGain_B0 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '1':
+                    self.physicalGain_B1 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '2':
+                    self.physicalGain_B2 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '3':
+                    self.physicalGain_B3 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '4':
+                    self.physicalGain_B4 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '5':
+                    self.physicalGain_B5 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '6':
+                    self.physicalGain_B6 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '7':
+                    self.physicalGain_B7 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '8':
+                    self.physicalGain_B8 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '9':
+                    self.physicalGain_B9 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '10':
+                    self.physicalGain_B10 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '11':
+                    self.physicalGain_B11 = arcsiUtils.str2Float(physGainTag.text.strip())
+                elif physGainTag.attrib['bandId'] == '12':
+                    self.physicalGain_B12 = arcsiUtils.str2Float(physGainTag.text.strip())
+
+            # Get Reflectance Conversion info
+            self.reflConvert_U = arcsiUtils.str2Float(reflectanceConversionTag.find('U').text.strip())
+            for solarIrrTag in reflectanceConversionTag.find('Solar_Irradiance_List'):
+                if solarIrrTag.attrib['bandId'] == '0':
+                    self.esun_B0 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '1':
+                    self.esun_B1 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '2':
+                    self.esun_B2 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '3':
+                    self.esun_B3 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '4':
+                    self.esun_B4 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '5':
+                    self.esun_B5 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '6':
+                    self.esun_B6 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '7':
+                    self.esun_B7 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '8':
+                    self.esun_B8 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '9':
+                    self.esun_B9 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '10':
+                    self.esun_B10 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '11':
+                    self.esun_B11 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+                elif solarIrrTag.attrib['bandId'] == '12':
+                    self.esun_B12 = arcsiUtils.str2Float(solarIrrTag.text.strip())
+
+            # Get Spectral Info
+            for specInfoTag in spectralInfoListTag:
+                phyBandName = specInfoTag.attrib['physicalBand']
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = phyBandName
+                specBandObj.bandID = specInfoTag.attrib['bandId']
+                specBandObj.imgRes = arcsiUtils.str2Float(specInfoTag.find('RESOLUTION').text.strip())
+                specBandObj.wvLenMin = arcsiUtils.str2Float(specInfoTag.find('Wavelength').find('MIN').text.strip())
+                specBandObj.wvLenMax = arcsiUtils.str2Float(specInfoTag.find('Wavelength').find('MAX').text.strip())
+                specBandObj.wvLenCen = arcsiUtils.str2Float(specInfoTag.find('Wavelength').find('CENTRAL').text.strip())
+                specBandObj.respFuncStep = arcsiUtils.str2Float(specInfoTag.find('Spectral_Response').find('STEP').text.strip())
+                specResStrVals = specInfoTag.find('Spectral_Response').find('VALUES').text.strip().split(' ')
+                specResVals = list()
+                for strVal in specResStrVals:
+                    specResVals.append(arcsiUtils.str2Float(strVal))
+                specBandObj.respFunc = specResVals
+                self.specBandInfo[phyBandName] = specBandObj
+
+            tree = None
+
+            ####### READ GRANULE HEADER FILES ##########
+            granuleDIR = os.path.join(self.sen2FileBaseDIR, 'GRANULE')
+            granLC1DIRsIn = os.listdir(granuleDIR)
+            granLC1DIRs = []
+            for dirStr in granLC1DIRsIn:
+                if 'L1C' in dirStr:
+                    granLC1DIRs.append(dirStr)
+            if len(granLC1DIRs) != 1:
+                raise ARCSIException("Couldn't find the granule directory")
+            granuleHdr = os.path.join(os.path.join(granuleDIR, granLC1DIRs[0]), 'MTD_TL.xml')
+
+            tree = ET.parse(granuleHdr)
+            root = tree.getroot()
+
+            # Get Geometric Info Tag
+            geometricInfoTag = root.find('{https://psd-12.sentinel2.eo.esa.int/PSD/S2_PDI_Level-1C_Tile_Metadata.xsd}Geometric_Info')
+
+            # Get Tile Geocoding tag.
+            tileGeocoding = geometricInfoTag.find('Tile_Geocoding')
+
+            # Get EPSG Code.
+            epsgCodeStr = tileGeocoding.find('HORIZONTAL_CS_CODE').text.strip()
+            epsgCode = arcsiUtils.str2Int(epsgCodeStr.split(':')[1])
+            inProj = osr.SpatialReference()
+            inProj.ImportFromEPSG(epsgCode)
+            if self.inWKT is "":
+                self.inWKT = inProj.ExportToWkt()
+
+            tlXRes10 = 0.0
+            tlYRes10 = 0.0
+            xSizeRes10 = 0
+            ySizeRes10 = 0
+            tlXRes20 = 0.0
+            tlYRes20 = 0.0
+            xSizeRes20 = 0
+            ySizeRes20 = 0
+            tlXRes60 = 0.0
+            tlYRes60 = 0.0
+            xSizeRes60 = 0
+            ySizeRes60 = 0
+            for tileGeocodeChild in tileGeocoding:
+                if tileGeocodeChild.tag == 'Geoposition':
+                    if tileGeocodeChild.attrib['resolution'] == '10':
+                        tlXRes10 = arcsiUtils.str2Float(tileGeocodeChild.find('ULX').text.strip())
+                        tlYRes10 = arcsiUtils.str2Float(tileGeocodeChild.find('ULY').text.strip())
+                    elif  tileGeocodeChild.attrib['resolution'] == '20':
+                        tlXRes20 = arcsiUtils.str2Float(tileGeocodeChild.find('ULX').text.strip())
+                        tlYRes20 = arcsiUtils.str2Float(tileGeocodeChild.find('ULY').text.strip())
+                    elif  tileGeocodeChild.attrib['resolution'] == '60':
+                        tlXRes60 = arcsiUtils.str2Float(tileGeocodeChild.find('ULX').text.strip())
+                        tlYRes60 = arcsiUtils.str2Float(tileGeocodeChild.find('ULY').text.strip())
+                    else:
+                        raise ARCSIException("Resolution must be 10, 20 or 60m")
+                elif tileGeocodeChild.tag == 'Size':
+                    if tileGeocodeChild.attrib['resolution'] == '10':
+                        xSizeRes10 = arcsiUtils.str2Int(tileGeocodeChild.find('NCOLS').text.strip())
+                        ySizeRes10 = arcsiUtils.str2Int(tileGeocodeChild.find('NROWS').text.strip())
+                    elif  tileGeocodeChild.attrib['resolution'] == '20':
+                        xSizeRes20 = arcsiUtils.str2Int(tileGeocodeChild.find('NCOLS').text.strip())
+                        ySizeRes20 = arcsiUtils.str2Int(tileGeocodeChild.find('NROWS').text.strip())
+                    elif  tileGeocodeChild.attrib['resolution'] == '60':
+                        xSizeRes60 = arcsiUtils.str2Int(tileGeocodeChild.find('NCOLS').text.strip())
+                        ySizeRes60 = arcsiUtils.str2Int(tileGeocodeChild.find('NROWS').text.strip())
+                    else:
+                        raise ARCSIException("Resolution must be 10, 20 or 60m")
+
+            brXRes10 = tlXRes10 + (xSizeRes10 * 10)
+            brYRes10 = tlYRes10 - (ySizeRes10 * 10)
+            brXRes20 = tlXRes20 + (xSizeRes20 * 20)
+            brYRes20 = tlYRes20 - (ySizeRes20 * 20)
+            brXRes60 = tlXRes60 + (xSizeRes60 * 60)
+            brYRes60 = tlYRes60 - (ySizeRes60 * 60)
+
+            self.xTL = arcsiUtils.getMinVal([tlXRes10, tlXRes20, tlXRes60])
+            self.yTL = arcsiUtils.getMaxVal([tlYRes10, tlYRes20, tlYRes60])
+            self.xBR = arcsiUtils.getMaxVal([brXRes10, brXRes20, brXRes60])
+            self.yBR = arcsiUtils.getMinVal([brYRes10, brYRes20, brYRes60])
+            self.xTR = self.xBR
+            self.yTR = self.yTL
+            self.xBL = self.xTL
+            self.yBL = self.yBR
+
+            self.xCentre = self.xTL + ((self.xTR - self.xTL)/2)
+            self.yCentre = self.yBR + ((self.yTL - self.yBR)/2)
+
+            self.latCentre, self.lonCentre = arcsiUtils.getLatLong(inProj, self.xCentre, self.yCentre)
+            self.latTL, self.lonTL = arcsiUtils.getLatLong(inProj, self.xTL, self.yTL)
+            self.latTR, self.lonTR = arcsiUtils.getLatLong(inProj, self.xTR, self.yTR)
+            self.latBL, self.lonBL = arcsiUtils.getLatLong(inProj, self.xBL, self.yBL)
+            self.latBR, self.lonBR = arcsiUtils.getLatLong(inProj, self.xBR, self.yBR)            
+
+            # Get Tile angles tag.
+            tileAngles = geometricInfoTag.find('Tile_Angles')
+
+            sunAngleTag = tileAngles.find('Mean_Sun_Angle')
+            self.solarZenith = arcsiUtils.str2Float(sunAngleTag.find('ZENITH_ANGLE').text.strip())
+            self.solarAzimuth = arcsiUtils.str2Float(sunAngleTag.find('AZIMUTH_ANGLE').text.strip())
+
+            senZenVals = []
+            senAzVals = []
+            for meanViewIncAngleTag in tileAngles.find('Mean_Viewing_Incidence_Angle_List'):
+                if meanViewIncAngleTag.tag == 'Mean_Viewing_Incidence_Angle':
+                    senZenVals.append(arcsiUtils.str2Float(meanViewIncAngleTag.find('ZENITH_ANGLE').text.strip()))
+                    senAzVals.append(arcsiUtils.str2Float(meanViewIncAngleTag.find('AZIMUTH_ANGLE').text.strip()))
+
+            self.sensorZenith = arcsiUtils.getMeanVal(senZenVals)
+            self.sensorAzimuth = arcsiUtils.getMeanVal(senAzVals)
         except Exception as e:
             raise e
 
@@ -111,17 +495,45 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         Customises the generic name for the WorldView2 sensor
         """
         outname = self.defaultGenBaseOutFileName()
+        outname = outname + '_' + self.uniqueTileID
         return outname
 
     def expectedImageDataPresent(self):
         imageDataPresent = True
 
-        if not os.path.exists(self.fileName):
+        if not os.path.exists(self.sen2ImgB01):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB02):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB03):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB04):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB05):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB06):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB07):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB08A):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB08):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB09):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB10):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB11):
+            imageDataPresent = False
+        elif not os.path.exists(self.sen2ImgB12):
             imageDataPresent = False
 
         return imageDataPresent
 
     def imgNeedMosaicking(self):
+        return False
+
+    def inImgsDiffRes(self):
         return True
 
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
@@ -129,6 +541,9 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
 
     def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
+
+    def resampleImgRes(self, outputPath, resampleToLowResImg):
+        raise ARCSIException("Image resampling has not yet been implemented...")
 
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         raise ARCSIException("Don't know how to create a valid data mask for Sentinel-2")
@@ -169,8 +584,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0

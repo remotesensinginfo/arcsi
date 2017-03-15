@@ -46,6 +46,10 @@ import os
 import osgeo.gdal as gdal
 # Import the numpy library
 import numpy
+# Import the osr module from gdal.
+from osgeo import osr
+# Import the ogr module from gdal.
+from osgeo import ogr
 
 class ARCSIUtils (object):
     """
@@ -250,6 +254,46 @@ class ARCSIUtils (object):
         else:
             raise ARCSIException("could not convert string to int: \'" + strVal + '\'.')
         return outInt
+
+    def getMaxVal(self, vals):
+        outVal = 0.0
+        first = True
+        for val in vals:
+            if first:
+                outVal = val
+                first = False
+            elif val > outVal:
+                outVal = val
+        return outVal
+
+    def getMinVal(self, vals):
+        outVal = 0.0
+        first = True
+        for val in vals:
+            if first:
+                outVal = val
+                first = False
+            elif val < outVal:
+                outVal = val
+        return outVal
+
+    def getMeanVal(self, vals):
+        outVal = 0.0
+        for val in vals:
+            outVal = outVal + val
+        return outVal / float(len(vals))
+
+    def getLatLong(self, inProj, x, y):
+        wgs84latlonProj = osr.SpatialReference()
+        wgs84latlonProj.ImportFromEPSG(4326)
+        wktPt = 'POINT(%s %s)' % (x, y)
+        point = ogr.CreateGeometryFromWkt(wktPt)
+        point.AssignSpatialReference(inProj)
+        point.TransformTo(wgs84latlonProj)
+        latVal = point.GetY()
+        longVal = point.GetX()
+        return latVal, longVal
+
 
 class ARCSILandsatMetaUtils(object):
     """

@@ -199,10 +199,10 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
             self.acquViewAngle = float(root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('VIEWING_ANGLE').text.strip())
             print("self.acquViewAngle: ", self.acquViewAngle)
 
-            self.senorZenith = self.acquViewAngle
-            print("self.senorZenith: ", self.senorZenith)
-            self.senorAzimuth = self.acquIncidAngle
-            print("self.senorAzimuth: ", self.senorAzimuth)
+            self.sensorZenith = self.acquViewAngle
+            print("self.sensorZenith: ", self.sensorZenith)
+            self.sensorAzimuth = self.acquIncidAngle
+            print("self.sensorAzimuth: ", self.sensorAzimuth)
 
             filesDIR = os.path.dirname(inputHeader)
             if not self.userSpInputImage is None:
@@ -275,7 +275,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         Get sensor viewing angles
         returns (viewAzimuth, viewZenith)
         """
-        return (self.senorAzimuth, self.senorZenith)
+        return (self.sensorAzimuth, self.sensorZenith)
 
     def generateOutputBaseName(self):
         """
@@ -297,6 +297,9 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
 
     def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
+
+    def resampleImgRes(self, outputPath, resampleToLowResImg):
+        raise ARCSIException("Image data does not need resampling")
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -379,8 +382,8 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
@@ -531,8 +534,8 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0

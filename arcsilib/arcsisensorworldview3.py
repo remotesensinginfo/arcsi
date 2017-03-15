@@ -89,10 +89,10 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
         self.solarZenithMax = 0.0
         self.solarAzimuthMin = 0.0
         self.solarAzimuthMax = 0.0
-        self.senorZenithMin = 0.0
-        self.senorZenithMax = 0.0
-        self.senorAzimuthMin = 0.0
-        self.senorAzimuthMax = 0.0
+        self.sensorZenithMin = 0.0
+        self.sensorZenithMax = 0.0
+        self.sensorAzimuthMin = 0.0
+        self.sensorAzimuthMax = 0.0
         self.nadirViewAngle = 0.0
         # Coastal
         self.absCalFactB1 = 0.0
@@ -205,13 +205,13 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
             self.solarAzimuthMax = float(imageInfoTag.find('MAXSUNAZ').text.strip())
             self.solarAzimuth = float(imageInfoTag.find('MEANSUNAZ').text.strip())
 
-            self.senorZenithMin = 90-float(imageInfoTag.find('MINSATEL').text.strip())
-            self.senorZenithMax = 90-float(imageInfoTag.find('MAXSATEL').text.strip())
-            self.senorZenith = 90-float(imageInfoTag.find('MEANSATEL').text.strip())
+            self.sensorZenithMin = 90-float(imageInfoTag.find('MINSATEL').text.strip())
+            self.sensorZenithMax = 90-float(imageInfoTag.find('MAXSATEL').text.strip())
+            self.sensorZenith = 90-float(imageInfoTag.find('MEANSATEL').text.strip())
 
-            self.senorAzimuthMin = float(imageInfoTag.find('MINSATAZ').text.strip())
-            self.senorAzimuthMax = float(imageInfoTag.find('MAXSATAZ').text.strip())
-            self.senorAzimuth = float(imageInfoTag.find('MEANSATAZ').text.strip())
+            self.sensorAzimuthMin = float(imageInfoTag.find('MINSATAZ').text.strip())
+            self.sensorAzimuthMax = float(imageInfoTag.find('MAXSATAZ').text.strip())
+            self.sensorAzimuth = float(imageInfoTag.find('MEANSATAZ').text.strip())
 
             self.nadirViewAngle = float(imageInfoTag.find('MEANOFFNADIRVIEWANGLE').text.strip())
 
@@ -345,7 +345,7 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
         Get sensor viewing angles
         returns (viewAzimuth, viewZenith)
         """
-        return (self.senorAzimuth, self.senorZenith)
+        return (self.sensorAzimuth, self.sensorZenith)
 
     def generateOutputBaseName(self):
         """
@@ -367,6 +367,9 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
 
     def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
+
+    def resampleImgRes(self, outputPath, resampleToLowResImg):
+        raise ARCSIException("Image data does not need resampling")
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -498,8 +501,8 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
@@ -847,8 +850,8 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
