@@ -491,7 +491,6 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             self.sensorZenith = arcsiUtils.getMeanVal(senZenVals)
             self.sensorAzimuth = arcsiUtils.getMeanVal(senAzVals)
 
-
             # Get 6S spectral response functions. 
             for specRspBand in self.specBandInfo:
                 respFuncSize = len(self.specBandInfo[specRspBand].respFunc)
@@ -702,7 +701,6 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         solarIrrVals.append(IrrVal(irradiance=self.esun_B12))
 
         rsgislib.imagecalibration.toaRefl2Radiance(inImgBands, outputReflImage, outFormat, rsgislib.TYPE_32FLOAT, self.quantificationVal, self.earthSunDist_U, self.solarZenith, solarIrrVals)
-
         return outputReflImage, outputThermalImage
 
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
@@ -958,7 +956,11 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         s.atmos_profile = atmosProfile
         s.aero_profile = aeroProfile
         s.ground_reflectance = grdRefl
-        s.geometry = Py6S.Geometry.Landsat_TM()
+        s.geometry = Py6S.Geometry.User()
+        s.geometry.solar_z = self.solarZenith
+        s.geometry.solar_a = self.solarAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
