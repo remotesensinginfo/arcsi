@@ -50,6 +50,8 @@ import numpy
 from osgeo import osr
 # Import the ogr module from gdal.
 from osgeo import ogr
+# Import the scipy interpolate module
+import scipy.interpolate
 
 class ARCSIUtils (object):
     """
@@ -145,6 +147,22 @@ class ARCSIUtils (object):
         except Exception as e:
             raise e
         return numpy.array(specResp)
+
+    def resampleSpectralResponseFunc(self, wvlens, respFunc, outSamp, sampleMethod):
+        """
+        Specifies the kind of interpolation as a string 
+        Options: 'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'
+        Where, 'zero', 'slinear', 'quadratic' and 'cubic' refer to a spline 
+        interpolation of zeroth, first, second or third order) or as an integer 
+        specifying the order of the spline interpolator to use. Default is ‘linear’
+
+        See scipy documentation for more information: 
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html
+        """
+        resamFunc = scipy.interpolate.interp1d(wvlens, respFunc, kind=sampleMethod, axis=-1, copy=True, bounds_error=False, fill_value=0, assume_sorted=True)
+        oWVLens = numpy.arange(wvlens[0], wvlens[-1], outSamp)
+        oSpecResp = resamFunc(oWVLens)
+        return oWVLens, oSpecResp
 
     def isSummerOrWinter(self, lat, long, date):
         summerWinter = 0

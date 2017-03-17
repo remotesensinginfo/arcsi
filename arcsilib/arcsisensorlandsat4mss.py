@@ -734,3 +734,8 @@ class ARCSILandsat4MSSSensor (ARCSIAbstractSensor):
         dataset.GetRasterBand(3).SetDescription("NIR1")
         dataset.GetRasterBand(4).SetDescription("NIR2")
         dataset = None
+
+    def cleanLocalFollowProcessing(self):
+        print("")
+
+

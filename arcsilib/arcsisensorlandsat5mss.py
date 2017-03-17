@@ -739,3 +739,8 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         dataset.GetRasterBand(4).SetDescription("NIR2")
         dataset = None
 
+    def cleanLocalFollowProcessing(self):
+        print("")
+
+
+

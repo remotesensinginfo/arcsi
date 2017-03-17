@@ -894,7 +894,7 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         else:
             print("Could not open image to set band names: ", imageFile)
 
-    def cleanFollowProcessing(self):
+    def cleanLocalFollowProcessing(self):
         if self.createdCopyKEADNImg:
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName('KEA')
@@ -904,4 +904,6 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName('KEA')
                 gdalDriver.Delete(self.fileName)
+
+
 
