@@ -697,4 +697,8 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         else:
             print("Could not open image to set band names: ", imageFile)
 
+    def cleanLocalFollowProcessing(self):
+        print("")
+
+
 

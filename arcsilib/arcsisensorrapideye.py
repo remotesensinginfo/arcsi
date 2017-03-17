@@ -913,7 +913,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         else:
             print("Could not open image to set band names: ", imageFile)
 
-    def cleanFollowProcessing(self):
+    def cleanLocalFollowProcessing(self):
         if not self.origFileName is '':
             rsgisUtils = rsgislib.RSGISPyUtils()
             rsgisUtils.deleteFileWithBasename(self.fileName)

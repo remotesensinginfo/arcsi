@@ -173,8 +173,8 @@ if __name__ == '__main__':
     parser.add_argument("--sample", type=float, default="1",
                         help='''The sampling of the output file.''')
     # Define the argument which specifies the standard aersol profile to use.
-    parser.add_argument("--method", type=str, default="NearNeighbour", choices=['NearNeighbour', 'Linear'],
-                        help='''Specify the method of resampling. Choises are NearNeighbour, Linear.''')
+    parser.add_argument("--method", type=str, default="NearNeighbour", choices=['NearNeighbour'],
+                        help='''Specify the method of resampling. Choices are NearNeighbour.''')
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()

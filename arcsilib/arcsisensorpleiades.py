@@ -1008,7 +1008,8 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         else:
             print("Could not open image to set band names: ", imageFile)
 
-    def cleanFollowProcessing(self):
+
+    def cleanLocalFollowProcessing(self):
         if self.createdCopyKEADNImg:
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName('KEA')

@@ -1007,3 +1007,7 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
         dataset.GetRasterBand(6).SetDescription("SWIR2")
         dataset = None
 
+    def cleanLocalFollowProcessing(self):
+        print("")
+
+

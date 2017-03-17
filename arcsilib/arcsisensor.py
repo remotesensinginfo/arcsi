@@ -1590,7 +1590,11 @@ class ARCSIAbstractSensor (object):
         writer.close(calcStats=True)
         print("Interpolating Image - Complete")
 
+
+    @abstractmethod
+    def cleanLocalFollowProcessing(self): pass
+
     def cleanFollowProcessing(self):
-        print("")
+        self.cleanLocalFollowProcessing()
 
 
