@@ -280,8 +280,8 @@ don't currently support the sensor you require.''')
                         help='''Specifies the scale factor for the reflectance
                         products.''')
     parser.add_argument("--interp", type=str, default="cubic",
-                        choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos'],
-                        help='''Specifies interpolation algorithm when reprojecting the imagery
+                        choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average', 'mode', 'max', 'min', 'med'],
+                        help='''Specifies interpolation algorithm when reprojecting/resampling the imagery
                                 (Note. the options are those in gdalwarp).''')
     parser.add_argument("--cs_initdist", type=int, default=3000,
                                      help='''When clear-sky regions are being defined this parameter

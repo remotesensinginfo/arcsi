@@ -319,7 +319,7 @@ class ARCSILandsat2MSSSensor (ARCSIAbstractSensor):
     def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
 
-    def resampleImgRes(self, outputPath, resampleToLowResImg):
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
         raise ARCSIException("Image data does not need resampling")
 
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):

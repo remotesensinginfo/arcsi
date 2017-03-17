@@ -120,6 +120,18 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         self.sen2ImgB12 = ''
         self.sen2ImgTCI = ''
 
+        # File paths/names for resampled images
+        self.sen2ImgB02_20m = None
+        self.sen2ImgB03_20m = None
+        self.sen2ImgB04_20m = None
+        self.sen2ImgB08_20m = None
+        self.sen2ImgB05_10m = None
+        self.sen2ImgB06_10m = None
+        self.sen2ImgB07_10m = None
+        self.sen2ImgB11_10m = None
+        self.sen2ImgB12_10m = None
+
+
         self.inNoDataVal = 0
         self.inSatDataVal = 65535
         self.quantificationVal = 10000
@@ -138,7 +150,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         self.physicalGain_B11 = 0.0
         self.physicalGain_B12 = 0.0
 
-        self.reflConvert_U = 0.0
+        self.earthSunDist_U = 0.0
         self.esun_B0 = 0.0
         self.esun_B1 = 0.0
         self.esun_B2 = 0.0
@@ -156,6 +168,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         self.specBandInfo = dict()
 
         self.uniqueTileID = ''
+
+        self.resampleTo20m = False
 
     def extractHeaderParameters(self, inputHeader, wktStr):
         """
@@ -317,7 +331,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                     self.physicalGain_B12 = arcsiUtils.str2Float(physGainTag.text.strip())
 
             # Get Reflectance Conversion info
-            self.reflConvert_U = arcsiUtils.str2Float(reflectanceConversionTag.find('U').text.strip())
+            self.earthSunDist_U = arcsiUtils.str2Float(reflectanceConversionTag.find('U').text.strip())
             for solarIrrTag in reflectanceConversionTag.find('Solar_Irradiance_List'):
                 if solarIrrTag.attrib['bandId'] == '0':
                     self.esun_B0 = arcsiUtils.str2Float(solarIrrTag.text.strip())
@@ -542,31 +556,165 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
     def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
 
-    def resampleImgRes(self, outputPath, resampleToLowResImg):
-        raise ARCSIException("Image resampling has not yet been implemented...")
-
-    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
-        raise ARCSIException("Don't know how to create a valid data mask for Sentinel-2")
-
-    def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
-        print("Converting to Radiance")
-        raise ARCSIException("Not Implemented")
-
-    def generateImageSaturationMask(self, outputPath, outputName, outFormat):
-        print("Generate Saturation Image")
-        raise ARCSIException("Not Implemented")
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
+        outBaseName = self.generateOutputBaseName()
+        if resampleToLowResImg:
+            # Resample to 20 m
+            self.sen2ImgB02_20m = os.path.join(outputPath, outBaseName+'_B02_20m.kea')
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB02, self.sen2ImgB02_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            self.sen2ImgB03_20m = os.path.join(outputPath, outBaseName+'_B03_20m.kea')
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB03, self.sen2ImgB03_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            self.sen2ImgB04_20m = os.path.join(outputPath, outBaseName+'_B04_20m.kea')
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB04, self.sen2ImgB04_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            self.sen2ImgB08_20m = os.path.join(outputPath, outBaseName+'_B08_20m.kea')
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB08, self.sen2ImgB08_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            self.resampleTo20m = True
+        else:
+            # Resample to 10 m
+            self.sen2ImgB05_10m = os.path.join(outputPath, outBaseName+'_B05_10m.kea')
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB05, self.sen2ImgB05_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            self.sen2ImgB06_10m = os.path.join(outputPath, outBaseName+'_B06_10m.kea')
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB06, self.sen2ImgB06_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            self.sen2ImgB07_10m = os.path.join(outputPath, outBaseName+'_B07_10m.kea')
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB07, self.sen2ImgB07_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            self.sen2ImgB11_10m = os.path.join(outputPath, outBaseName+'_B11_10m.kea')
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB11, self.sen2ImgB11_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            self.sen2ImgB12_10m = os.path.join(outputPath, outBaseName+'_B12_10m.kea')
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB12, self.sen2ImgB12_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            self.resampleTo20m = False
 
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         print("Generate valid image mask")
         outputImage = os.path.join(outputPath, outputMaskName)
+        inImgBands = []
+        if self.resampleTo20m:
+            inImgBands.append(self.sen2ImgB02_20m)
+            inImgBands.append(self.sen2ImgB03_20m)
+            inImgBands.append(self.sen2ImgB04_20m)
+            inImgBands.append(self.sen2ImgB05)
+            inImgBands.append(self.sen2ImgB06)
+            inImgBands.append(self.sen2ImgB07)
+            inImgBands.append(self.sen2ImgB08_20m)
+            inImgBands.append(self.sen2ImgB11)
+            inImgBands.append(self.sen2ImgB12)
+        else: 
+            inImgBands.append(self.sen2ImgB02)
+            inImgBands.append(self.sen2ImgB03)
+            inImgBands.append(self.sen2ImgB04)
+            inImgBands.append(self.sen2ImgB05_10m)
+            inImgBands.append(self.sen2ImgB06_10m)
+            inImgBands.append(self.sen2ImgB07_10m)
+            inImgBands.append(self.sen2ImgB08)
+            inImgBands.append(self.sen2ImgB11_10m)
+            inImgBands.append(self.sen2ImgB12_10m)
+        rsgislib.imageutils.genValidMask(inimages=inImgBands, outimage=outputImage, format=outFormat, nodata=self.inNoDataVal)
         return outputImage
 
+
+    def generateImageSaturationMask(self, outputPath, outputName, outFormat):
+        print("Generate Saturation Image")
+        outputImage = os.path.join(outputPath, outputName)
+
+        s2Band = collections.namedtuple('S2Band', ['bandName', 'fileName', 'bandIndex', 'satVal'])
+        bandDefnSeq = list()
+        if self.resampleTo20m:
+            bandDefnSeq.append(s2Band(bandName="Blue", fileName=self.sen2ImgB02_20m, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="Green", fileName=self.sen2ImgB03_20m, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="Red", fileName=self.sen2ImgB04_20m, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="RE_B05", fileName=self.sen2ImgB05, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="RE_B06", fileName=self.sen2ImgB06, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="RE_B07", fileName=self.sen2ImgB07, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="NIR", fileName=self.sen2ImgB08_20m, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="SWIR1", fileName=self.sen2ImgB11, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="SWIR2", fileName=self.sen2ImgB12, bandIndex=1, satVal=self.inSatDataVal))
+        else:
+            bandDefnSeq.append(s2Band(bandName="Blue", fileName=self.sen2ImgB02, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="Green", fileName=self.sen2ImgB03, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="Red", fileName=self.sen2ImgB04, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="RE_B05", fileName=self.sen2ImgB05_10m, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="RE_B06", fileName=self.sen2ImgB06_10m, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="RE_B07", fileName=self.sen2ImgB07_10m, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="NIR", fileName=self.sen2ImgB08, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="SWIR1", fileName=self.sen2ImgB11_10m, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="SWIR2", fileName=self.sen2ImgB12_10m, bandIndex=1, satVal=self.inSatDataVal))
+
+        rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
+
+    def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
+        print("Converting to Radiance")
+        outputReflImage = os.path.join(outputPath, outputReflName)
+        outputThermalImage = None
+
+        inImgBands = list()
+        if self.resampleTo20m:
+            inImgBands.append(self.sen2ImgB02_20m)
+            inImgBands.append(self.sen2ImgB03_20m)
+            inImgBands.append(self.sen2ImgB04_20m)
+            inImgBands.append(self.sen2ImgB05)
+            inImgBands.append(self.sen2ImgB06)
+            inImgBands.append(self.sen2ImgB07)
+            inImgBands.append(self.sen2ImgB08_20m)
+            inImgBands.append(self.sen2ImgB11)
+            inImgBands.append(self.sen2ImgB12)
+        else: 
+            inImgBands.append(self.sen2ImgB02)
+            inImgBands.append(self.sen2ImgB03)
+            inImgBands.append(self.sen2ImgB04)
+            inImgBands.append(self.sen2ImgB05_10m)
+            inImgBands.append(self.sen2ImgB06_10m)
+            inImgBands.append(self.sen2ImgB07_10m)
+            inImgBands.append(self.sen2ImgB08)
+            inImgBands.append(self.sen2ImgB11_10m)
+            inImgBands.append(self.sen2ImgB12_10m)
+
+        solarIrrVals = list()
+        IrrVal = collections.namedtuple('SolarIrradiance', ['irradiance'])
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B1))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B2))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B3))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B4))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B5))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B6))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B7))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B11))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B12))
+
+        rsgislib.imagecalibration.toaRefl2Radiance(inImgBands, outputReflImage, outFormat, rsgislib.TYPE_32FLOAT, self.quantificationVal, self.earthSunDist_U, self.solarZenith, solarIrrVals)
+
+        return outputReflImage, outputThermalImage
+
+    
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         raise ARCSIException("Not Implemented")
 
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         print("Converting to TOA")
-        raise ARCSIException("Not Implemented")
+        outputImage = os.path.join(outputPath, outputName)
+        inImgBands = list()
+        if self.resampleTo20m:
+            inImgBands.append(self.sen2ImgB02_20m)
+            inImgBands.append(self.sen2ImgB03_20m)
+            inImgBands.append(self.sen2ImgB04_20m)
+            inImgBands.append(self.sen2ImgB05)
+            inImgBands.append(self.sen2ImgB06)
+            inImgBands.append(self.sen2ImgB07)
+            inImgBands.append(self.sen2ImgB08_20m)
+            inImgBands.append(self.sen2ImgB11)
+            inImgBands.append(self.sen2ImgB12)
+        else: 
+            inImgBands.append(self.sen2ImgB02)
+            inImgBands.append(self.sen2ImgB03)
+            inImgBands.append(self.sen2ImgB04)
+            inImgBands.append(self.sen2ImgB05_10m)
+            inImgBands.append(self.sen2ImgB06_10m)
+            inImgBands.append(self.sen2ImgB07_10m)
+            inImgBands.append(self.sen2ImgB08)
+            inImgBands.append(self.sen2ImgB11_10m)
+            inImgBands.append(self.sen2ImgB12_10m)
+
+        rsgislib.imagecalc.calcImageRescale(inImgBands, outputImage, outFormat, rsgislib.TYPE_16UINT, self.inNoDataVal, 0, self.quantificationVal, 0, 0, scaleFactor)
+
+        return outputImage
 
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("Cloud Masking Not Implemented for Sentinel-2.")
@@ -755,14 +903,15 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)
         if not dataset is None:
-            dataset.GetRasterBand(1).SetDescription("Coastal")
-            dataset.GetRasterBand(2).SetDescription("Blue")
-            dataset.GetRasterBand(3).SetDescription("Green")
-            dataset.GetRasterBand(4).SetDescription("Yellow")
-            dataset.GetRasterBand(5).SetDescription("Red")
-            dataset.GetRasterBand(6).SetDescription("RedEdge")
-            dataset.GetRasterBand(7).SetDescription("NIR1")
-            dataset.GetRasterBand(8).SetDescription("NIR2")
+            dataset.GetRasterBand(1).SetDescription("Blue")
+            dataset.GetRasterBand(2).SetDescription("Green")
+            dataset.GetRasterBand(3).SetDescription("Red")
+            dataset.GetRasterBand(4).SetDescription("RE_B5")
+            dataset.GetRasterBand(5).SetDescription("RE_B6")
+            dataset.GetRasterBand(6).SetDescription("RE_B7")
+            dataset.GetRasterBand(7).SetDescription("NIR")
+            dataset.GetRasterBand(8).SetDescription("SWIR1")
+            dataset.GetRasterBand(9).SetDescription("SWIR2")
             dataset = None
         else:
             print("Could not open image to set band names: ", imageFile)

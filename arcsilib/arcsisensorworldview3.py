@@ -368,7 +368,7 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
     def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
 
-    def resampleImgRes(self, outputPath, resampleToLowResImg):
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
         raise ARCSIException("Image data does not need resampling")
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
