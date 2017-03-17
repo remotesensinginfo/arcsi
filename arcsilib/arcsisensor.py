@@ -481,7 +481,7 @@ class ARCSIAbstractSensor (object):
     def mosaicImageTiles(self, outputPath): pass
 
     @abstractmethod
-    def resampleImgRes(self, outputPath, resampleToLowResImg): pass
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'): pass
 
     def hasThermal(self):
         return False

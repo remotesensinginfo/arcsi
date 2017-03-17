@@ -464,7 +464,8 @@ class ARCSIRun (object):
 
             # Check if bands need resampling
             if sensorClass.inImgsDiffRes():
-                sensorClass.resampleImgRes(outFilePath, resample2LowResImg)
+                print('Resampling image bands to match one another.')
+                sensorClass.resampleImgRes(outFilePath, resample2LowResImg, interpAlgor)
 
             # Check if the image data needs mosaicking.
             if sensorClass.imgNeedMosaicking():

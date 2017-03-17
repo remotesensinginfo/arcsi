@@ -440,7 +440,7 @@ class ARCSISPOT7Sensor (ARCSIAbstractSensor):
         self.fileName = os.path.join(outputPath, baseName+'_mosic.kea')
         imageutils.createImageMosaic(self.inputImgFiles, self.fileName, self.inImgNoData, 0, 1, 0, 'KEA', rsgislib.imageutils.getRSGISLibDataType(self.inputImgFiles[0]))
 
-    def resampleImgRes(self, outputPath, resampleToLowResImg):
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
         raise ARCSIException("Image data does not need resampling")
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
