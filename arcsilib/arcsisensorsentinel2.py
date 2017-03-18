@@ -638,6 +638,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
 
         s2Band = collections.namedtuple('S2Band', ['bandName', 'fileName', 'bandIndex', 'satVal'])
         bandDefnSeq = list()
+        self.inSatDataVal = float(self.inSatDataVal)
         if self.resampleTo20m:
             bandDefnSeq.append(s2Band(bandName="Blue", fileName=self.sen2ImgB02_20m, bandIndex=1, satVal=self.inSatDataVal))
             bandDefnSeq.append(s2Band(bandName="Green", fileName=self.sen2ImgB03_20m, bandIndex=1, satVal=self.inSatDataVal))
