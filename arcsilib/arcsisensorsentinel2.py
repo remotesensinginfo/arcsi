@@ -115,7 +115,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         self.sen2ImgB05 = ''
         self.sen2ImgB06 = ''
         self.sen2ImgB07 = ''
-        self.sen2ImgB08A = ''
+        self.sen2ImgB8A = ''
         self.sen2ImgB08 = ''
         self.sen2ImgB09 = ''
         self.sen2ImgB10 = ''
@@ -131,6 +131,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         self.sen2ImgB05_10m = None
         self.sen2ImgB06_10m = None
         self.sen2ImgB07_10m = None
+        self.sen2ImgB8A_10m = None
         self.sen2ImgB11_10m = None
         self.sen2ImgB12_10m = None
 
@@ -238,7 +239,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             for granuleChild in granuleTag:
                 if granuleChild.tag == 'IMAGE_FILE':
                     imgFile = granuleChild.text.strip()
-                    tmpFiles = glob.glob(os.path.join(self.sen2FileBaseDIR, imgFile+'*'))
+                    tmpFiles = glob.glob(os.path.join(self.sen2FileBaseDIR, imgFile+'*.jp2'))
                     if len(tmpFiles) == 1:
                         if 'B01' in imgFile:
                             self.sen2ImgB01 = tmpFiles[0]
@@ -255,7 +256,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                         elif 'B07' in imgFile:
                             self.sen2ImgB07 = tmpFiles[0]
                         elif 'B8A' in imgFile:
-                            self.sen2ImgB08A = tmpFiles[0]
+                            self.sen2ImgB8A = tmpFiles[0]
                         elif 'B08' in imgFile:
                             self.sen2ImgB08 = tmpFiles[0]
                         elif 'B09' in imgFile:
@@ -550,7 +551,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             imageDataPresent = False
         elif not os.path.exists(self.sen2ImgB07):
             imageDataPresent = False
-        elif not os.path.exists(self.sen2ImgB08A):
+        elif not os.path.exists(self.sen2ImgB8A):
             imageDataPresent = False
         elif not os.path.exists(self.sen2ImgB08):
             imageDataPresent = False
@@ -598,6 +599,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB06, self.sen2ImgB06_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
             self.sen2ImgB07_10m = os.path.join(outputPath, outBaseName+'_B07_10m.kea')
             rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB07, self.sen2ImgB07_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            self.sen2ImgB8A_10m = os.path.join(outputPath, outBaseName+'_B08A_10m.kea')
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB8A, self.sen2ImgB8A_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
             self.sen2ImgB11_10m = os.path.join(outputPath, outBaseName+'_B11_10m.kea')
             rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB11, self.sen2ImgB11_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
             self.sen2ImgB12_10m = os.path.join(outputPath, outBaseName+'_B12_10m.kea')
@@ -616,6 +619,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             inImgBands.append(self.sen2ImgB06)
             inImgBands.append(self.sen2ImgB07)
             inImgBands.append(self.sen2ImgB08_20m)
+            inImgBands.append(self.sen2ImgB8A)
             inImgBands.append(self.sen2ImgB11)
             inImgBands.append(self.sen2ImgB12)
         else: 
@@ -626,6 +630,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             inImgBands.append(self.sen2ImgB06_10m)
             inImgBands.append(self.sen2ImgB07_10m)
             inImgBands.append(self.sen2ImgB08)
+            inImgBands.append(self.sen2ImgB8A_10m)
             inImgBands.append(self.sen2ImgB11_10m)
             inImgBands.append(self.sen2ImgB12_10m)
         rsgislib.imageutils.genValidMask(inimages=inImgBands, outimage=outputImage, format=outFormat, nodata=self.inNoDataVal)
@@ -646,7 +651,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             bandDefnSeq.append(s2Band(bandName="RE_B05", fileName=self.sen2ImgB05, bandIndex=1, satVal=self.inSatDataVal))
             bandDefnSeq.append(s2Band(bandName="RE_B06", fileName=self.sen2ImgB06, bandIndex=1, satVal=self.inSatDataVal))
             bandDefnSeq.append(s2Band(bandName="RE_B07", fileName=self.sen2ImgB07, bandIndex=1, satVal=self.inSatDataVal))
-            bandDefnSeq.append(s2Band(bandName="NIR", fileName=self.sen2ImgB08_20m, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="NIR_B08", fileName=self.sen2ImgB08_20m, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="NIR_B08A", fileName=self.sen2ImgB8A, bandIndex=1, satVal=self.inSatDataVal))
             bandDefnSeq.append(s2Band(bandName="SWIR1", fileName=self.sen2ImgB11, bandIndex=1, satVal=self.inSatDataVal))
             bandDefnSeq.append(s2Band(bandName="SWIR2", fileName=self.sen2ImgB12, bandIndex=1, satVal=self.inSatDataVal))
         else:
@@ -656,7 +662,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             bandDefnSeq.append(s2Band(bandName="RE_B05", fileName=self.sen2ImgB05_10m, bandIndex=1, satVal=self.inSatDataVal))
             bandDefnSeq.append(s2Band(bandName="RE_B06", fileName=self.sen2ImgB06_10m, bandIndex=1, satVal=self.inSatDataVal))
             bandDefnSeq.append(s2Band(bandName="RE_B07", fileName=self.sen2ImgB07_10m, bandIndex=1, satVal=self.inSatDataVal))
-            bandDefnSeq.append(s2Band(bandName="NIR", fileName=self.sen2ImgB08, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="NIR_B08", fileName=self.sen2ImgB08, bandIndex=1, satVal=self.inSatDataVal))
+            bandDefnSeq.append(s2Band(bandName="NIR_B08A", fileName=self.sen2ImgB8A_10m, bandIndex=1, satVal=self.inSatDataVal))
             bandDefnSeq.append(s2Band(bandName="SWIR1", fileName=self.sen2ImgB11_10m, bandIndex=1, satVal=self.inSatDataVal))
             bandDefnSeq.append(s2Band(bandName="SWIR2", fileName=self.sen2ImgB12_10m, bandIndex=1, satVal=self.inSatDataVal))
 
@@ -676,6 +683,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             inImgBands.append(self.sen2ImgB06)
             inImgBands.append(self.sen2ImgB07)
             inImgBands.append(self.sen2ImgB08_20m)
+            inImgBands.append(self.sen2ImgB8A)
             inImgBands.append(self.sen2ImgB11)
             inImgBands.append(self.sen2ImgB12)
         else: 
@@ -686,6 +694,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             inImgBands.append(self.sen2ImgB06_10m)
             inImgBands.append(self.sen2ImgB07_10m)
             inImgBands.append(self.sen2ImgB08)
+            inImgBands.append(self.sen2ImgB8A_10m)
             inImgBands.append(self.sen2ImgB11_10m)
             inImgBands.append(self.sen2ImgB12_10m)
 
@@ -698,6 +707,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         solarIrrVals.append(IrrVal(irradiance=self.esun_B5))
         solarIrrVals.append(IrrVal(irradiance=self.esun_B6))
         solarIrrVals.append(IrrVal(irradiance=self.esun_B7))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B8))
         solarIrrVals.append(IrrVal(irradiance=self.esun_B11))
         solarIrrVals.append(IrrVal(irradiance=self.esun_B12))
 
@@ -719,6 +729,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             inImgBands.append(self.sen2ImgB06)
             inImgBands.append(self.sen2ImgB07)
             inImgBands.append(self.sen2ImgB08_20m)
+            inImgBands.append(self.sen2ImgB8A)
             inImgBands.append(self.sen2ImgB11)
             inImgBands.append(self.sen2ImgB12)
         else: 
@@ -729,6 +740,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             inImgBands.append(self.sen2ImgB06_10m)
             inImgBands.append(self.sen2ImgB07_10m)
             inImgBands.append(self.sen2ImgB08)
+            inImgBands.append(self.sen2ImgB8A_10m)
             inImgBands.append(self.sen2ImgB11_10m)
             inImgBands.append(self.sen2ImgB12_10m)
 
@@ -743,7 +755,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         return inImgDataArr
 
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
-        sixsCoeffs = numpy.zeros((9, 6), dtype=numpy.float32)
+        sixsCoeffs = numpy.zeros((10, 6), dtype=numpy.float32)
         # Set up 6S model
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
@@ -828,7 +840,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         sixsCoeffs[5,4] = float(s.outputs.values['diffuse_solar_irradiance'])
         sixsCoeffs[5,5] = float(s.outputs.values['environmental_irradiance'])
 
-        # NIR
+        # NIR B8
         s.wavelength = Py6S.Wavelength(self.specBandInfo['B8'].wvLenMin6S, self.specBandInfo['B8'].wvLenMax6S, self.specBandInfo['B8'].respFunc6S)
         s.run()
         sixsCoeffs[6,0] = float(s.outputs.values['coef_xa'])
@@ -838,8 +850,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         sixsCoeffs[6,4] = float(s.outputs.values['diffuse_solar_irradiance'])
         sixsCoeffs[6,5] = float(s.outputs.values['environmental_irradiance'])
 
-        # SWIR 1
-        s.wavelength = Py6S.Wavelength(self.specBandInfo['B11'].wvLenMin6S, self.specBandInfo['B11'].wvLenMax6S, self.specBandInfo['B11'].respFunc6S)
+        # NIR B8A
+        s.wavelength = Py6S.Wavelength(self.specBandInfo['B8A'].wvLenMin6S, self.specBandInfo['B8A'].wvLenMax6S, self.specBandInfo['B8A'].respFunc6S)
         s.run()
         sixsCoeffs[7,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[7,1] = float(s.outputs.values['coef_xb'])
@@ -848,8 +860,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         sixsCoeffs[7,4] = float(s.outputs.values['diffuse_solar_irradiance'])
         sixsCoeffs[7,5] = float(s.outputs.values['environmental_irradiance'])
 
-        # SWIR 2
-        s.wavelength = Py6S.Wavelength(self.specBandInfo['B12'].wvLenMin6S, self.specBandInfo['B12'].wvLenMax6S, self.specBandInfo['B12'].respFunc6S)
+        # SWIR 1
+        s.wavelength = Py6S.Wavelength(self.specBandInfo['B11'].wvLenMin6S, self.specBandInfo['B11'].wvLenMax6S, self.specBandInfo['B11'].respFunc6S)
         s.run()
         sixsCoeffs[8,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[8,1] = float(s.outputs.values['coef_xb'])
@@ -857,6 +869,16 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         sixsCoeffs[8,3] = float(s.outputs.values['direct_solar_irradiance'])
         sixsCoeffs[8,4] = float(s.outputs.values['diffuse_solar_irradiance'])
         sixsCoeffs[8,5] = float(s.outputs.values['environmental_irradiance'])
+
+        # SWIR 2
+        s.wavelength = Py6S.Wavelength(self.specBandInfo['B12'].wvLenMin6S, self.specBandInfo['B12'].wvLenMax6S, self.specBandInfo['B12'].respFunc6S)
+        s.run()
+        sixsCoeffs[9,0] = float(s.outputs.values['coef_xa'])
+        sixsCoeffs[9,1] = float(s.outputs.values['coef_xb'])
+        sixsCoeffs[9,2] = float(s.outputs.values['coef_xc'])
+        sixsCoeffs[9,3] = float(s.outputs.values['direct_solar_irradiance'])
+        sixsCoeffs[9,4] = float(s.outputs.values['diffuse_solar_irradiance'])
+        sixsCoeffs[9,5] = float(s.outputs.values['environmental_irradiance'])
 
         return sixsCoeffs
 
@@ -878,6 +900,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         imgBandCoeffs.append(Band6S(band=7, aX=float(sixsCoeffs[6,0]), bX=float(sixsCoeffs[6,1]), cX=float(sixsCoeffs[6,2]), DirIrr=float(sixsCoeffs[6,3]), DifIrr=float(sixsCoeffs[6,4]), EnvIrr=float(sixsCoeffs[6,5])))
         imgBandCoeffs.append(Band6S(band=8, aX=float(sixsCoeffs[7,0]), bX=float(sixsCoeffs[7,1]), cX=float(sixsCoeffs[7,2]), DirIrr=float(sixsCoeffs[7,3]), DifIrr=float(sixsCoeffs[7,4]), EnvIrr=float(sixsCoeffs[7,5])))
         imgBandCoeffs.append(Band6S(band=9, aX=float(sixsCoeffs[8,0]), bX=float(sixsCoeffs[8,1]), cX=float(sixsCoeffs[8,2]), DirIrr=float(sixsCoeffs[8,3]), DifIrr=float(sixsCoeffs[8,4]), EnvIrr=float(sixsCoeffs[8,5])))
+        imgBandCoeffs.append(Band6S(band=10, aX=float(sixsCoeffs[9,0]), bX=float(sixsCoeffs[9,1]), cX=float(sixsCoeffs[9,2]), DirIrr=float(sixsCoeffs[9,3]), DifIrr=float(sixsCoeffs[9,4]), EnvIrr=float(sixsCoeffs[9,5])))
 
         for band in imgBandCoeffs:
             print(band)
@@ -910,6 +933,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                 imgBandCoeffs.append(Band6S(band=7, aX=float(sixsCoeffs[6,0]), bX=float(sixsCoeffs[6,1]), cX=float(sixsCoeffs[6,2]), DirIrr=float(sixsCoeffs[6,3]), DifIrr=float(sixsCoeffs[6,4]), EnvIrr=float(sixsCoeffs[6,5])))
                 imgBandCoeffs.append(Band6S(band=8, aX=float(sixsCoeffs[7,0]), bX=float(sixsCoeffs[7,1]), cX=float(sixsCoeffs[7,2]), DirIrr=float(sixsCoeffs[7,3]), DifIrr=float(sixsCoeffs[7,4]), EnvIrr=float(sixsCoeffs[7,5])))
                 imgBandCoeffs.append(Band6S(band=9, aX=float(sixsCoeffs[8,0]), bX=float(sixsCoeffs[8,1]), cX=float(sixsCoeffs[8,2]), DirIrr=float(sixsCoeffs[8,3]), DifIrr=float(sixsCoeffs[8,4]), EnvIrr=float(sixsCoeffs[8,5])))
+                imgBandCoeffs.append(Band6S(band=10, aX=float(sixsCoeffs[9,0]), bX=float(sixsCoeffs[9,1]), cX=float(sixsCoeffs[9,2]), DirIrr=float(sixsCoeffs[9,3]), DifIrr=float(sixsCoeffs[9,4]), EnvIrr=float(sixsCoeffs[9,5])))
                 elevCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=imgBandCoeffs))
 
         rsgislib.imagecalibration.apply6SCoeffElevLUTParam(inputRadImage, inputDEMFile, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, elevCoeffs)
@@ -945,6 +969,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                     imgBandCoeffs.append(Band6S(band=7, aX=float(sixsCoeffs[6,0]), bX=float(sixsCoeffs[6,1]), cX=float(sixsCoeffs[6,2]), DirIrr=float(sixsCoeffs[6,3]), DifIrr=float(sixsCoeffs[6,4]), EnvIrr=float(sixsCoeffs[6,5])))
                     imgBandCoeffs.append(Band6S(band=8, aX=float(sixsCoeffs[7,0]), bX=float(sixsCoeffs[7,1]), cX=float(sixsCoeffs[7,2]), DirIrr=float(sixsCoeffs[7,3]), DifIrr=float(sixsCoeffs[7,4]), EnvIrr=float(sixsCoeffs[7,5])))
                     imgBandCoeffs.append(Band6S(band=9, aX=float(sixsCoeffs[8,0]), bX=float(sixsCoeffs[8,1]), cX=float(sixsCoeffs[8,2]), DirIrr=float(sixsCoeffs[8,3]), DifIrr=float(sixsCoeffs[8,4]), EnvIrr=float(sixsCoeffs[8,5])))
+                    imgBandCoeffs.append(Band6S(band=10, aX=float(sixsCoeffs[9,0]), bX=float(sixsCoeffs[9,1]), cX=float(sixsCoeffs[9,2]), DirIrr=float(sixsCoeffs[9,3]), DifIrr=float(sixsCoeffs[9,4]), EnvIrr=float(sixsCoeffs[9,5])))
                     aot6SCoeffsOut.append(aotLUTFeat(AOT=float(aotVal), Coeffs=imgBandCoeffs))
                 elevAOTCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=aot6SCoeffsOut))
 
@@ -1012,9 +1037,10 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             dataset.GetRasterBand(4).SetDescription("RE_B5")
             dataset.GetRasterBand(5).SetDescription("RE_B6")
             dataset.GetRasterBand(6).SetDescription("RE_B7")
-            dataset.GetRasterBand(7).SetDescription("NIR")
-            dataset.GetRasterBand(8).SetDescription("SWIR1")
-            dataset.GetRasterBand(9).SetDescription("SWIR2")
+            dataset.GetRasterBand(7).SetDescription("NIR_B8")
+            dataset.GetRasterBand(8).SetDescription("NIR_B8A")
+            dataset.GetRasterBand(9).SetDescription("SWIR1")
+            dataset.GetRasterBand(10).SetDescription("SWIR2")
             dataset = None
         else:
             print("Could not open image to set band names: ", imageFile)
@@ -1031,6 +1057,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                 gdalDriver.Delete(self.sen2ImgB05_10m)
                 gdalDriver.Delete(self.sen2ImgB06_10m)
                 gdalDriver.Delete(self.sen2ImgB07_10m)
+                gdalDriver.Delete(self.sen2ImgB8A_10m)
                 gdalDriver.Delete(self.sen2ImgB11_10m)
                 gdalDriver.Delete(self.sen2ImgB12_10m)
 
