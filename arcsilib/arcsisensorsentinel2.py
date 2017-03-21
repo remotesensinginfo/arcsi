@@ -668,6 +668,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             bandDefnSeq.append(s2Band(bandName="SWIR2", fileName=self.sen2ImgB12_10m, bandIndex=1, satVal=self.inSatDataVal))
 
         rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
+        return outputImage
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
