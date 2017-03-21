@@ -594,7 +594,7 @@ class ARCSIRun (object):
                         saturateImage = saturateImageProj
                 if calcStatsPy:
                     print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(saturateImage, usenodataval=False, nodataval=0, calcpyramids=True)
+                    rsgislib.rastergis.populateStats(saturateImage, True, True)
                 prodsCalculated["SATURATE"] = True
                 print("")
 
