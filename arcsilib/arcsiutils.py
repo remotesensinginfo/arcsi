@@ -52,6 +52,8 @@ from osgeo import osr
 from osgeo import ogr
 # Import the scipy interpolate module
 import scipy.interpolate
+# Import the maths module
+import math
 
 class ARCSIUtils (object):
     """
@@ -265,12 +267,17 @@ class ARCSIUtils (object):
     def str2Int(self, strVal, errVal=None):
         strVal = str(strVal).strip()
         outInt = 0
-        if strVal.isnumeric():
+        try:
             outInt = int(strVal)
-        elif not errVal is None:
-            outInt = int(errVal)
-        else:
-            raise ARCSIException("could not convert string to int: \'" + strVal + '\'.')
+        except ValueError:
+            try:
+                flVal = self.str2Float(strVal, errVal)
+                outInt = math.floor(flVal + 0.5)
+            except ARCSIException:
+                if not errVal is None:
+                    outInt = int(errVal)
+                else:
+                    raise ARCSIException("could not convert string to int: \'" + strVal + '\'.')
         return outInt
 
     def getMaxVal(self, vals):
