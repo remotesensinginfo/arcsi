@@ -73,7 +73,8 @@ import osgeo.gdal as gdal
 from rios import rat
 # Import the glob tool
 import glob
-
+# Import subprocess module
+import subprocess
 
 class ARCSISen2SpectralBandObj(object):
     """
@@ -135,7 +136,6 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         self.sen2ImgB11_10m = None
         self.sen2ImgB12_10m = None
 
-
         self.inNoDataVal = 0
         self.inSatDataVal = 65535
         self.quantificationVal = 10000
@@ -174,6 +174,51 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         self.uniqueTileID = ''
 
         self.resampleTo20m = False
+
+        self.epsgCode = 0
+
+        self.viewAnglesFmaskImg = None
+
+        self.imgIntScaleFactor = 1000
+
+    ################################
+    #### CODE FROM PYTHON FMASK ####
+    ################################
+    @staticmethod
+    def makeValueArray(valuesListNode):
+        """
+        Take a <Values_List> node from the XML, and return an array of the values contained
+        within it. This will be a 2-d numpy array of float32 values (should I pass the dtype in??)
+        
+        """
+        valuesList = valuesListNode.findall('VALUES')
+        vals = []
+        for valNode in valuesList:
+            text = valNode.text
+            vals.append([numpy.float32(x) for x in text.strip().split()])
+        return numpy.array(vals)
+
+    def buildViewAngleArr(self, viewingAngleNodeList, angleName):
+        """
+        Build up the named viewing angle array from the various detector strips given as
+        separate arrays. I don't really understand this, and may need to re-write it once
+        I have worked it out......
+        
+        The angleName is one of 'Zenith' or 'Azimuth'.
+        Returns a dictionary of 2-d arrays, keyed by the bandId string. 
+        """
+        angleArrDict = {}
+        for viewingAngleNode in viewingAngleNodeList:
+            bandId = viewingAngleNode.attrib['bandId']
+            angleNode = viewingAngleNode.find(angleName)
+            angleArr = self.makeValueArray(angleNode.find('Values_List'))
+            if bandId not in angleArrDict:
+                angleArrDict[bandId] = angleArr
+            else:
+                mask = (~numpy.isnan(angleArr))
+                angleArrDict[bandId][mask] = angleArr[mask]
+        return angleArrDict
+    ################################
 
     def extractHeaderParameters(self, inputHeader, wktStr):
         """
@@ -406,9 +451,9 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
 
             # Get EPSG Code.
             epsgCodeStr = tileGeocoding.find('HORIZONTAL_CS_CODE').text.strip()
-            epsgCode = arcsiUtils.str2Int(epsgCodeStr.split(':')[1])
+            self.epsgCode = arcsiUtils.str2Int(epsgCodeStr.split(':')[1])
             inProj = osr.SpatialReference()
-            inProj.ImportFromEPSG(epsgCode)
+            inProj.ImportFromEPSG(self.epsgCode)
             if self.inWKT is "":
                 self.inWKT = inProj.ExportToWkt()
 
@@ -491,6 +536,49 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
 
             self.sensorZenith = arcsiUtils.getMeanVal(senZenVals)
             self.sensorAzimuth = arcsiUtils.getMeanVal(senAzVals)
+
+            ################################
+            #### CODE FROM PYTHON FMASK ####
+            ################################
+            # Upper-left corners of images at different resolutions. As far as I can
+            # work out, these coords appear to be the upper left corner of the upper left
+            # pixel, i.e. equivalent to GDAL's convention. This also means that they
+            # are the same for the different resolutions, which is nice. 
+            self.ulxyByRes = {}
+            posNodeList = tileGeocoding.findall('Geoposition')
+            for posNode in posNodeList:
+                res = posNode.attrib['resolution']
+                ulx = float(posNode.find('ULX').text)
+                uly = float(posNode.find('ULY').text)
+                self.ulxyByRes[res] = (ulx, uly)
+
+            # Sun and satellite angles. 
+            sunZenithNode = tileAngles.find('Sun_Angles_Grid').find('Zenith')
+            self.angleGridXres = float(sunZenithNode.find('COL_STEP').text)
+            self.angleGridYres = float(sunZenithNode.find('ROW_STEP').text)
+            self.sunZenithGrid = self.makeValueArray(sunZenithNode.find('Values_List'))
+            sunAzimuthNode = tileAngles.find('Sun_Angles_Grid').find('Azimuth')
+            self.sunAzimuthGrid = self.makeValueArray(sunAzimuthNode.find('Values_List'))
+            self.anglesGridShape = self.sunAzimuthGrid.shape
+            
+            # Now build up the viewing angle per grid cell, from the separate layers
+            # given for each detector for each band. Initially I am going to keep
+            # the bands separate, just to see how that looks. 
+            # The names of things in the XML suggest that these are view angles,
+            # but the numbers suggest that they are angles as seen from the pixel's 
+            # frame of reference on the ground, i.e. they are in fact what we ultimately want. 
+            viewingAngleNodeList = tileAngles.findall('Viewing_Incidence_Angles_Grids')
+            self.viewZenithDict = self.buildViewAngleArr(viewingAngleNodeList, 'Zenith')
+            self.viewAzimuthDict = self.buildViewAngleArr(viewingAngleNodeList, 'Azimuth')
+            
+            # Make a guess at the coordinates of the angle grids. These are not given 
+            # explicitly in the XML, and don't line up exactly with the other grids, so I am 
+            # making a rough estimate. Because the angles don't change rapidly across these 
+            # distances, it is not important if I am a bit wrong (although it would be nice
+            # to be exactly correct!). 
+            (ulx, uly) = self.ulxyByRes["10"]
+            self.anglesULXY = (ulx - self.angleGridXres / 2.0, uly + self.angleGridYres / 2.0)
+            ################################
 
             # Get 6S spectral response functions. 
             for specRspBand in self.specBandInfo:
@@ -609,6 +697,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
 
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         print("Generate valid image mask")
+        # Generate the valid image mask
         outputImage = os.path.join(outputPath, outputMaskName)
         inImgBands = []
         if self.resampleTo20m:
@@ -634,8 +723,72 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             inImgBands.append(self.sen2ImgB11_10m)
             inImgBands.append(self.sen2ImgB12_10m)
         rsgislib.imageutils.genValidMask(inimages=inImgBands, outimage=outputImage, format=outFormat, nodata=self.inNoDataVal)
-        return outputImage
 
+        ################################
+        #### CODE FROM PYTHON FMASK ####
+        ################################
+        tmpViewAngleImg = os.path.join(outputPath, os.path.splitext(os.path.basename(viewAngleImg))[0]+'tmp.kea')
+        # Generate the acquasition anagles image.
+        # This scale value will convert between DN and radians in output image file, radians = dn * SCALE_TO_RADIANS
+        SCALE_TO_RADIANS = 0.01
+
+        drvr = gdal.GetDriverByName('KEA')
+        (nrows, ncols) = self.anglesGridShape
+        ds = drvr.Create(tmpViewAngleImg, ncols, nrows, 4, gdal.GDT_Int16)
+        gt = (self.anglesULXY[0], self.angleGridXres, 0, self.anglesULXY[1], 0.0, -self.angleGridYres)
+        ds.SetGeoTransform(gt)
+        sr = osr.SpatialReference()
+        sr.ImportFromEPSG(int(self.epsgCode))
+        ds.SetProjection(sr.ExportToWkt())
+
+        nullValDN = 1000
+
+        # Get a sorted list of the Sentinel-2 band names. Note that sometimes this
+        # is an incomplete list of band names, which appears to be due to a bug in 
+        # earlier versions of ESA's processing software. I suspect it relates to 
+        # Anomaly number 11 in the following page. 
+        # https://sentinel.esa.int/web/sentinel/news/-/article/new-processing-baseline-for-sentinel-2-products
+        bandNames = sorted(self.viewAzimuthDict.keys())
+
+        # Mean over all bands
+        satAzDeg = numpy.array([self.viewAzimuthDict[i] for i in bandNames])
+        satAzDegMeanOverBands = satAzDeg.mean(axis=0)
+
+        satZenDeg = numpy.array([self.viewZenithDict[i] for i in bandNames])
+        satZenDegMeanOverBands = satZenDeg.mean(axis=0)
+
+        sunAzDeg = self.sunAzimuthGrid
+        sunZenDeg = self.sunZenithGrid
+
+        stackDeg = numpy.array([satAzDegMeanOverBands, satZenDegMeanOverBands, sunAzDeg, sunZenDeg])
+        stackRadians = numpy.radians(stackDeg)
+
+        stackDN = numpy.round(stackRadians / SCALE_TO_RADIANS).astype(numpy.int16)
+        nullmask = numpy.isnan(stackDeg)
+        stackDN[nullmask] = nullValDN
+
+        lnames = ['SatelliteAzimuth', 'SatelliteZenith', 'SunAzimuth', 'SunZenith']
+        for i in range(ds.RasterCount):
+            b = ds.GetRasterBand(i+1)
+            b.WriteArray(stackDN[i])
+            b.SetNoDataValue(nullValDN)
+            b.SetDescription(lnames[i])
+        del ds
+        ################################
+        rsgislib.imageutils.popImageStats(tmpViewAngleImg, usenodataval=True, nodataval=1000, calcpyramids=False)
+        rsgislib.imageutils.resampleImage2Match(outputImage, tmpViewAngleImg, viewAngleImg, outFormat, 'nearestneighbour', datatype=None)
+        dataset = gdal.Open(viewAngleImg, gdal.GA_Update)
+        if not dataset is None:
+            dataset.GetRasterBand(1).SetDescription("SatelliteAzimuth")
+            dataset.GetRasterBand(2).SetDescription("SatelliteZenith")
+            dataset.GetRasterBand(3).SetDescription("SunAzimuth")
+            dataset.GetRasterBand(4).SetDescription("SunZenith")
+        dataset = None
+        drvr.Delete(tmpViewAngleImg)
+
+        self.viewAnglesFmaskImg = viewAngleImg
+
+        return outputImage
 
     def generateImageSaturationMask(self, outputPath, outputName, outFormat):
         print("Generate Saturation Image")
@@ -746,11 +899,74 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             inImgBands.append(self.sen2ImgB12_10m)
 
         rsgislib.imagecalc.calcImageRescale(inImgBands, outputImage, outFormat, rsgislib.TYPE_16UINT, self.inNoDataVal, 0, self.quantificationVal, 0, 0, scaleFactor)
-
+        self.imgIntScaleFactor = scaleFactor
         return outputImage
 
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
-        raise ARCSIException("Cloud Masking Not Implemented for Sentinel-2.")
+        outputImage = os.path.join(outputPath, outputName)
+        tmpBaseName = os.path.splitext(outputName)[0]
+        tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
+
+        tmpDIRExisted = True
+        if not os.path.exists(tmpBaseDIR):
+            os.makedirs(tmpBaseDIR)
+            tmpDIRExisted = False
+
+        # Using python-fmask (http://pythonfmask.org)
+        from fmask import config
+        from fmask import fmask
+        from rios import fileinfo
+
+        sen2ImgB01_tmp = os.path.join(tmpBaseDIR, tmpBaseName+'_B01.kea')
+        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB01, sen2ImgB01_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT)
+        sen2ImgB09_tmp = os.path.join(tmpBaseDIR, tmpBaseName+'_B09.kea')
+        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB09, sen2ImgB09_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT)
+        sen2ImgB10_tmp = os.path.join(tmpBaseDIR, tmpBaseName+'_B10.kea')
+        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB10, sen2ImgB10_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT)
+
+        tmpTOAImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmasktmpTOA.kea')
+        if self.imgIntScaleFactor != 10000:
+            vrtImgB1B9B10 = os.path.join(tmpBaseDIR, tmpBaseName+'_b01b09b10_60mBands.vrt')
+            cmdVRT = 'gdalbuildvrt -separate ' + vrtImgB1B9B10 + ' ' + sen2ImgB01_tmp + ' ' + sen2ImgB09_tmp + ' ' + sen2ImgB10_tmp
+            try:
+                subprocess.call(cmdVRT, shell=True)
+            except OSError as e:
+                raise ARCSIException('Could not successful execute command: ' + cmdVRT)
+            sen2ImgB1B9B10Rescaled = os.path.join(tmpBaseDIR, tmpBaseName+'_B01B09B10Rescaled.kea')
+            rsgislib.imagecalc.imageMath(vrtImgB1B9B10, sen2ImgB1B9B10Rescaled, '(b1/10000)*'+str(self.imgIntScaleFactor), 'KEA', rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.stackImageBands([inputReflImage, sen2ImgB1B9B10Rescaled], None, tmpTOAImg, None, 0, 'KEA', rsgislib.TYPE_16UINT)
+        else:
+            rsgislib.imageutils.stackImageBands([inputReflImage, sen2ImgB01_tmp, sen2ImgB09_tmp, sen2ImgB10_tmp], None, tmpTOAImg, None, 0, 'KEA', rsgislib.TYPE_16UINT)
+
+        fmaskReflImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskRefl.kea')
+        rsgislib.imageutils.selectImageBands(tmpTOAImg, fmaskReflImg, 'KEA', rsgislib.TYPE_16UINT, [11,1,2,3,4,5,6,7,8,12,13,9,10])
+
+        anglesInfo = config.AnglesFileInfo(self.viewAnglesFmaskImg, 3, self.viewAnglesFmaskImg, 2, self.viewAnglesFmaskImg, 1, self.viewAnglesFmaskImg, 0)
+        
+        fmaskFilenames = config.FmaskFilenames()
+        fmaskFilenames.setTOAReflectanceFile(fmaskReflImg)
+        fmaskFilenames.setOutputCloudMaskFile(outputImage)
+        
+        fmaskConfig = config.FmaskConfig(config.FMASK_SENTINEL2)
+        fmaskConfig.setAnglesInfo(anglesInfo)
+        fmaskConfig.setKeepIntermediates(True)
+        fmaskConfig.setVerbose(True)
+        fmaskConfig.setTempDir(tmpBaseDIR)
+        fmaskConfig.setTOARefScaling(float(self.imgIntScaleFactor))
+        fmaskConfig.setMinCloudSize(8)
+        
+        # Work out a suitable buffer size, in pixels, dependent on the resolution of the input TOA image
+        #toaImgInfo = fileinfo.ImageInfo(fmaskReflImg)
+        fmaskConfig.setCloudBufferSize(10)
+        fmaskConfig.setShadowBufferSize(10)
+        
+        fmask.doFmask(fmaskFilenames, fmaskConfig)
+
+        if not self.debugMode:
+            if not tmpDIRExisted:
+                shutil.rmtree(tmpBaseDIR, ignore_errors=True)
+
+        return outputImage
 
     def createCloudMaskDataArray(self, inImgDataArr):
         return inImgDataArr

@@ -481,7 +481,7 @@ class ARCSIRun (object):
             if not validMaskImage is None:
                 rsgislib.rastergis.populateStats(validMaskImage, True, True)
             if not viewAngleImg is None:
-                rsgislib.imageutils.popImageStats(viewAngleImg, usenodataval=True, nodataval=99999, calcpyramids=True)
+                rsgislib.imageutils.popImageStats(viewAngleImg, usenodataval=True, nodataval=1000, calcpyramids=True)
             print("")
             if not validMaskImage is None:
                 finalOutFiles["VALID_MASK"] = validMaskImage
