@@ -941,11 +941,13 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         fmaskReflImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskRefl.kea')
         rsgislib.imageutils.selectImageBands(tmpTOAImg, fmaskReflImg, 'KEA', rsgislib.TYPE_16UINT, [11,1,2,3,4,5,6,7,8,12,13,9,10])
 
-        anglesInfo = config.AnglesFileInfo(self.viewAnglesFmaskImg, 3, self.viewAnglesFmaskImg, 2, self.viewAnglesFmaskImg, 1, self.viewAnglesFmaskImg, 0)
-        
+        anglesInfo = config.AnglesFileInfo(self.viewAnglesFmaskImg, 3, self.viewAnglesFmaskImg, 2, self.viewAnglesFmaskImg, 1, self.viewAnglesFmaskImg, 0)        
+
+        fmaskCloudsImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskCloudsResult.kea')
         fmaskFilenames = config.FmaskFilenames()
         fmaskFilenames.setTOAReflectanceFile(fmaskReflImg)
-        fmaskFilenames.setOutputCloudMaskFile(outputImage)
+        fmaskFilenames.setSaturationMask(inputSatImage)
+        fmaskFilenames.setOutputCloudMaskFile(fmaskCloudsImg)
         
         fmaskConfig = config.FmaskConfig(config.FMASK_SENTINEL2)
         fmaskConfig.setAnglesInfo(anglesInfo)
@@ -961,6 +963,34 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         fmaskConfig.setShadowBufferSize(10)
         
         fmask.doFmask(fmaskFilenames, fmaskConfig)
+
+        rsgislib.imagecalc.imageMath(fmaskCloudsImg, outputImage, '(b1==2)?1:(b1==3)?2:0', outFormat, rsgislib.TYPE_16UINT)
+        if outFormat == 'KEA':
+            rsgislib.rastergis.populateStats(outputImage, True, True)
+            ratDataset = gdal.Open(outputImage, gdal.GA_Update)
+            red = rat.readColumn(ratDataset, 'Red')
+            green = rat.readColumn(ratDataset, 'Green')
+            blue = rat.readColumn(ratDataset, 'Blue')
+            ClassName = numpy.empty_like(red, dtype=numpy.dtype('a255'))
+
+            if(red.shape[0] > 0):
+                red[1] = 0
+                green[1] = 0
+                blue[1] = 255
+                ClassName[1] = 'Clouds'
+
+                if(red.shape[0] > 1):
+                    red[2] = 0
+                    green[2] = 255
+                    blue[2] = 255
+                    ClassName[2] = 'Shadows'
+
+            rat.writeColumn(ratDataset, "Red", red)
+            rat.writeColumn(ratDataset, "Green", green)
+            rat.writeColumn(ratDataset, "Blue", blue)
+            rat.writeColumn(ratDataset, "ClassName", ClassName)
+            ratDataset = None
+        rsgislib.imageutils.copyProjFromImage(outputImage, inputReflImage)
 
         if not self.debugMode:
             if not tmpDIRExisted:
