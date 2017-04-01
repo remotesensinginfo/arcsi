@@ -449,9 +449,9 @@ class ARCSISPOT7Sensor (ARCSIAbstractSensor):
 
         bandDefnSeq = list()
         spotBand = collections.namedtuple('Band', ['bandName', 'bandIndex', 'bias', 'gain'])
-        bandDefnSeq.append(spotBand(bandName="Blue", bandIndex=1, bias=self.b0RadBias, gain=self.b0RadGain))
+        bandDefnSeq.append(spotBand(bandName="Blue", bandIndex=3, bias=self.b2RadBias, gain=self.b2RadGain))
         bandDefnSeq.append(spotBand(bandName="Green", bandIndex=2, bias=self.b1RadBias, gain=self.b1RadGain))
-        bandDefnSeq.append(spotBand(bandName="Red", bandIndex=3, bias=self.b2RadBias, gain=self.b2RadGain))
+        bandDefnSeq.append(spotBand(bandName="Red", bandIndex=1, bias=self.b0RadBias, gain=self.b0RadGain))
         bandDefnSeq.append(spotBand(bandName="NIR", bandIndex=4, bias=self.b3RadBias, gain=self.b3RadGain))
         rsgislib.imagecalibration.spot5ToRadiance(self.fileName, outputImage, outFormat, bandDefnSeq)
 
@@ -464,9 +464,9 @@ class ARCSISPOT7Sensor (ARCSIAbstractSensor):
         spotBand = collections.namedtuple('Band', ['bandName', 'fileName', 'bandIndex', 'satVal'])
         bandDefnSeq = list()
         self.inImgSatVal = float(self.inImgSatVal)
-        bandDefnSeq.append(spotBand(bandName="Blue", fileName=self.fileName, bandIndex=1, satVal=self.inImgSatVal))
+        bandDefnSeq.append(spotBand(bandName="Blue", fileName=self.fileName, bandIndex=3, satVal=self.inImgSatVal))
         bandDefnSeq.append(spotBand(bandName="Green", fileName=self.fileName, bandIndex=2, satVal=self.inImgSatVal))
-        bandDefnSeq.append(spotBand(bandName="Red", fileName=self.fileName, bandIndex=3, satVal=self.inImgSatVal))
+        bandDefnSeq.append(spotBand(bandName="Red", fileName=self.fileName, bandIndex=1, satVal=self.inImgSatVal))
         bandDefnSeq.append(spotBand(bandName="NIR", fileName=self.fileName, bandIndex=4, satVal=self.inImgSatVal))
 
         rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
@@ -536,9 +536,9 @@ class ARCSISPOT7Sensor (ARCSIAbstractSensor):
         outputImage = os.path.join(outputPath, outputName)
         solarIrradianceVals = list()
         IrrVal = collections.namedtuple('SolarIrradiance', ['irradiance'])
-        solarIrradianceVals.append(IrrVal(irradiance=self.b0SolarIrr))
-        solarIrradianceVals.append(IrrVal(irradiance=self.b1SolarIrr))
         solarIrradianceVals.append(IrrVal(irradiance=self.b2SolarIrr))
+        solarIrradianceVals.append(IrrVal(irradiance=self.b1SolarIrr))
+        solarIrradianceVals.append(IrrVal(irradiance=self.b0SolarIrr))
         solarIrradianceVals.append(IrrVal(irradiance=self.b3SolarIrr))
 
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
