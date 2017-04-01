@@ -148,8 +148,8 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
                 raise ARCSIException("Cannot open top level section \'Metadata_Identification\'")
 
             dimapVersion = topLevelMetaIdent.find('METADATA_FORMAT').attrib['version'].strip()
-            if dimapVersion != '2.0':
-                raise ARCSIException("Only DIMAP Version 2.0 is supported by this reader; provided with: \'" + dimapVersion + "\'")
+            if dimapVersion.split('.')[0] != '2':
+                raise ARCSIException("Only DIMAP Version 2.X is supported by this reader; provided with: \'" + dimapVersion + "\'")
 
             metaSensorProfile = topLevelMetaIdent.find('METADATA_PROFILE').text.strip()
             if not ((metaSensorProfile == 'PHR_SENSOR') or (metaSensorProfile == 'PHR_ORTHO')):
@@ -344,6 +344,7 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
                         b3BandRadTag = child
 
                 elif child.tag == 'Band_Solar_Irradiance':
+                    print(child.find('BAND_ID').text)
                     bandID = child.find('BAND_ID').text.strip()
                     if bandID == 'B0':
                         b0SolarIrrTag = child
@@ -518,9 +519,9 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
 
         bandDefnSeq = list()
         pdsBand = collections.namedtuple('Band', ['bandName', 'bandIndex', 'bias', 'gain'])
-        bandDefnSeq.append(pdsBand(bandName="Blue", bandIndex=1, bias=self.b0RadBias, gain=self.b0RadGain))
+        bandDefnSeq.append(pdsBand(bandName="Blue", bandIndex=3, bias=self.b2RadBias, gain=self.b2RadGain))
         bandDefnSeq.append(pdsBand(bandName="Green", bandIndex=2, bias=self.b1RadBias, gain=self.b1RadGain))
-        bandDefnSeq.append(pdsBand(bandName="Red", bandIndex=3, bias=self.b2RadBias, gain=self.b2RadGain))
+        bandDefnSeq.append(pdsBand(bandName="Red",  bandIndex=1, bias=self.b0RadBias, gain=self.b0RadGain))
         bandDefnSeq.append(pdsBand(bandName="NIR", bandIndex=4, bias=self.b3RadBias, gain=self.b3RadGain))
         rsgislib.imagecalibration.spot5ToRadiance(self.fileName, outputImage, outFormat, bandDefnSeq)
 
@@ -533,9 +534,9 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         pdsBand = collections.namedtuple('Band', ['bandName', 'fileName', 'bandIndex', 'satVal'])
         bandDefnSeq = list()
         self.inImgSatVal = float(self.inImgSatVal)
-        bandDefnSeq.append(pdsBand(bandName="Blue", fileName=self.fileName, bandIndex=1, satVal=self.inImgSatVal))
+        bandDefnSeq.append(pdsBand(bandName="Blue", fileName=self.fileName, bandIndex=3, satVal=self.inImgSatVal))
         bandDefnSeq.append(pdsBand(bandName="Green", fileName=self.fileName, bandIndex=2, satVal=self.inImgSatVal))
-        bandDefnSeq.append(pdsBand(bandName="Red", fileName=self.fileName, bandIndex=3, satVal=self.inImgSatVal))
+        bandDefnSeq.append(pdsBand(bandName="Red", fileName=self.fileName, bandIndex=1, satVal=self.inImgSatVal))
         bandDefnSeq.append(pdsBand(bandName="NIR", fileName=self.fileName, bandIndex=4, satVal=self.inImgSatVal))
         rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
         return outputImage
@@ -599,9 +600,9 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
         outputImage = os.path.join(outputPath, outputName)
         solarIrradianceVals = list()
         IrrVal = collections.namedtuple('SolarIrradiance', ['irradiance'])
-        solarIrradianceVals.append(IrrVal(irradiance=self.b0SolarIrr))
-        solarIrradianceVals.append(IrrVal(irradiance=self.b1SolarIrr))
         solarIrradianceVals.append(IrrVal(irradiance=self.b2SolarIrr))
+        solarIrradianceVals.append(IrrVal(irradiance=self.b1SolarIrr))
+        solarIrradianceVals.append(IrrVal(irradiance=self.b0SolarIrr))
         solarIrradianceVals.append(IrrVal(irradiance=self.b3SolarIrr))
 
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)

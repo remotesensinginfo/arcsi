@@ -130,8 +130,8 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
                 raise ARCSIException("Cannot open top level section \'Metadata_Identification\'")
 
             dimapVersion = topLevelMetaIdent.find('METADATA_FORMAT').attrib['version'].strip()
-            if dimapVersion != '2.0':
-                raise ARCSIException("Only DIMAP Version 2.0 is supported by this reader; provided with: \'" + dimapVersion + "\'")
+            if dimapVersion.split('.')[0] != '2':
+                raise ARCSIException("Only DIMAP Version 2.X is supported by this reader; provided with: \'" + dimapVersion + "\'")
 
             metaSensorProfile = topLevelMetaIdent.find('METADATA_PROFILE').text.strip()
             if not ((metaSensorProfile == 'S6_SENSOR') or (metaSensorProfile == 'S6_ORTHO')):
