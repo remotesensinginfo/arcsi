@@ -445,7 +445,7 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         print("Generate valid image mask")
         outputImage = os.path.join(outputPath, outputMaskName)
-        rsgislib.imageutils.genValidMask(inimages=[self.fileName], outimage=outputImage, format=outFormat, nodata=0.0)
+        rsgislib.imageutils.genValidMask(inimages=[self.fileName], outimage=outputImage, gdalformat=outFormat, nodata=0.0)
         return outputImage
 
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):

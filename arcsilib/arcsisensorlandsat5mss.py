@@ -332,7 +332,7 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         tmpValidPxlMsk = os.path.join(outputPath, tmpBaseName+'vldpxlmsk.kea')
         outputImage = os.path.join(outputPath, outputMaskName)
         inImages = [self.band1File, self.band2File, self.band3File, self.band4File]
-        rsgislib.imageutils.genValidMask(inimages=inImages, outimage=tmpValidPxlMsk, format='KEA', nodata=0.0)
+        rsgislib.imageutils.genValidMask(inimages=inImages, outimage=tmpValidPxlMsk, gdalformat='KEA', nodata=0.0)
         rsgislib.rastergis.populateStats(tmpValidPxlMsk, True, False, True)
         # Check there is valid data
         ratDS = gdal.Open(tmpValidPxlMsk, gdal.GA_ReadOnly)
