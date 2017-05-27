@@ -521,11 +521,11 @@ class ARCSISPOT7Sensor (ARCSIAbstractSensor):
             self.createdCopyKEADNImg = True
 
         outputImage = os.path.join(outputPath, outputMaskName)
-        rsgislib.imageutils.genValidMask(inimages=[self.fileName], outimage=outputImage, format=outFormat, nodata=self.inImgNoData)
+        rsgislib.imageutils.genValidMask(inimages=[self.fileName], outimage=outputImage, gdalformat=outFormat, nodata=self.inImgNoData)
         return outputImage
 
         outputImage = os.path.join(outputPath, outputMaskName)
-        rsgislib.imageutils.genValidMask(inimages=[self.fileName], outimage=outputImage, format=outFormat, nodata=self.inImgNoData)
+        rsgislib.imageutils.genValidMask(inimages=[self.fileName], outimage=outputImage, gdalformat=outFormat, nodata=self.inImgNoData)
         return outputImage
 
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):

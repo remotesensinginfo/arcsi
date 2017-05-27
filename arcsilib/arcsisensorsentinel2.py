@@ -722,7 +722,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             inImgBands.append(self.sen2ImgB8A_10m)
             inImgBands.append(self.sen2ImgB11_10m)
             inImgBands.append(self.sen2ImgB12_10m)
-        rsgislib.imageutils.genValidMask(inimages=inImgBands, outimage=outputImage, format=outFormat, nodata=self.inNoDataVal)
+        rsgislib.imageutils.genValidMask(inimages=inImgBands, outimage=outputImage, gdalformat=outFormat, nodata=self.inNoDataVal)
 
         ################################
         #### CODE FROM PYTHON FMASK ####
