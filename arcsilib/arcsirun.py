@@ -154,7 +154,6 @@ class ARCSIRun (object):
         A function contains the main flow of the software
         """
 
-        
         arcsiUtils = ARCSIUtils()
         rsgisUtils = rsgislib.RSGISPyUtils()
         # Create list to store products to be calculated and those actually calculated.
@@ -465,7 +464,18 @@ class ARCSIRun (object):
             # Check if bands need resampling
             if sensorClass.inImgsDiffRes():
                 print('Resampling image bands to match one another.')
-                sensorClass.resampleImgRes(outFilePath, resample2LowResImg, interpAlgor)
+                interpAlgorRSGISLib = interpAlgor
+                if interpAlgor == 'near':
+                    interpAlgorRSGISLib = 'nearestneighbour'
+                elif (interpAlgor == 'max') or (interpAlgor == 'min') or (interpAlgor == 'med'):
+                    print("WARNING: 'max', 'min' and 'med' are not available options for resampling imagery, changing to:\n", file=sys.stderr)
+                    if resample2LowResImg:
+                        interpAlgorRSGISLib = 'average'
+                        print("\t'average'.\n", file=sys.stderr)
+                    else:
+                        interpAlgorRSGISLib = 'cubic'
+                        print("\t'cubic'.\n", file=sys.stderr)
+                sensorClass.resampleImgRes(outFilePath, resample2LowResImg, interpAlgorRSGISLib)
 
             # Check if the image data needs mosaicking.
             if sensorClass.imgNeedMosaicking():

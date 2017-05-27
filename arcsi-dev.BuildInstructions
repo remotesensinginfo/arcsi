@@ -1,2 +1,2 @@
-python setup.py install --prefix=/share/osgeo_gdal2/fw/arcsi/dev
+python setup.py install --prefix=/Users/pete/Temp/arcsidev
 
