@@ -277,10 +277,10 @@ if __name__ == '__main__':
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input spectral response file.
-    parser.add_argument("-i", "--input", type=str,
+    parser.add_argument("-i", "--input", type=str, required=True,
                         help='''Input directory containing the input Landsat Scenes.''')
     # Define the argument for specifying input seperator.
-    parser.add_argument("-o", "--output", type=str,
+    parser.add_argument("-o", "--output", type=str, required=True,
                         help='''The output directory to which the output structure will be written.''')
     parser.add_argument("--nodirstruct", action='store_true', default=False,
                         help='''Specifies that a directory structure should not be built when the new folders are created.''')
@@ -288,16 +288,6 @@ if __name__ == '__main__':
                         help='''Specifies whether the user should be promoted for decision if two files of same name exist.''')
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-
-    if args.input == None:
-        print("An input directory was not specified.")
-        parser.print_help()
-        sys.exit()
-
-    if args.output == None:
-        print("An output directory was not specified.")
-        parser.print_help()
-        sys.exit()
 
     arcsiObj = ARCSISortLandsatData()
     try:

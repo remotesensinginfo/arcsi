@@ -301,7 +301,7 @@ if __name__ == '__main__':
     parser.add_argument("-l", "--list", type=str,
                         help='''Input file contains archive (tar, tar.gz, tar.bz, tar.bz2 and/or zip).''')
     # Define the argument for specifying the output directory.
-    parser.add_argument("-o", "--output", type=str,
+    parser.add_argument("-o", "--output", type=str, required=True,
                         help='''The output directory to which all output files are to be written.''')
     parser.add_argument("--nofolders", action='store_true', default=False,
                         help='''Specifies individual folders should not be
@@ -311,10 +311,6 @@ if __name__ == '__main__':
 
     if (args.input == None) & (args.file == None) & (args.list == None):
         print("Error: An input directory, list as a text file or single archive file must be specified.")
-        sys.exit()
-
-    if args.output == None:
-        print("Error: An output directory was not specified.")
         sys.exit()
 
     arcsiObj = ARCSIExtractData()

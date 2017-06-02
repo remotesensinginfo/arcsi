@@ -1851,7 +1851,7 @@ if __name__ == '__main__':
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input spectral response file.
-    parser.add_argument("-i", "--input", type=str,
+    parser.add_argument("-i", "--input", type=str, required=True,
                         help='''A seperated (--sep) text file defining the
                         wavelength (nm) and normalised spectral response
                         function.''')
@@ -1876,13 +1876,7 @@ if __name__ == '__main__':
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
-    if args.input == None:
-        print("An input file was not specified.")
-        parser.print_help()
-        sys.exit()
-
     arcsiObj = ARCSISolarIrradiance()
-
     arcsiObj.run(args.input, args.sep, args.ignore, args.wvcol, args.rcol, args.julianday)
 
 
