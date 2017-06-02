@@ -234,9 +234,17 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             tree = ET.parse(inputHeader)
             root = tree.getroot()
 
+            hdrFileVersion = 'psd14'
+
             generalInfoTag = root.find('{https://psd-14.sentinel2.eo.esa.int/PSD/User_Product_Level-1C.xsd}General_Info')
             if generalInfoTag == None:
-                raise ARCSIException("Cannot open top level section \'General_Info\' - is this really a Sentinel-2 image file?")
+                generalInfoTag = root.find('{https://psd-13.sentinel2.eo.esa.int/PSD/User_Product_Level-1C.xsd}General_Info')
+                if generalInfoTag == None:
+                    raise ARCSIException("Cannot open top level section \'General_Info\' - is this really a Sentinel-2 image file?")
+                else:
+                    hdrFileVersion = 'psd13'
+            else:
+                hdrFileVersion = 'psd14'
 
             productInfoTag = generalInfoTag.find('Product_Info')
             if productInfoTag == None:
@@ -266,58 +274,127 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             self.orbitNumber = datatakeTag.find('SENSING_ORBIT_NUMBER').text.strip()
             self.orbitDirection = datatakeTag.find('SENSING_ORBIT_DIRECTION').text.strip()
 
-            prodURI = productInfoTag.find('PRODUCT_URI').text.strip()
-            self.uniqueTileID = prodURI.split('_')[5]
+            if hdrFileVersion == 'psd14':
+                prodURI = productInfoTag.find('PRODUCT_URI').text.strip()
+                self.uniqueTileID = prodURI.split('_')[5]
 
-
-            # Get the input image band file names.
-            granuleListTag = productInfoTag.find('Product_Organisation').find('Granule_List')
+            # Get the input granule information (e.g., bands).
             granulesTagsLst = list()
-            for granuleLstChild in granuleListTag:
-                if granuleLstChild.tag == 'Granule':
-                    granulesTagsLst.append(granuleLstChild)
+            if hdrFileVersion == 'psd14':
+                granuleListTag = productInfoTag.find('Product_Organisation').find('Granule_List')
+                for granuleLstChild in granuleListTag:
+                    if granuleLstChild.tag == 'Granule':
+                        granulesTagsLst.append(granuleLstChild)
+            elif hdrFileVersion == 'psd13':
+                granuleListTags = productInfoTag.find('Product_Organisation')
+                for granulesLstTag in granuleListTags:
+                    if granulesLstTag.tag == 'Granule_List':
+                        granulesTagsLst.append(granulesLstTag.find('Granules'))
+            else:
+                raise ARCSIException("Do not recognised header format: '" + hdrFileVersion +"'")
 
-            if len(granulesTagsLst) != 1:
+            granuleIdentifier = ''
+            if len(granulesTagsLst) == 0:
+                raise ARCSIException("Could not find any granules within the header file. (Header: " + hdrFileVersion + ")")
+            elif (len(granulesTagsLst) != 1) and (hdrFileVersion == 'psd14'):
                 raise ARCSIException("Only expecting a single granule within the file... The input image you have provided is not supported by ARCSI - please report so we can add support.")
-
-            granuleTag = granulesTagsLst[0]
-            for granuleChild in granuleTag:
-                if granuleChild.tag == 'IMAGE_FILE':
-                    imgFile = granuleChild.text.strip()
-                    tmpFiles = glob.glob(os.path.join(self.sen2FileBaseDIR, imgFile+'*.jp2'))
-                    if len(tmpFiles) == 1:
-                        if 'B01' in imgFile:
-                            self.sen2ImgB01 = tmpFiles[0]
-                        elif 'B02' in imgFile:
-                            self.sen2ImgB02 = tmpFiles[0]
-                        elif 'B03' in imgFile:
-                            self.sen2ImgB03 = tmpFiles[0]
-                        elif 'B04' in imgFile:
-                            self.sen2ImgB04 = tmpFiles[0]
-                        elif 'B05' in imgFile:
-                            self.sen2ImgB05 = tmpFiles[0]
-                        elif 'B06' in imgFile:
-                            self.sen2ImgB06 = tmpFiles[0]
-                        elif 'B07' in imgFile:
-                            self.sen2ImgB07 = tmpFiles[0]
-                        elif 'B8A' in imgFile:
-                            self.sen2ImgB8A = tmpFiles[0]
-                        elif 'B08' in imgFile:
-                            self.sen2ImgB08 = tmpFiles[0]
-                        elif 'B09' in imgFile:
-                            self.sen2ImgB09 = tmpFiles[0]
-                        elif 'B10' in imgFile:
-                            self.sen2ImgB10 = tmpFiles[0]
-                        elif 'B11' in imgFile:
-                            self.sen2ImgB11 = tmpFiles[0]
-                        elif 'B12' in imgFile:
-                            self.sen2ImgB12 = tmpFiles[0]
-                        elif 'TCI' in imgFile:
-                            self.sen2ImgTCI = tmpFiles[0]
+            elif hdrFileVersion == 'psd13':
+                granulesDIR = os.path.join(self.sen2FileBaseDIR, 'GRANULE')
+                files = os.listdir(path=granulesDIR)
+                granuleFileTags = list()
+                for file in files:
+                    if os.path.isdir(os.path.join(granulesDIR, file)):
+                        for granulesTmpTag in granulesTagsLst:
+                            if granulesTmpTag.attrib['granuleIdentifier'].strip() == file:
+                                granuleFileTags.append(granulesTmpTag)
+                if len(granuleFileTags) == 1:
+                    granuleTag  = granuleFileTags[0]
+                    granuleIdentifier = granuleTag.attrib['granuleIdentifier'].strip()
+                    self.uniqueTileID = granuleIdentifier.split('_')[9]
+                else:
+                    raise ARCSIException("Only expecting a single granule within the file... The input image you have provided is not supported by ARCSI - please report so we can add support.")
+            else:
+                granuleTag = granulesTagsLst[0]
+            
+            if hdrFileVersion == 'psd14':
+                for granuleChild in granuleTag:
+                    if granuleChild.tag == 'IMAGE_FILE':
+                        imgFile = granuleChild.text.strip()
+                        tmpFiles = glob.glob(os.path.join(self.sen2FileBaseDIR, imgFile+'*.jp2'))
+                        if len(tmpFiles) == 1:
+                            if 'B01' in imgFile:
+                                self.sen2ImgB01 = tmpFiles[0]
+                            elif 'B02' in imgFile:
+                                self.sen2ImgB02 = tmpFiles[0]
+                            elif 'B03' in imgFile:
+                                self.sen2ImgB03 = tmpFiles[0]
+                            elif 'B04' in imgFile:
+                                self.sen2ImgB04 = tmpFiles[0]
+                            elif 'B05' in imgFile:
+                                self.sen2ImgB05 = tmpFiles[0]
+                            elif 'B06' in imgFile:
+                                self.sen2ImgB06 = tmpFiles[0]
+                            elif 'B07' in imgFile:
+                                self.sen2ImgB07 = tmpFiles[0]
+                            elif 'B8A' in imgFile:
+                                self.sen2ImgB8A = tmpFiles[0]
+                            elif 'B08' in imgFile:
+                                self.sen2ImgB08 = tmpFiles[0]
+                            elif 'B09' in imgFile:
+                                self.sen2ImgB09 = tmpFiles[0]
+                            elif 'B10' in imgFile:
+                                self.sen2ImgB10 = tmpFiles[0]
+                            elif 'B11' in imgFile:
+                                self.sen2ImgB11 = tmpFiles[0]
+                            elif 'B12' in imgFile:
+                                self.sen2ImgB12 = tmpFiles[0]
+                            elif 'TCI' in imgFile:
+                                self.sen2ImgTCI = tmpFiles[0]
+                            else:
+                                raise ARCSIException("Could not associated image file with an expected image band: " + imgFile)
                         else:
-                            raise ARCSIException("Could not associated image file with an expected image band: " + imgFile)
-                    else:
-                        raise ARCSIException("Could not file image file for: " + imgFile)
+                            raise ARCSIException("Could not file image file for: " + imgFile)
+            elif hdrFileVersion == 'psd13':
+                imgsPath = os.path.join(os.path.join(os.path.join(self.sen2FileBaseDIR, 'GRANULE'), granuleIdentifier), 'IMG_DATA')
+                for granuleChild in granuleTag:
+                    if granuleChild.tag == 'IMAGE_ID':
+                        imgFile = granuleChild.text.strip()
+                        tmpFiles = glob.glob(os.path.join(imgsPath, imgFile+'*.jp2'))
+                        if len(tmpFiles) == 1:
+                            if 'B01' in imgFile:
+                                self.sen2ImgB01 = tmpFiles[0]
+                            elif 'B02' in imgFile:
+                                self.sen2ImgB02 = tmpFiles[0]
+                            elif 'B03' in imgFile:
+                                self.sen2ImgB03 = tmpFiles[0]
+                            elif 'B04' in imgFile:
+                                self.sen2ImgB04 = tmpFiles[0]
+                            elif 'B05' in imgFile:
+                                self.sen2ImgB05 = tmpFiles[0]
+                            elif 'B06' in imgFile:
+                                self.sen2ImgB06 = tmpFiles[0]
+                            elif 'B07' in imgFile:
+                                self.sen2ImgB07 = tmpFiles[0]
+                            elif 'B8A' in imgFile:
+                                self.sen2ImgB8A = tmpFiles[0]
+                            elif 'B08' in imgFile:
+                                self.sen2ImgB08 = tmpFiles[0]
+                            elif 'B09' in imgFile:
+                                self.sen2ImgB09 = tmpFiles[0]
+                            elif 'B10' in imgFile:
+                                self.sen2ImgB10 = tmpFiles[0]
+                            elif 'B11' in imgFile:
+                                self.sen2ImgB11 = tmpFiles[0]
+                            elif 'B12' in imgFile:
+                                self.sen2ImgB12 = tmpFiles[0]
+                            elif 'TCI' in imgFile:
+                                self.sen2ImgTCI = tmpFiles[0]
+                            else:
+                                raise ARCSIException("Could not associated image file with an expected image band: " + imgFile)
+                        else:
+                            raise ARCSIException("Could not file image file for: " + imgFile)
+            else:
+                raise ARCSIException("Do not recognised header format: '" + hdrFileVersion +"'")
 
             productImgCharTag = generalInfoTag.find('Product_Image_Characteristics')
             if productImgCharTag == None:
@@ -409,36 +486,206 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                 elif solarIrrTag.attrib['bandId'] == '12':
                     self.esun_B12 = arcsiUtils.str2Float(solarIrrTag.text.strip())
 
-            # Get Spectral Info
-            for specInfoTag in spectralInfoListTag:
-                phyBandName = specInfoTag.attrib['physicalBand']
+            if hdrFileVersion == 'psd14':
+                # Get Spectral Info
+                for specInfoTag in spectralInfoListTag:
+                    phyBandName = specInfoTag.attrib['physicalBand']
+                    specBandObj = ARCSISen2SpectralBandObj()
+                    specBandObj.phyBandName = phyBandName
+                    specBandObj.bandID = specInfoTag.attrib['bandId']
+                    specBandObj.imgRes = arcsiUtils.str2Float(specInfoTag.find('RESOLUTION').text.strip())
+                    specBandObj.wvLenMin = arcsiUtils.str2Float(specInfoTag.find('Wavelength').find('MIN').text.strip())
+                    specBandObj.wvLenMax = arcsiUtils.str2Float(specInfoTag.find('Wavelength').find('MAX').text.strip())
+                    specBandObj.wvLenCen = arcsiUtils.str2Float(specInfoTag.find('Wavelength').find('CENTRAL').text.strip())
+                    specBandObj.respFuncStep = arcsiUtils.str2Float(specInfoTag.find('Spectral_Response').find('STEP').text.strip())
+                    specResStrVals = specInfoTag.find('Spectral_Response').find('VALUES').text.strip().split(' ')
+                    specResVals = list()
+                    for strVal in specResStrVals:
+                        specResVals.append(arcsiUtils.str2Float(strVal))
+                    specBandObj.respFunc = specResVals
+                    self.specBandInfo[phyBandName] = specBandObj
+            elif hdrFileVersion == 'psd13':
+                # B01
                 specBandObj = ARCSISen2SpectralBandObj()
-                specBandObj.phyBandName = phyBandName
-                specBandObj.bandID = specInfoTag.attrib['bandId']
-                specBandObj.imgRes = arcsiUtils.str2Float(specInfoTag.find('RESOLUTION').text.strip())
-                specBandObj.wvLenMin = arcsiUtils.str2Float(specInfoTag.find('Wavelength').find('MIN').text.strip())
-                specBandObj.wvLenMax = arcsiUtils.str2Float(specInfoTag.find('Wavelength').find('MAX').text.strip())
-                specBandObj.wvLenCen = arcsiUtils.str2Float(specInfoTag.find('Wavelength').find('CENTRAL').text.strip())
-                specBandObj.respFuncStep = arcsiUtils.str2Float(specInfoTag.find('Spectral_Response').find('STEP').text.strip())
-                specResStrVals = specInfoTag.find('Spectral_Response').find('VALUES').text.strip().split(' ')
-                specResVals = list()
-                for strVal in specResStrVals:
-                    specResVals.append(arcsiUtils.str2Float(strVal))
-                specBandObj.respFunc = specResVals
-                self.specBandInfo[phyBandName] = specBandObj
+                specBandObj.phyBandName = "B1"
+                specBandObj.bandID = "0"
+                specBandObj.imgRes = 60
+                specBandObj.wvLenMin = 430
+                specBandObj.wvLenMax = 457
+                specBandObj.wvLenCen = 443.9
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.01522444, 0.06669758, 0.19425897, 0.35395736, 0.45648857, 0.50759455, 0.54750739, 0.58419244, 0.61012868, 0.64603585, 0.69458246, 0.74037505, 0.78703023, 0.85862712, 0.94458791, 0.9928916, 1, 0.99055275, 0.97282606, 0.95596914, 0.95429069, 0.91888272, 0.72055356, 0.38639386, 0.14531035, 0.05161255, 0.01738704, 0.00029585]
+                self.specBandInfo["B1"] = specBandObj
+
+                # B02
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B2"
+                specBandObj.bandID = "1"
+                specBandObj.imgRes = 10
+                specBandObj.wvLenMin = 440
+                specBandObj.wvLenMax = 538
+                specBandObj.wvLenCen = 496.6
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.00119988, 0.00201397, 0.00258793, 0.00271734, 0.00271858, 0.002053, 0.00324912, 0.0021993, 0.00277292, 0.00311194, 0.00234723, 0.00374245, 0.0028408, 0.00304821, 0.00604983, 0.00894596, 0.01953246, 0.03875845, 0.08374839, 0.17565347, 0.29129289, 0.36347223, 0.3811347, 0.38419864, 0.39176673, 0.39862405, 0.40894049, 0.42354641, 0.4485657, 0.4811418, 0.50498541, 0.52293008, 0.52892822, 0.53366, 0.53242234, 0.53311303, 0.53655971, 0.54232711, 0.55667534, 0.57791322, 0.60145975, 0.6156357, 0.62060573, 0.61270938, 0.59482968, 0.57420278, 0.55609253, 0.5440646, 0.54004284, 0.5517318, 0.56998769, 0.59684728, 0.63205242, 0.67244298, 0.71093613, 0.73748447, 0.75709994, 0.76697185, 0.77176039, 0.77883444, 0.78683055, 0.79421954, 0.80824012, 0.82348832, 0.83743831, 0.84485726, 0.84716089, 0.83974417, 0.82502148, 0.8036499, 0.78544282, 0.76973497, 0.7598602, 0.76337273, 0.77981251, 0.80847605, 0.84947272, 0.90112566, 0.95456662, 0.98736039, 1, 0.98609155, 0.90770989, 0.72315884, 0.47814326, 0.28641509, 0.16955089, 0.10257285, 0.06498784, 0.04106167, 0.02503855, 0.01307564, 0.00257814, 0.00108051, 0.00030609, 0.00043924, 0.00044121]
+                self.specBandInfo["B2"] = specBandObj
+
+                # B03
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B3"
+                specBandObj.bandID = "2"
+                specBandObj.imgRes = 10
+                specBandObj.wvLenMin = 537
+                specBandObj.wvLenMax = 582
+                specBandObj.wvLenCen = 560
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.00080152, 0.01631966, 0.03749604, 0.08021834, 0.16857673, 0.33961135, 0.57045802, 0.74395167, 0.8255379, 0.86623109, 0.88713486, 0.89063153, 0.87743881, 0.85952176, 0.84272738, 0.83271245, 0.83091319, 0.8429466, 0.86557037, 0.89523547, 0.93204973, 0.96550034, 0.99001699, 1, 0.99850933, 0.98241577, 0.94879561, 0.90893224, 0.87016848, 0.83868631, 0.8133992, 0.79225145, 0.7842798, 0.78830002, 0.80532973, 0.82861237, 0.84453213, 0.85667749, 0.85654311, 0.79885992, 0.62453426, 0.38688244, 0.20018537, 0.09831467, 0.04284073, 0.01651146]
+                self.specBandInfo["B3"] = specBandObj
+
+                # B04
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B4"
+                specBandObj.bandID = 3
+                specBandObj.imgRes = 10
+                specBandObj.wvLenMin = 646
+                specBandObj.wvLenMax = 684
+                specBandObj.wvLenCen = 664.5
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.00261427, 0.03462832, 0.15030251, 0.46548409, 0.81834707, 0.96554871, 0.98388489, 0.99687187, 1, 0.9955785, 0.99164257, 0.97772062, 0.93750282, 0.87465366, 0.81520176, 0.77787363, 0.7662682, 0.77666981, 0.80308737, 0.83262125, 0.8589057, 0.88527593, 0.91047688, 0.93604508, 0.95692399, 0.96878538, 0.9736139, 0.97172876, 0.96901499, 0.96568155, 0.96045441, 0.94488073, 0.88430524, 0.70624874, 0.42290429, 0.18976191, 0.06313289, 0.02061386, 0.0020257]
+                self.specBandInfo["B4"] = specBandObj
+
+                # B05
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B5"
+                specBandObj.bandID = "4"
+                specBandObj.imgRes = 20
+                specBandObj.wvLenMin = 694
+                specBandObj.wvLenMax = 713
+                specBandObj.wvLenCen = 703.9
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.00118221, 0.04128719, 0.16781115, 0.47867704, 0.83408915, 0.98555238, 1, 0.99917704, 0.99301208, 0.98202139, 0.96500594, 0.94523647, 0.92390813, 0.90154471, 0.88461764, 0.86012379, 0.75605334, 0.52042972, 0.19640628, 0.03678278]
+                self.specBandInfo["B5"] = specBandObj
+
+                # B06
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B6"
+                specBandObj.bandID = "5"
+                specBandObj.imgRes = 20
+                specBandObj.wvLenMin = 731
+                specBandObj.wvLenMax = 749
+                specBandObj.wvLenCen = 740.2
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.00528628, 0.08491265, 0.34549055, 0.75026111, 0.91998424, 0.91774468, 0.93414364, 0.95786657, 0.97589351, 0.98201154, 0.98159765, 0.99345282, 1, 0.98250656, 0.96245634, 0.85475636, 0.50661225, 0.13533181, 0.0134302]
+                self.specBandInfo["B6"] = specBandObj
+
+                # B07
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B7"
+                specBandObj.bandID = "6"
+                specBandObj.imgRes = 20
+                specBandObj.wvLenMin = 769
+                specBandObj.wvLenMax = 797
+                specBandObj.wvLenCen = 782.5
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.00158775, 0.01471955, 0.06700855, 0.19944036, 0.42271848, 0.69391142, 0.89840316, 0.98314165, 0.99479749, 1, 0.99483279, 0.96447136, 0.90781386, 0.8464478, 0.80150314, 0.77808053, 0.77627582, 0.78832546, 0.79959911, 0.80136031, 0.79006668, 0.75603297, 0.67647373, 0.53577608, 0.36341065, 0.19325756, 0.07716074, 0.01971336, 0.00315275]
+                self.specBandInfo["B7"] = specBandObj
+
+                # B08
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B8"
+                specBandObj.bandID = "7"
+                specBandObj.imgRes = 10
+                specBandObj.wvLenMin = 760
+                specBandObj.wvLenMax = 908
+                specBandObj.wvLenCen = 835.1
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.00135242, 0.00391616, 0.00044871, 0.00759275, 0.01905313, 0.03349108, 0.05649128, 0.0870686, 0.13235321, 0.20327639, 0.31387542, 0.44988941, 0.58726605, 0.71436889, 0.8181812, 0.90284514, 0.96067672, 0.99369744, 1, 0.98524291, 0.95844788, 0.93666123, 0.92594982, 0.93050611, 0.94139304, 0.95341007, 0.96218307, 0.9655653, 0.96296703, 0.95877093, 0.95087228, 0.94471788, 0.94260088, 0.94521458, 0.94468494, 0.94302291, 0.9363001, 0.92707231, 0.91511356, 0.90021968, 0.88081425, 0.86148256, 0.84257439, 0.82215879, 0.80140132, 0.7765823, 0.75539136, 0.73775889, 0.72215744, 0.70870534, 0.69854507, 0.6903735, 0.68251717, 0.68178973, 0.68302899, 0.67891416, 0.67639408, 0.67176564, 0.66600791, 0.66127505, 0.65915263, 0.65868891, 0.66436872, 0.67295613, 0.68563017, 0.7011901, 0.72062162, 0.74210801, 0.75925571, 0.77620597, 0.7835688, 0.78713055, 0.78702403, 0.7828085, 0.77539043, 0.7675732, 0.75848677, 0.74517599, 0.73227212, 0.71988842, 0.70601879, 0.69027923, 0.67538468, 0.66109671, 0.6489481, 0.63768298, 0.62716971, 0.61876397, 0.61082755, 0.60427772, 0.59741976, 0.59177741, 0.5870773, 0.58292462, 0.58141689, 0.57973476, 0.58049471, 0.58280279, 0.58561492, 0.58979099, 0.59310853, 0.59700109, 0.60157219, 0.60336097, 0.60555331, 0.60896068, 0.61337866, 0.61852465, 0.62655929, 0.63707128, 0.6483534, 0.6587092, 0.66674618, 0.66798851, 0.65925168, 0.64099533, 0.61519263, 0.5829609, 0.55150764, 0.52589593, 0.50665129, 0.49612167, 0.49873702, 0.5117356, 0.52875232, 0.54241942, 0.53768022, 0.49573105, 0.41916397, 0.32670548, 0.23104246, 0.14852103, 0.08967661, 0.05496955, 0.03325212, 0.01976446, 0.00783771, 0.00128398]
+                self.specBandInfo["B8"] = specBandObj
+
+                # B8A
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B8A"
+                specBandObj.bandID = "8"
+                specBandObj.imgRes = 20
+                specBandObj.wvLenMin = 848
+                specBandObj.wvLenMax = 881
+                specBandObj.wvLenCen = 864.8
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.0016587, 0.01322143, 0.02469164, 0.05133023, 0.10485306, 0.21639327, 0.38460415, 0.58535033, 0.77394613, 0.87784514, 0.91437737, 0.92209877, 0.92564458, 0.9293724, 0.93569013, 0.94639017, 0.95565571, 0.96536061, 0.97439721, 0.97984594, 0.98330113, 0.98288901, 0.98846942, 1, 0.99957999, 0.92089575, 0.72838861, 0.47188018, 0.23786107, 0.10682374, 0.04603695, 0.02219884, 0.00879487, 0.00046171]
+                self.specBandInfo["B8A"] = specBandObj
+
+                # B09
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B9"
+                specBandObj.bandID = "9"
+                specBandObj.imgRes = 60
+                specBandObj.wvLenMin = 932
+                specBandObj.wvLenMax = 958
+                specBandObj.wvLenCen = 945
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.01805614, 0.06583501, 0.18513673, 0.40896107, 0.6807859, 0.87492845, 0.93105831, 0.96430107, 0.98449689, 0.99148444, 0.99741262, 0.97773458, 0.9794157, 0.99836495, 0.98976032, 1, 0.98740831, 0.98535381, 0.95618373, 0.96549887, 0.93078391, 0.86340691, 0.70418342, 0.44996198, 0.20134116, 0.05969267, 0.0138846]
+                self.specBandInfo["B9"] = specBandObj
+
+                # B10
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B10"
+                specBandObj.bandID = "10"
+                specBandObj.imgRes = 60
+                specBandObj.wvLenMin = 1337
+                specBandObj.wvLenMax = 1412
+                specBandObj.wvLenCen = 1373.5
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.00024052, 5.404e-05, 3.052e-05, 2.872e-05, 7.632e-05, 0.00010949, 8.804e-05, 0.00012356, 0.00017424, 0.0003317, 0.00036891, 0.0004467, 0.00065919, 0.0010913, 0.00196903, 0.00373668, 0.00801754, 0.01884719, 0.04466732, 0.10165546, 0.20111776, 0.34284841, 0.50710992, 0.6632068, 0.78377143, 0.86153862, 0.91000261, 0.94193255, 0.96182259, 0.97365119, 0.98169786, 0.98795826, 0.99283342, 0.99649788, 0.99906011, 1, 0.99907734, 0.99601604, 0.9909083, 0.98479854, 0.97802142, 0.97030114, 0.96080954, 0.94849765, 0.93314108, 0.91482336, 0.8937997, 0.86825426, 0.83023193, 0.76384193, 0.65440009, 0.50671604, 0.35014737, 0.21799972, 0.12643091, 0.06768988, 0.0322709, 0.013544, 0.00544557, 0.00237642, 0.00111267, 0.00053796, 0.0003457, 0.00017488, 0.00021619, 0.00019479, 0.00010421, 5.919e-05, 5.109e-05, 6.115e-05, 5.527e-05, 3.856e-05, 3.147e-05, 0.00012289, 0.0001089, 2.502e-05]
+                self.specBandInfo["B10"] = specBandObj
+
+                # B11
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B11"
+                specBandObj.bandID = "11"
+                specBandObj.imgRes = 20
+                specBandObj.wvLenMin = 1539
+                specBandObj.wvLenMax = 1682
+                specBandObj.wvLenCen = 1613.7
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [6.79e-06, 6.66e-06, 8e-06, 2.734e-05, 3.685e-05, 8.851e-05, 0.00014522, 0.00024812, 0.00047627, 0.00056335, 0.00065326, 0.00089835, 0.00114664, 0.00165604, 0.00241611, 0.00350246, 0.00524274, 0.0081538, 0.01237062, 0.0186097, 0.02721853, 0.03879155, 0.05379167, 0.07353187, 0.09932758, 0.1334178, 0.18029249, 0.24484994, 0.32834511, 0.42749961, 0.53576798, 0.64570396, 0.74245998, 0.81447017, 0.85866596, 0.87924777, 0.88665266, 0.888727, 0.89105732, 0.89725046, 0.90632982, 0.91627527, 0.9263751, 0.93515828, 0.94226446, 0.94739906, 0.95131987, 0.95416808, 0.95635128, 0.95813297, 0.96062738, 0.96344083, 0.96577764, 0.96818134, 0.97104025, 0.97343195, 0.97597444, 0.97865413, 0.97994672, 0.98064126, 0.98094979, 0.98143338, 0.98123856, 0.98068083, 0.98033995, 0.98101894, 0.98268503, 0.98507875, 0.98777658, 0.9903608, 0.99202087, 0.9933069, 0.99256744, 0.99044883, 0.98717314, 0.98353656, 0.9800432, 0.97617287, 0.97253451, 0.96977033, 0.96762556, 0.9662626, 0.96572411, 0.96592079, 0.96729798, 0.96975438, 0.97337748, 0.97862858, 0.98345358, 0.98765317, 0.9919238, 0.99554959, 0.99767411, 0.99866451, 0.99941783, 0.99930984, 0.99885298, 0.99913515, 0.99973164, 0.99973592, 1, 0.9998438, 0.9967639, 0.99175576, 0.9859206, 0.97887302, 0.97029262, 0.96135891, 0.95379752, 0.94709017, 0.94228614, 0.93919512, 0.93616637, 0.92889205, 0.9129921, 0.88158383, 0.82602164, 0.74412949, 0.64281662, 0.53483955, 0.42772166, 0.32439525, 0.23488131, 0.16445229, 0.11056237, 0.07271886, 0.04634859, 0.02949618, 0.01941871, 0.0133487, 0.00934594, 0.00654231, 0.00487921, 0.00341903, 0.00249864, 0.00196431, 0.00142754, 0.00105878, 0.00049978, 0.00022833, 0.00015999, 3.415e-05, 4.517e-05, 1.313e-05]
+                self.specBandInfo["B11"] = specBandObj
+
+                # B12
+                specBandObj = ARCSISen2SpectralBandObj()
+                specBandObj.phyBandName = "B12"
+                specBandObj.bandID = "12"
+                specBandObj.imgRes = 20
+                specBandObj.wvLenMin = 2078
+                specBandObj.wvLenMax = 2320
+                specBandObj.wvLenCen = 2202.4
+                specBandObj.respFuncStep = 1
+                specBandObj.respFunc = [0.00063835, 0.00102286, 0.00288712, 0.00399879, 0.00658916, 0.00765458, 0.00799918, 0.00853524, 0.00929493, 0.00999614, 0.01096645, 0.01208363, 0.01335837, 0.01501119, 0.01711931, 0.01977307, 0.02332743, 0.02765779, 0.03320435, 0.04020464, 0.04886709, 0.0596238, 0.07315348, 0.09050885, 0.11143964, 0.13686671, 0.16776886, 0.20341457, 0.24281992, 0.28484195, 0.32711894, 0.36834301, 0.40794043, 0.4447145, 0.47647207, 0.50303896, 0.52524762, 0.54328057, 0.55717994, 0.5685619, 0.57895708, 0.58860881, 0.59881758, 0.60990899, 0.62128986, 0.63421311, 0.64847648, 0.66363778, 0.67997936, 0.69609688, 0.71189957, 0.7269499, 0.74124079, 0.75734734, 0.77201504, 0.78552587, 0.79818641, 0.80962939, 0.81965718, 0.82855741, 0.83668178, 0.84440292, 0.85106862, 0.85321701, 0.85471321, 0.8561428, 0.85778963, 0.8594989, 0.86142876, 0.86322831, 0.86511218, 0.8672932, 0.86967076, 0.87427502, 0.87856212, 0.88241466, 0.88590611, 0.8894516, 0.89320419, 0.8966738, 0.89987484, 0.90257636, 0.90481219, 0.90550545, 0.90564491, 0.90548208, 0.90513822, 0.90476379, 0.90406427, 0.90332978, 0.90274309, 0.90235795, 0.90196488, 0.90340528, 0.90429478, 0.90529761, 0.90642862, 0.90807348, 0.91010493, 0.91293181, 0.91556686, 0.91842631, 0.92128288, 0.92431702, 0.92719913, 0.92972159, 0.93190455, 0.93412538, 0.93588954, 0.93707083, 0.93762594, 0.93828534, 0.93763643, 0.94042634, 0.94250397, 0.94324531, 0.94301861, 0.94210283, 0.94061808, 0.93841726, 0.93665003, 0.93524569, 0.93301102, 0.92686708, 0.92104485, 0.91547175, 0.91100989, 0.90828339, 0.9072733, 0.90817907, 0.91115631, 0.91617845, 0.92284525, 0.92059829, 0.91947472, 0.91947973, 0.92126575, 0.92451632, 0.92772589, 0.93196884, 0.93676408, 0.94147739, 0.94679545, 0.95119533, 0.95443018, 0.95704142, 0.95972628, 0.9625372, 0.96485326, 0.96603599, 0.96664138, 0.96630455, 0.96545713, 0.96484036, 0.96365512, 0.96169531, 0.95944859, 0.95732078, 0.95513625, 0.95355574, 0.95273072, 0.95217795, 0.95172542, 0.9521403, 0.95263595, 0.95405248, 0.95707559, 0.96063594, 0.96421772, 0.96830187, 0.97268597, 0.97741944, 0.98289489, 0.9871429, 0.99073348, 0.99398244, 0.99678431, 0.99875181, 1, 0.9999284, 0.9991523, 0.99712951, 0.99388228, 0.98968273, 0.98373274, 0.97621057, 0.96780985, 0.95833495, 0.94842856, 0.93818752, 0.9277078, 0.91702104, 0.90597951, 0.89384371, 0.88165575, 0.86861704, 0.85460324, 0.84058628, 0.82598123, 0.80948042, 0.79182917, 0.7724052, 0.74907137, 0.72031195, 0.68815487, 0.65125598, 0.6100244, 0.56600904, 0.52095058, 0.47464344, 0.42924778, 0.38584718, 0.34208462, 0.30067509, 0.26317221, 0.22770037, 0.19571781, 0.16808736, 0.14467686, 0.12482737, 0.10823403, 0.09439655, 0.08235799, 0.07149445, 0.0626855, 0.05498009, 0.04818852, 0.04285814, 0.03859244, 0.03494044, 0.03199172, 0.02958044, 0.02741084, 0.02556884, 0.02395058, 0.02166741, 0.0191457, 0.01632139, 0.0109837, 0.00736032, 0.00649061, 0.00469736, 0.00205874]
+                self.specBandInfo["B12"] = specBandObj
+            else:
+                raise ARCSIException("Do not recognised header format: '" + hdrFileVersion +"'")
 
             tree = None
 
             ####### READ GRANULE HEADER FILES ##########
-            granuleDIR = os.path.join(self.sen2FileBaseDIR, 'GRANULE')
-            granLC1DIRsIn = os.listdir(granuleDIR)
-            granLC1DIRs = []
-            for dirStr in granLC1DIRsIn:
-                if 'L1C' in dirStr:
-                    granLC1DIRs.append(dirStr)
-            if len(granLC1DIRs) != 1:
-                raise ARCSIException("Couldn't find the granule directory")
-            granuleHdr = os.path.join(os.path.join(granuleDIR, granLC1DIRs[0]), 'MTD_TL.xml')
+            granuleHdr = ''
+            if hdrFileVersion == 'psd14':
+                granuleDIR = os.path.join(self.sen2FileBaseDIR, 'GRANULE')
+                granLC1DIRsIn = os.listdir(granuleDIR)
+                granLC1DIRs = []
+                for dirStr in granLC1DIRsIn:
+                    if 'L1C' in dirStr:
+                        granLC1DIRs.append(dirStr)
+                if len(granLC1DIRs) != 1:
+                    raise ARCSIException("Couldn't find the granule directory")
+                granuleHdr = os.path.join(os.path.join(granuleDIR, granLC1DIRs[0]), 'MTD_TL.xml')
+            elif hdrFileVersion == 'psd13':
+                granuleDIR = os.path.join(os.path.join(self.sen2FileBaseDIR, 'GRANULE'), granuleIdentifier)
+                granuleTmpFiles = glob.glob(os.path.join(granuleDIR, 'S2A_OPER_MTD_L1C*.xml'))
+                if len(granuleTmpFiles) == 1:
+                    granuleHdr = granuleTmpFiles[0]
+                else:
+                    raise ARCSIException("Cannot find the granule header file.")
+            else:
+                raise ARCSIException("Do not recognised header format: '" + hdrFileVersion +"'")
 
             tree = ET.parse(granuleHdr)
             root = tree.getroot()
