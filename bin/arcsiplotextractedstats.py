@@ -295,10 +295,10 @@ if __name__ == '__main__':
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
 
-    parser.add_argument("-i", "--input", type=str,
+    parser.add_argument("-i", "--input", type=str, required=True,
                         help='''Specify the input statistics file.''')
 
-    parser.add_argument("-f", "--field", type=str,
+    parser.add_argument("-f", "--field", type=str, required=True,
                         help='''String to specify the field to be plotted.
                                 Note, this should be the base name, i.e.,
                                 Red not RedAvg or RedMax''')
@@ -308,10 +308,10 @@ if __name__ == '__main__':
                         shapefile defining the ROI to be plotted. If just
                         1 feature then value is zero (default).''')
 
-    parser.add_argument("-t", "--title", type=str,
+    parser.add_argument("-t", "--title", type=str, required=True,
                         help='''String for the title to be added to the plot.''')
 
-    parser.add_argument("-o", "--output", type=str,
+    parser.add_argument("-o", "--output", type=str, required=True,
                         help='''Output PDF file for the plot.''')
 
     parser.add_argument("--simple", action='store_true', default=False,
@@ -320,36 +320,6 @@ if __name__ == '__main__':
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
-    if args.input == None:
-        print("Input file information was not specified.")
-        parser.print_help()
-        sys.exit()
-
-    if args.output == None:
-        print("An output file was not specified.")
-        parser.print_help()
-        sys.exit()
-
-    if args.field == None:
-        print("An input field needs to be specified.")
-        parser.print_help()
-        sys.exit()
-
-    if args.title == None:
-        print("A title for the plot is required.")
-        parser.print_help()
-        sys.exit()
-
     arcsiObj = ARCSIPlotExtractedStats()
     arcsiObj.processAndPlotData(args.input, args.output, args.field, args.title, args.simple, args.feature)
-
-
-
-
-
-
-
-
-
-
 
