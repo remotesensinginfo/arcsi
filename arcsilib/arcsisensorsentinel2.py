@@ -942,6 +942,20 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB12, self.sen2ImgB12_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
             self.resampleTo20m = False
 
+    def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat):
+        bandInfo = []
+        bandInfo.append(rsgislib.imageutils.SharpBandInfo(band=1, status=rsgislib.SHARP_RES_HIGH, name='Blue'))
+        bandInfo.append(rsgislib.imageutils.SharpBandInfo(band=2, status=rsgislib.SHARP_RES_HIGH, name='Green'))
+        bandInfo.append(rsgislib.imageutils.SharpBandInfo(band=3, status=rsgislib.SHARP_RES_HIGH, name='Red'))
+        bandInfo.append(rsgislib.imageutils.SharpBandInfo(band=4, status=rsgislib.SHARP_RES_LOW, name='RE_B5'))
+        bandInfo.append(rsgislib.imageutils.SharpBandInfo(band=5, status=rsgislib.SHARP_RES_LOW, name='RE_B6'))
+        bandInfo.append(rsgislib.imageutils.SharpBandInfo(band=6, status=rsgislib.SHARP_RES_LOW, name='RE_B7'))
+        bandInfo.append(rsgislib.imageutils.SharpBandInfo(band=7, status=rsgislib.SHARP_RES_HIGH, name='NIR_B8'))
+        bandInfo.append(rsgislib.imageutils.SharpBandInfo(band=8, status=rsgislib.SHARP_RES_LOW, name='NIR_B8A'))
+        bandInfo.append(rsgislib.imageutils.SharpBandInfo(band=9, status=rsgislib.SHARP_RES_LOW, name='SWIR1'))
+        bandInfo.append(rsgislib.imageutils.SharpBandInfo(band=10, status=rsgislib.SHARP_RES_LOW, name='SWIR2'))
+        rsgislib.imageutils.sharpenLowResBands(inimage=inputImg, outimage=outputImage, bandinfo=bandInfo, winsize=7, nodata=0, gdalformat=outFormat, datatype=rsgislib.TYPE_32FLOAT)
+
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         print("Generate valid image mask")
         # Generate the valid image mask

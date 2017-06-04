@@ -137,7 +137,8 @@ don't currently support the sensor you require.''')
                         help='''Specify the output file path.''')
     # Define the argument for specifying the file path of the output images.
     parser.add_argument("-t", "--tmpath", type=str,
-                        help='''Specify a tempory path for files to be written to temporarly during processing if required (DDVAOT, DOS and CLOUDS).''')
+                        help='''Specify a tempory path for files to be written to temporarly 
+                                during processing if required (DDVAOT, DOS and CLOUDS).''')
     # Define the argument which specifies the products which are to be generated.
     parser.add_argument("-p", "--prods", type=str, nargs='+', choices=ARCSI_PRODUCTS_LIST,
                         help='''Specify the output products which are to be

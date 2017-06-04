@@ -369,6 +369,9 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
     def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
         raise ARCSIException("Image data does not need resampling")
 
+    def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat):
+        raise ARCSIException("Image sharpening is not available for this sensor.")
+
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         print("Create the valid data mask")
         tmpBaseName = os.path.splitext(outputMaskName)[0]

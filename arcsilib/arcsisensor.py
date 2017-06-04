@@ -483,6 +483,9 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'): pass
 
+    @abstractmethod
+    def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat): pass
+
     def hasThermal(self):
         return False
 

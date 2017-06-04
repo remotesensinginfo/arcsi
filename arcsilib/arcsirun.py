@@ -249,6 +249,7 @@ class ARCSIRun (object):
             prodsToCalc["FOOTPRINT"] = False
             prodsToCalc["METADATA"] = False
             prodsToCalc["STDSREF"] = False
+            prodsToCalc["SHARP"] = False
 
             # Make a copy of the dictionary to store calculated products.
             prodsCalculated = copy.copy(prodsToCalc)
@@ -321,6 +322,11 @@ class ARCSIRun (object):
                     prodsToCalc["FOOTPRINT"] = True
                 elif prod == 'METADATA':
                     prodsToCalc["METADATA"] = True
+                elif prod == 'SHARP':
+                    prodsToCalc["RAD"] = True
+                    prodsToCalc["SHARP"] = True
+                    if resample2LowResImg:
+                        raise ARCSIException("'SHARP' product is only appropriate if lower resolution images bands are being sharpened to a higher resolution.")
                 
             if prodsToCalc["DOSAOT"] and prodsToCalc["DDVAOT"]:
                 raise ARCSIException("You cannot specify both the DOSAOT and DDVAOT products, you must choose one or the other.")
@@ -410,7 +416,6 @@ class ARCSIRun (object):
                 pxlResDefd = True
                 xPxlRes = xPxlResUsr
                 yPxlRes = yPxlResUsr
-
 
             validMaskImage=None
             validMaskImageProj=""
@@ -685,6 +690,16 @@ class ARCSIRun (object):
                             rsgisUtils.deleteFileWithBasename(thermalRadImage)
                             thermalRadImage = outThermRadImagePath
                     outBaseName = outBaseNameProj
+
+                if prodsToCalc["SHARP"]:
+                    print("Sharpen radiance image...")
+                    processStageStr = processStageStr + "_sharp"
+                    outRadSharpImageName = outBaseName + processStageStr + "_rad" + arcsiUtils.getFileExtension(outFormat)
+                    outRadSharpImage = os.path.join(outFilePath, outRadSharpImageName)
+                    sensorClass.sharpenLowResRadImgBands(radianceImage, outRadSharpImage, outFormat)
+                    rsgisUtils.deleteFileWithBasename(radianceImage)
+                    radianceImage = outRadSharpImage
+                    prodsCalculated['SHARP'] = True
 
                 print("Setting Band Names...")
                 sensorClass.setBandNames(radianceImage)

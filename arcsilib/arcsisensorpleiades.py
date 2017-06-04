@@ -513,6 +513,9 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
     def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
         raise ARCSIException("Image data does not need resampling")
 
+    def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat):
+        raise ARCSIException("Image sharpening is not available for this sensor.")
+
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
         outputImage = os.path.join(outputPath, outputReflName)
