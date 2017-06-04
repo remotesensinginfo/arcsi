@@ -1154,15 +1154,18 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         tmpBaseName = os.path.splitext(outputName)[0]
         tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
 
+        try:
+            # Using python-fmask (http://pythonfmask.org)
+            from fmask import config
+            from fmask import fmask
+            from rios import fileinfo
+        except ImportError as pyFMaskErr:
+            raise ARCSIException("Could not import python-fmask (http://pythonfmask.org) library - please install.")
+
         tmpDIRExisted = True
         if not os.path.exists(tmpBaseDIR):
             os.makedirs(tmpBaseDIR)
             tmpDIRExisted = False
-
-        # Using python-fmask (http://pythonfmask.org)
-        from fmask import config
-        from fmask import fmask
-        from rios import fileinfo
 
         sen2ImgB01_tmp = os.path.join(tmpBaseDIR, tmpBaseName+'_B01.kea')
         rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB01, sen2ImgB01_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT)
