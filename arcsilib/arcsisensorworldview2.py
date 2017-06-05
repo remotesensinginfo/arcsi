@@ -36,10 +36,10 @@ Module that contains the ARCSIWorldView2Sensor class.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
+# Import updated print function into python 2.7
 from __future__ import print_function
+# Import updated division operator into python 2.7
 from __future__ import division
-from __future__ import unicode_literals
 # import abstract base class stuff
 from .arcsisensor import ARCSIAbstractSensor
 # Import the ARCSI exception class
@@ -86,10 +86,10 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
         self.solarZenithMax = 0.0
         self.solarAzimuthMin = 0.0
         self.solarAzimuthMax = 0.0
-        self.senorZenithMin = 0.0
-        self.senorZenithMax = 0.0
-        self.senorAzimuthMin = 0.0
-        self.senorAzimuthMax = 0.0
+        self.sensorZenithMin = 0.0
+        self.sensorZenithMax = 0.0
+        self.sensorAzimuthMin = 0.0
+        self.sensorAzimuthMax = 0.0
         self.nadirViewAngle = 0.0
         # Coastal
         self.absCalFactB1 = 0.0
@@ -167,13 +167,13 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             self.solarAzimuthMax = float(imageInfoTag.find('MAXSUNAZ').text.strip())
             self.solarAzimuth = float(imageInfoTag.find('MEANSUNAZ').text.strip())
 
-            self.senorZenithMin = 90-float(imageInfoTag.find('MINSATEL').text.strip())
-            self.senorZenithMax = 90-float(imageInfoTag.find('MAXSATEL').text.strip())
-            self.senorZenith = 90-float(imageInfoTag.find('MEANSATEL').text.strip())
+            self.sensorZenithMin = 90-float(imageInfoTag.find('MINSATEL').text.strip())
+            self.sensorZenithMax = 90-float(imageInfoTag.find('MAXSATEL').text.strip())
+            self.sensorZenith = 90-float(imageInfoTag.find('MEANSATEL').text.strip())
 
-            self.senorAzimuthMin = float(imageInfoTag.find('MINSATAZ').text.strip())
-            self.senorAzimuthMax = float(imageInfoTag.find('MAXSATAZ').text.strip())
-            self.senorAzimuth = float(imageInfoTag.find('MEANSATAZ').text.strip())
+            self.sensorAzimuthMin = float(imageInfoTag.find('MINSATAZ').text.strip())
+            self.sensorAzimuthMax = float(imageInfoTag.find('MAXSATAZ').text.strip())
+            self.sensorAzimuth = float(imageInfoTag.find('MEANSATAZ').text.strip())
 
             self.nadirViewAngle = float(imageInfoTag.find('MEANOFFNADIRVIEWANGLE').text.strip())
 
@@ -270,7 +270,7 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
         Get sensor viewing angles
         returns (viewAzimuth, viewZenith)
         """
-        return (self.senorAzimuth, self.senorZenith)
+        return (self.sensorAzimuth, self.sensorZenith)
 
     def generateOutputBaseName(self):
         """
@@ -290,8 +290,14 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("WorldView2 does not provide any image masks, do not use the MASK option.")
 
-    def mosaicImageTiles(self):
+    def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
+
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
+        raise ARCSIException("Image data does not need resampling")
+
+    def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat):
+        raise ARCSIException("Image sharpening is not available for this sensor.")
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -353,6 +359,9 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("Cloud Masking Not Implemented for WorldView2.")
 
+    def createCloudMaskDataArray(self, inImgDataArr):
+        return inImgDataArr
+
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((8, 6), dtype=numpy.float32)
         # Set up 6S model
@@ -363,8 +372,8 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
@@ -512,7 +521,7 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             elevCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=imgBandCoeffs))
 
         rsgislib.imagecalibration.apply6SCoeffElevLUTParam(inputRadImage, inputDEMFile, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, elevCoeffs)
-        return outputImage
+        return outputImage, elevCoeffs
 
     def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax, scaleFactor, elevAOTCoeffs=None):
         print("Converting to Surface Reflectance")
@@ -553,7 +562,6 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
     def run6SToOptimiseAODValue(self, aotVal, radBlueVal, predBlueVal, aeroProfile, atmosProfile, grdRefl, surfaceAltitude):
         """Used as part of the optimastion for identifying values of AOD"""
         print("Testing AOD Val: ", aotVal,)
-        sixsCoeffs = numpy.zeros((5, 3), dtype=numpy.float32)
         # Set up 6S model
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
@@ -563,8 +571,8 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
@@ -732,4 +740,5 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
         else:
             print("Could not open image to set band names: ", imageFile)
 
-
+    def cleanLocalFollowProcessing(self):
+        print("")

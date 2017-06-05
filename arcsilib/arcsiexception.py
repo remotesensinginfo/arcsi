@@ -35,11 +35,6 @@ Module that contains the ARCSIException class.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
-from __future__ import print_function
-from __future__ import division
-from __future__ import unicode_literals
-
 class ARCSIException(Exception):
 
     def __init__(self, value):

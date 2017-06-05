@@ -35,10 +35,10 @@
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
+# Import updated print function into python 2.7
 from __future__ import print_function
+# Import updated division operator into python 2.7
 from __future__ import division
-from __future__ import unicode_literals
 # Import the glob module.
 import glob
 # Import python system library
@@ -217,16 +217,16 @@ if __name__ == '__main__':
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
 
-    parser.add_argument("-i", "--input", type=str,
+    parser.add_argument("-i", "--input", type=str, required=True,
                         help='''Specify the directory containing the input image files
                                 and files selected from the input directory, glob
                                 supported wild characters .''')
 
-    parser.add_argument("-r", "--roi", type=str,
+    parser.add_argument("-r", "--roi", type=str, required=True,
                         help='''String to specify the region of interest (ROI). Must be
                         a shapefile of the image projection as the input images.''')
 
-    parser.add_argument("-o", "--output", type=str,
+    parser.add_argument("-o", "--output", type=str, required=True,
                         help='''An output text file with the zonal stats results.''')
 
 
@@ -234,21 +234,6 @@ if __name__ == '__main__':
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
-
-    if args.input == None:
-        print("Input file information was not specified.")
-        parser.print_help()
-        sys.exit()
-
-    if args.output == None:
-        print("An output file was not specified.")
-        parser.print_help()
-        sys.exit()
-
-    if args.roi == None:
-        print("An ROI shapefile was not specified.")
-        parser.print_help()
-        sys.exit()
 
     arcsiObj = ARCSIExtractROIStats()
     arcsiObj.extractImageFileStats(args.input, args.output, args.roi)

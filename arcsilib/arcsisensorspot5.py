@@ -22,8 +22,8 @@ Module that contains the ARCSISPOT5Sensor class.
 #  along with ARCSI.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# Purpose:  A class for read the RapidEye sensor header file and applying
-#           the pre-processing operations within ARCSI to the RapidEye
+# Purpose:  A class for read the SPOT5 sensor header file and applying
+#           the pre-processing operations within ARCSI to the SPOT5
 #           datasets.
 #
 # Author: Pete Bunting
@@ -36,10 +36,10 @@ Module that contains the ARCSISPOT5Sensor class.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
+# Import updated print function into python 2.7
 from __future__ import print_function
+# Import updated division operator into python 2.7
 from __future__ import division
-from __future__ import unicode_literals
 # import abstract base class stuff
 from .arcsisensor import ARCSIAbstractSensor
 # Import the ARCSI exception class
@@ -199,10 +199,10 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
             self.acquViewAngle = float(root.find('Dataset_Sources').find('Source_Information').find('Scene_Source').find('VIEWING_ANGLE').text.strip())
             print("self.acquViewAngle: ", self.acquViewAngle)
 
-            self.senorZenith = self.acquViewAngle
-            print("self.senorZenith: ", self.senorZenith)
-            self.senorAzimuth = self.acquIncidAngle
-            print("self.senorAzimuth: ", self.senorAzimuth)
+            self.sensorZenith = self.acquViewAngle
+            print("self.sensorZenith: ", self.sensorZenith)
+            self.sensorAzimuth = self.acquIncidAngle
+            print("self.sensorAzimuth: ", self.sensorAzimuth)
 
             filesDIR = os.path.dirname(inputHeader)
             if not self.userSpInputImage is None:
@@ -275,7 +275,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         Get sensor viewing angles
         returns (viewAzimuth, viewZenith)
         """
-        return (self.senorAzimuth, self.senorZenith)
+        return (self.sensorAzimuth, self.sensorZenith)
 
     def generateOutputBaseName(self):
         """
@@ -295,8 +295,14 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("SPOT5 does not provide any image masks, do not use the MASK option.")
 
-    def mosaicImageTiles(self):
+    def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
+
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
+        raise ARCSIException("Image data does not need resampling")
+
+    def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat):
+        raise ARCSIException("Image sharpening is not available for this sensor.")
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -337,6 +343,11 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
 
         return outputImage
 
+    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
+        print("Generate valid image mask")
+        outputImage = os.path.join(outputPath, outputMaskName)
+        return outputImage
+
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         raise ARCSIException("There are no thermal bands...")
 
@@ -361,8 +372,11 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("SPOT5 does not have a cloud masking implementation in ARCSI.")
 
+    def createCloudMaskDataArray(self, inImgDataArr):
+        return inImgDataArr
+
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
-        sixsCoeffs = numpy.zeros((5, 6), dtype=numpy.float32)
+        sixsCoeffs = numpy.zeros((4, 6), dtype=numpy.float32)
         # Set up 6S model
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
@@ -371,8 +385,8 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
@@ -478,7 +492,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
             elevCoeffs.append(elevLUTFeat(Elev=float(elevVal), Coeffs=imgBandCoeffs))
 
         rsgislib.imagecalibration.apply6SCoeffElevLUTParam(inputRadImage, inputDEMFile, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, elevCoeffs)
-        return outputImage
+        return outputImage, elevCoeffs
 
     def convertImageToSurfaceReflAOTDEMElevLUT(self, inputRadImage, inputDEMFile, inputAOTImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax, scaleFactor, elevAOTCoeffs=None):
         print("Converting to Surface Reflectance")
@@ -515,7 +529,6 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
     def run6SToOptimiseAODValue(self, aotVal, radBlueVal, predBlueVal, aeroProfile, atmosProfile, grdRefl, surfaceAltitude):
         """Used as part of the optimastion for identifying values of AOD"""
         print("Testing AOD Val: ", aotVal,)
-        sixsCoeffs = numpy.zeros((5, 3), dtype=numpy.float32)
         # Set up 6S model
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
@@ -524,8 +537,8 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
@@ -686,5 +699,9 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
             dataset = None
         else:
             print("Could not open image to set band names: ", imageFile)
+
+    def cleanLocalFollowProcessing(self):
+        print("")
+
 
 

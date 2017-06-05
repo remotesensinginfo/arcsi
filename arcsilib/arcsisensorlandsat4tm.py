@@ -36,10 +36,10 @@ Module that contains the ARCSILandsat4TMSensor class.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
+# Import updated print function into python 2.7
 from __future__ import print_function
+# Import updated division operator into python 2.7
 from __future__ import division
-from __future__ import unicode_literals
 # import abstract base class stuff
 from .arcsisensor import ARCSIAbstractSensor
 # Import the ARCSI exception class
@@ -363,8 +363,14 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("Landsat 4 TM does not provide any image masks, do not use the MASK option.")
 
-    def mosaicImageTiles(self):
+    def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
+
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
+        raise ARCSIException("Image data does not need resampling")
+
+    def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat):
+        raise ARCSIException("Image sharpening is not available for this sensor.")
 
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         print("Create the valid data mask")
@@ -372,7 +378,14 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
         tmpValidPxlMsk = os.path.join(outputPath, tmpBaseName+'vldpxlmsk.kea')
         outputImage = os.path.join(outputPath, outputMaskName)
         inImages = [self.band1File, self.band2File, self.band3File, self.band4File, self.band5File, self.band7File, self.band6File]
-        rsgislib.imageutils.genValidMask(inimages=inImages, outimage=tmpValidPxlMsk, format='KEA', nodata=0.0)
+        rsgislib.imageutils.genValidMask(inimages=inImages, outimage=tmpValidPxlMsk, gdalformat='KEA', nodata=0.0)
+        rsgislib.rastergis.populateStats(tmpValidPxlMsk, True, False, True)
+        # Check there is valid data
+        ratDS = gdal.Open(tmpValidPxlMsk, gdal.GA_ReadOnly)
+        Histogram = rat.readColumn(ratDS, "Histogram")
+        ratDS = None
+        if Histogram.shape[0] < 2:
+            raise ARCSIException("There is no valid data in this image.")
         if not os.path.exists(viewAngleImg):
             rsgislib.rastergis.spatialExtent(clumps=tmpValidPxlMsk, minXX='MinXX', minXY='MinXY', maxXX='MaxXX', maxXY='MaxXY', minYX='MinYX', minYY='MinYY', maxYX='MaxYX', maxYY='MaxYY', ratband=1)
             rsgislib.imagecalibration.calcNadirImgViewAngle(tmpValidPxlMsk, viewAngleImg, 'KEA', 705000.0, 'MinXX', 'MinXY', 'MaxXX', 'MaxXY', 'MinYX', 'MinYY', 'MaxYX', 'MaxYY')
@@ -470,6 +483,10 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
             return outputImage
         except Exception as e:
             raise e
+
+    def createCloudMaskDataArray(self, inImgDataArr):
+        return inImgDataArr
+
 
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((6, 6), dtype=numpy.float32)
@@ -938,3 +955,8 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
         dataset.GetRasterBand(5).SetDescription("SWIR1")
         dataset.GetRasterBand(6).SetDescription("SWIR2")
         dataset = None
+
+    def cleanLocalFollowProcessing(self):
+        print("")
+
+

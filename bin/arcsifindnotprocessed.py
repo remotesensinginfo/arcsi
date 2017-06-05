@@ -39,10 +39,10 @@ to find scene which have yet to be processed to completion.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
+# Import updated print function into python 2.7
 from __future__ import print_function
+# Import updated division operator into python 2.7
 from __future__ import division
-from __future__ import unicode_literals
 # Import the python os.path module
 import os.path
 # Import the python sys module
