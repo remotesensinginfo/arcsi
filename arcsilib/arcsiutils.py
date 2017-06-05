@@ -34,10 +34,10 @@ Module that contains the ARCSIUtils class.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
+# Import updated print function into python 2.7
 from __future__ import print_function
+# Import updated division operator into python 2.7
 from __future__ import division
-from __future__ import unicode_literals
 # Import the ARCSI exception class
 from .arcsiexception import ARCSIException
 # Import the OS python module
@@ -46,6 +46,14 @@ import os
 import osgeo.gdal as gdal
 # Import the numpy library
 import numpy
+# Import the osr module from gdal.
+from osgeo import osr
+# Import the ogr module from gdal.
+from osgeo import ogr
+# Import the scipy interpolate module
+import scipy.interpolate
+# Import the maths module
+import math
 
 class ARCSIUtils (object):
     """
@@ -98,6 +106,15 @@ class ARCSIUtils (object):
             raise e
         return outList
 
+    def writeText2File(self, textStr, outFile):
+        try:
+            f = open(outFile, 'w')
+            f.write(str(textStr)+'\n')
+            f.flush()
+            f.close()
+        except Exception as e:
+            raise e
+
     def stringTokenizer(self, line, delimiter):
         tokens = list()
         token = str()
@@ -133,6 +150,22 @@ class ARCSIUtils (object):
             raise e
         return numpy.array(specResp)
 
+    def resampleSpectralResponseFunc(self, wvlens, respFunc, outSamp, sampleMethod):
+        """
+        Specifies the kind of interpolation as a string 
+        Options: 'linear', 'nearest', 'zero', 'slinear', 'quadratic', 'cubic'
+        Where, 'zero', 'slinear', 'quadratic' and 'cubic' refer to a spline 
+        interpolation of zeroth, first, second or third order) or as an integer 
+        specifying the order of the spline interpolator to use. Default is ‘linear’
+
+        See scipy documentation for more information: 
+        https://docs.scipy.org/doc/scipy/reference/generated/scipy.interpolate.interp1d.html
+        """
+        resamFunc = scipy.interpolate.interp1d(wvlens, respFunc, kind=sampleMethod, axis=-1, copy=True, bounds_error=False, fill_value=0, assume_sorted=True)
+        oWVLens = numpy.arange(wvlens[0], wvlens[-1], outSamp)
+        oSpecResp = resamFunc(oWVLens)
+        return oWVLens, oSpecResp
+
     def isSummerOrWinter(self, lat, long, date):
         summerWinter = 0
         if lat < 0:
@@ -155,7 +188,6 @@ class ARCSIUtils (object):
         outVar = None
         try:
             outVar = os.environ[var]
-            #print(outVar)
         except Exception:
             outVar = None
         return outVar
@@ -166,6 +198,17 @@ class ARCSIUtils (object):
             band = ds.GetRasterBand(bandnum + 1)
             band.SetMetadataItem('LAYER_TYPE', 'thematic')
         ds = None
+
+    def hasGCPs(self, imageFile):
+        ds = gdal.Open(imageFile, gdal.GA_ReadOnly)
+        if ds == None:
+            raise ARCSIException("Could not open the imageFile.")
+        numGCPs = ds.GetGCPCount()
+        hasGCPs = False
+        if numGCPs > 0:
+            hasGCPs = True
+        ds = None
+        return hasGCPs
 
     def copyGCPs(self, srcImg, destImg):
         srcDS = gdal.Open(srcImg, gdal.GA_ReadOnly)
@@ -185,6 +228,20 @@ class ARCSIUtils (object):
         srcDS = None
         destDS = None
 
+    def getWKTProjFromImage(self, inImg):
+        rasterDS = gdal.Open(inImg, gdal.GA_ReadOnly)
+        if rasterDS == None:
+            raise ARCSIException('Could not open raster image: \'' + inImg+ '\'')
+        projStr = rasterDS.GetProjection()
+        rasterDS = None
+        return projStr
+
+    def uidGenerator(self, size=6):
+        import uuid
+        randomStr = str(uuid.uuid4())
+        randomStr = randomStr.replace("-","")
+        return randomStr[0:size]
+
     def isNumber(self, strVal):
         try:
             float(strVal) # for int, long and float
@@ -197,7 +254,6 @@ class ARCSIUtils (object):
 
     def str2Float(self, strVal, errVal=None):
         strVal = str(strVal).strip()
-        #print("IN: " + strVal)
         outFloat = 0.0
         try:
             outFloat = float(strVal)
@@ -206,19 +262,63 @@ class ARCSIUtils (object):
                 outFloat = float(errVal)
             else:
                 raise ARCSIException("could not convert string to float: \'" + strVal + '\'.')
-        #print("Out: " + str(outFloat))
         return outFloat
 
     def str2Int(self, strVal, errVal=None):
         strVal = str(strVal).strip()
         outInt = 0
-        if strVal.isnumeric():
+        try:
             outInt = int(strVal)
-        elif not errVal is None:
-            outInt = int(errVal)
-        else:
-            raise ARCSIException("could not convert string to int: \'" + strVal + '\'.')
+        except ValueError:
+            try:
+                flVal = self.str2Float(strVal, errVal)
+                outInt = math.floor(flVal + 0.5)
+            except ARCSIException:
+                if not errVal is None:
+                    outInt = int(errVal)
+                else:
+                    raise ARCSIException("could not convert string to int: \'" + strVal + '\'.')
         return outInt
+
+    def getMaxVal(self, vals):
+        outVal = 0.0
+        first = True
+        for val in vals:
+            if first:
+                outVal = val
+                first = False
+            elif val > outVal:
+                outVal = val
+        return outVal
+
+    def getMinVal(self, vals):
+        outVal = 0.0
+        first = True
+        for val in vals:
+            if first:
+                outVal = val
+                first = False
+            elif val < outVal:
+                outVal = val
+        return outVal
+
+    def getMeanVal(self, vals):
+        outVal = 0.0
+        for val in vals:
+            outVal = outVal + val
+        return outVal / float(len(vals))
+
+    def getLatLong(self, inProj, x, y):
+        wgs84latlonProj = osr.SpatialReference()
+        wgs84latlonProj.ImportFromEPSG(4326)
+        wktPt = 'POINT(%s %s)' % (x, y)
+        point = ogr.CreateGeometryFromWkt(wktPt)
+        point.AssignSpatialReference(inProj)
+        point.TransformTo(wgs84latlonProj)
+        latVal = point.GetY()
+        longVal = point.GetX()
+        return latVal, longVal
+
 
 class ARCSILandsatMetaUtils(object):
     """
@@ -365,6 +465,18 @@ class ARCSISensorFactory(object):
         elif sensor == 'sen2':
             from arcsilib.arcsisensorsentinel2 import ARCSISentinel2Sensor
             sensorClass = ARCSISentinel2Sensor(debugMode, inputImage)
+        elif sensor == 'wv3':
+            from arcsilib.arcsisensorworldview3 import ARCSIWorldView3Sensor
+            sensorClass = ARCSIWorldView3Sensor(debugMode, inputImage)
+        elif sensor == 'spot6':
+            from arcsilib.arcsisensorspot6 import ARCSISPOT6Sensor
+            sensorClass = ARCSISPOT6Sensor(debugMode, inputImage)
+        elif sensor == 'spot7':
+            from arcsilib.arcsisensorspot7 import ARCSISPOT7Sensor
+            sensorClass = ARCSISPOT7Sensor(debugMode, inputImage)
+        elif sensor == 'pleiades':
+            from arcsilib.arcsisensorpleiades import ARCSIPleiadesSensor
+            sensorClass = ARCSIPleiadesSensor(debugMode, inputImage)
         else:
             raise ARCSIException("Could not get a class representing the sensor specified from the factory.")
 

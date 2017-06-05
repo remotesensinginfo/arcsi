@@ -36,10 +36,10 @@ Module that contains the ARCSIRapidEyeSensor class.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
+# Import updated print function into python 2.7
 from __future__ import print_function
+# Import updated division operator into python 2.7
 from __future__ import division
-from __future__ import unicode_literals
 # import abstract base class stuff
 from .arcsisensor import ARCSIAbstractSensor
 # Import the ARCSI exception class
@@ -133,7 +133,9 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                 tree = ET.parse(inputHeader)
                 root = tree.getroot()
 
-                rapideyeUrl = '{http://schemas.rapideye.de/products/productMetadataGeocorrected}'
+                hdrVersion = root.attrib['version'].strip() # 1.2.1 when this was implemented but the version was not changed when moved to plantlabs schema URL.
+                schemaURL = root.attrib['{http://www.w3.org/2001/XMLSchema-instance}schemaLocation'].strip().split()[0]
+                rapideyeUrl = '{'+schemaURL+'}'
                 metaDataProperty = root.find('{http://www.opengis.net/gml}metaDataProperty')
                 eoMetaData = metaDataProperty.find(rapideyeUrl+'EarthObservationMetaData')
                 if eoMetaData is None:
@@ -183,10 +185,10 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                 #print("self.solarZenith: ", self.solarZenith)
                 self.solarAzimuth = float(eoAcquParams.find('{http://earth.esa.int/opt}illuminationAzimuthAngle').text.strip())
                 #print("self.solarAzimuth: ", self.solarAzimuth)
-                self.senorZenith = self.acquCraftViewAngle
-                #print("self.senorZenith: ", self.senorZenith)
-                self.senorAzimuth = self.acquAzimuthAngle
-                #print("self.senorAzimuth: ", self.senorAzimuth)
+                self.sensorZenith = self.acquCraftViewAngle
+                #print("self.sensorZenith: ", self.sensorZenith)
+                self.sensorAzimuth = self.acquAzimuthAngle
+                #print("self.sensorAzimuth: ", self.sensorAzimuth)
                 timeStr = eoAcquParams.find(rapideyeUrl+'acquisitionDateTime').text.strip()
                 timeStr = timeStr.replace('Z', '')
                 try:
@@ -195,7 +197,11 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     try:
                         self.acquisitionTime = datetime.datetime.strptime(timeStr, "%Y-%m-%dT%H:%M:%S")
                     except Exception as e:
-                        raise e
+                        try:
+                            timeStrTmp = timeStr.split('+')[0]
+                            self.acquisitionTime = datetime.datetime.strptime(timeStrTmp, "%Y-%m-%dT%H:%M:%S.%f")
+                        except Exception as e:
+                            raise e
                 #print("self.acquisitionTime: ", self.acquisitionTime)
 
                 metadata = root.find('{http://www.opengis.net/gml}metaDataProperty').find(rapideyeUrl+'EarthObservationMetaData')
@@ -311,7 +317,6 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                 self.yCentre = 0.0
 
             elif (hdrExt.lower() == '.json') or (hdrExt.lower() == 'json'):
-                print('File has a JSON header -- ***** WARNING parsing this header format is largely untested *****')
                 with open(inputHeader, 'r') as f:
                     jsonStrData = f.read()
                 reHdrInfo = json.loads(jsonStrData)
@@ -339,10 +344,10 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     #print("self.solarZenith: ", self.solarZenith)
                     self.solarAzimuth = arcsiUtils.str2Float(reHdrInfo['properties']['sun']['azimuth'])
                     #print("self.solarAzimuth: ", self.solarAzimuth)
-                    self.senorZenith = self.acquCraftViewAngle
-                    #print("self.senorZenith: ", self.senorZenith)
-                    self.senorAzimuth = self.acquAzimuthAngle
-                    #print("self.senorAzimuth: ", self.senorAzimuth)
+                    self.sensorZenith = self.acquCraftViewAngle
+                    #print("self.sensorZenith: ", self.sensorZenith)
+                    self.sensorAzimuth = self.acquAzimuthAngle
+                    #print("self.sensorAzimuth: ", self.sensorAzimuth)
                 else:
                     raise ARCSIException("JSON Header is not expect format for RapidEye.")
 
@@ -455,7 +460,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         Get sensor viewing angles
         returns (viewAzimuth, viewZenith)
         """
-        return (self.senorAzimuth, self.senorZenith)
+        return (self.sensorAzimuth, self.sensorZenith)
 
     def generateOutputBaseName(self):
         """
@@ -482,8 +487,14 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("RapidEye does not provide any image masks, do not use the MASK option.")
 
-    def mosaicImageTiles(self):
+    def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
+
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
+        raise ARCSIException("Image data does not need resampling")
+
+    def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat):
+        raise ARCSIException("Image sharpening is not available for this sensor.")
 
     def convertImageToRadiance(self, outputPath, outputReflName, outputThermalName, outFormat):
         print("Converting to Radiance")
@@ -510,6 +521,12 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
 
         rsgislib.imagecalibration.saturatedPixelsMask(outputImage, outFormat, bandDefnSeq)
 
+        return outputImage
+
+    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
+        print("Generate valid image mask")
+        outputImage = os.path.join(outputPath, outputMaskName)
+        rsgislib.imageutils.genValidMask(inimages=[self.fileName], outimage=outputImage, gdalformat=outFormat, nodata=0.0)
         return outputImage
 
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
@@ -557,6 +574,10 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         except Exception as e:
             raise e
 
+    def createCloudMaskDataArray(self, inImgDataArr):
+        return inImgDataArr
+
+
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((5, 6), dtype=numpy.float32)
         # Set up 6S model
@@ -568,8 +589,8 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
@@ -720,7 +741,6 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
     def run6SToOptimiseAODValue(self, aotVal, radBlueVal, predBlueVal, aeroProfile, atmosProfile, grdRefl, surfaceAltitude):
         """Used as part of the optimastion for identifying values of AOD"""
         print("Testing AOD Val: ", aotVal,)
-        sixsCoeffs = numpy.zeros((5, 3), dtype=numpy.float32)
         # Set up 6S model
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
@@ -730,8 +750,8 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         s.geometry = Py6S.Geometry.User()
         s.geometry.solar_z = self.solarZenith
         s.geometry.solar_a = self.solarAzimuth
-        s.geometry.view_z = self.senorZenith
-        s.geometry.view_a = self.senorAzimuth
+        s.geometry.view_z = self.sensorZenith
+        s.geometry.view_a = self.sensorAzimuth
         s.geometry.month = self.acquisitionTime.month
         s.geometry.day = self.acquisitionTime.day
         s.geometry.gmt_decimal_hour = float(self.acquisitionTime.hour) + float(self.acquisitionTime.minute)/60.0
@@ -896,7 +916,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         else:
             print("Could not open image to set band names: ", imageFile)
 
-    def cleanFollowProcessing(self):
+    def cleanLocalFollowProcessing(self):
         if not self.origFileName is '':
             rsgisUtils = rsgislib.RSGISPyUtils()
             rsgisUtils.deleteFileWithBasename(self.fileName)

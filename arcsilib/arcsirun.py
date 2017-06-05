@@ -35,10 +35,10 @@ Module that contains the ARCSIRun class.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
+# Import updated print function into python 2.7
 from __future__ import print_function
+# Import updated division operator into python 2.7
 from __future__ import division
-from __future__ import unicode_literals
 # Import the system library
 import sys
 # Import the subprocess module
@@ -149,12 +149,11 @@ class ARCSIRun (object):
             aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT,
             demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor,
             initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts,
-            checkOutputs):
+            checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg):
         """
         A function contains the main flow of the software
         """
 
-        
         arcsiUtils = ARCSIUtils()
         rsgisUtils = rsgislib.RSGISPyUtils()
         # Create list to store products to be calculated and those actually calculated.
@@ -219,7 +218,7 @@ class ARCSIRun (object):
                 print("")
 
             # Step 3: Get Output Image Base Name.
-            if outBaseName is None:
+            if (outBaseName is None) or (outBaseName is ""):
                 outBaseName = sensorClass.generateOutputBaseName()
                 if not projAbbv is None:
                     outBaseNameProj = outBaseName + "_" + str(projAbbv)
@@ -250,6 +249,7 @@ class ARCSIRun (object):
             prodsToCalc["FOOTPRINT"] = False
             prodsToCalc["METADATA"] = False
             prodsToCalc["STDSREF"] = False
+            prodsToCalc["SHARP"] = False
 
             # Make a copy of the dictionary to store calculated products.
             prodsCalculated = copy.copy(prodsToCalc)
@@ -322,6 +322,11 @@ class ARCSIRun (object):
                     prodsToCalc["FOOTPRINT"] = True
                 elif prod == 'METADATA':
                     prodsToCalc["METADATA"] = True
+                elif prod == 'SHARP':
+                    prodsToCalc["RAD"] = True
+                    prodsToCalc["SHARP"] = True
+                    if resample2LowResImg:
+                        raise ARCSIException("'SHARP' product is only appropriate if lower resolution images bands are being sharpened to a higher resolution.")
                 
             if prodsToCalc["DOSAOT"] and prodsToCalc["DDVAOT"]:
                 raise ARCSIException("You cannot specify both the DOSAOT and DDVAOT products, you must choose one or the other.")
@@ -412,7 +417,6 @@ class ARCSIRun (object):
                 xPxlRes = xPxlResUsr
                 yPxlRes = yPxlResUsr
 
-
             validMaskImage=None
             validMaskImageProj=""
             viewAngleImg=""
@@ -462,22 +466,41 @@ class ARCSIRun (object):
             print('Checking Input Images are valid')
             sensorClass.checkInputImageValid()
 
+            # Check if bands need resampling
+            if sensorClass.inImgsDiffRes():
+                print('Resampling image bands to match one another.')
+                interpAlgorRSGISLib = interpAlgor
+                if interpAlgor == 'near':
+                    interpAlgorRSGISLib = 'nearestneighbour'
+                elif (interpAlgor == 'max') or (interpAlgor == 'min') or (interpAlgor == 'med'):
+                    print("WARNING: 'max', 'min' and 'med' are not available options for resampling imagery, changing to:\n", file=sys.stderr)
+                    if resample2LowResImg:
+                        interpAlgorRSGISLib = 'average'
+                        print("\t'average'.\n", file=sys.stderr)
+                    else:
+                        interpAlgorRSGISLib = 'cubic'
+                        print("\t'cubic'.\n", file=sys.stderr)
+                sensorClass.resampleImgRes(outFilePath, resample2LowResImg, interpAlgorRSGISLib)
+
+            # Check if the image data needs mosaicking.
             if sensorClass.imgNeedMosaicking():
                 print("Mosacking Input Image Tiles.")
-                sensorClass.mosaicImageTiles()
+                sensorClass.mosaicImageTiles(outFilePath)
 
             # Get the valid image data maskImage
             outName = outBaseName + "_valid" + arcsiUtils.getFileExtension(outFormat)
             viewAngleImg = os.path.join(outFilePath, outBaseName + "_viewangle" + arcsiUtils.getFileExtension(outFormat))
             validMaskImage = sensorClass.generateValidImageDataMask(outFilePath, outName, viewAngleImg, outFormat)
+            if not os.path.exists(viewAngleImg):
+                viewAngleImg = None
             if not validMaskImage is None:
                 rsgislib.rastergis.populateStats(validMaskImage, True, True)
-            if not viewAngleImg is "":
-                rsgislib.imageutils.popImageStats(viewAngleImg, usenodataval=True, nodataval=99999, calcpyramids=True)
+            if not viewAngleImg is None:
+                rsgislib.imageutils.popImageStats(viewAngleImg, usenodataval=True, nodataval=1000, calcpyramids=True)
             print("")
-            if (not validMaskImage is None):
+            if not validMaskImage is None:
                 finalOutFiles["VALID_MASK"] = validMaskImage
-            if not viewAngleImg is "":
+            if not viewAngleImg is None:
                 finalOutFiles["VIEW_ANGLE"] = viewAngleImg
 
             if reproject and (not validMaskImage is None):
@@ -513,7 +536,7 @@ class ARCSIRun (object):
                 finalOutFiles["VALID_MASK"] = validMaskImageProj
                 print("")
 
-            if reproject and (not viewAngleImg is ""):
+            if reproject and ((not viewAngleImg is "") and (not viewAngleImg is None)):
                 if not pxlResDefd:
                     viewAngleImgDS = gdal.Open(viewAngleImg, gdal.GA_ReadOnly)
                     if viewAngleImgDS is None:
@@ -586,7 +609,7 @@ class ARCSIRun (object):
                         saturateImage = saturateImageProj
                 if calcStatsPy:
                     print("Calculating Statistics...")
-                    rsgislib.imageutils.popImageStats(saturateImage, usenodataval=False, nodataval=0, calcpyramids=True)
+                    rsgislib.rastergis.populateStats(saturateImage, True, True)
                 prodsCalculated["SATURATE"] = True
                 print("")
 
@@ -657,7 +680,6 @@ class ARCSIRun (object):
                         + '-te ' + str(projImgBBOX['MinX']) + ' ' + str(projImgBBOX['MinY']) + ' ' + str(projImgBBOX['MaxX']) + ' ' + str(projImgBBOX['MaxY']) \
                         + ' -r ' + interpAlgor + ' -tap -srcnodata 0 -dstnodata 0 -of ' + outFormat + ' -overwrite ' \
                         + thermalRadImage + ' ' + outThermRadImagePath
-                        #print(cmd)
                         try:
                             subprocess.call(cmd, shell=True)
                         except OSError as e:
@@ -668,6 +690,16 @@ class ARCSIRun (object):
                             rsgisUtils.deleteFileWithBasename(thermalRadImage)
                             thermalRadImage = outThermRadImagePath
                     outBaseName = outBaseNameProj
+
+                if prodsToCalc["SHARP"]:
+                    print("Sharpen radiance image...")
+                    processStageStr = processStageStr + "_sharp"
+                    outRadSharpImageName = outBaseName + processStageStr + "_rad" + arcsiUtils.getFileExtension(outFormat)
+                    outRadSharpImage = os.path.join(outFilePath, outRadSharpImageName)
+                    sensorClass.sharpenLowResRadImgBands(radianceImage, outRadSharpImage, outFormat)
+                    rsgisUtils.deleteFileWithBasename(radianceImage)
+                    radianceImage = outRadSharpImage
+                    prodsCalculated['SHARP'] = True
 
                 print("Setting Band Names...")
                 sensorClass.setBandNames(radianceImage)
@@ -721,7 +753,10 @@ class ARCSIRun (object):
             if prodsToCalc["CLOUDS"]:
                 outName = outBaseName + "_clouds" + arcsiUtils.getFileExtension(outFormat)
                 if cloudMaskUsrImg == None:
-                    cloudsImage = sensorClass.generateCloudMask(toaImage, saturateImage, thermalBrightImage, validMaskImage, outFilePath, outName, outFormat, tmpPath, scaleFactor)
+                    if classmlclouds:
+                        cloudsImage = sensorClass.generateCloudMaskML(toaImage, validMaskImage, outFilePath, outName, outFormat, tmpPath, cloudtrainclouds, cloudtrainother, numCores=1)
+                    else:
+                        cloudsImage = sensorClass.generateCloudMask(toaImage, saturateImage, thermalBrightImage, validMaskImage, outFilePath, outName, outFormat, tmpPath, scaleFactor)
                     if calcStatsPy:
                         print("Calculating Statistics...")
                         rsgislib.rastergis.populateStats(cloudsImage, False, True)
@@ -821,7 +856,8 @@ class ARCSIRun (object):
                             outDEMNameMsk = outDEMName
 
                         # Calculate DEM statistics and set no data value.
-                        rsgislib.imageutils.popImageStats(outDEMNameMsk, True, -32768.0, True)
+                        if prodsToCalc["CLEARSKY"] or prodsToCalc["CLOUDS"]:
+                            rsgislib.imageutils.popImageStats(outDEMNameMsk, True, -32768.0, True)
                         rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
 
                         # Remove tmp DEM file.
@@ -1037,9 +1073,9 @@ class ARCSIRun (object):
                         stdSREFImg, stdSREFWholeImg = sensorClass.convertSREF2StdisedSREF(srefImage, sref6SWholeImage, outDEMName, topoShadowImage, outFilePath, outName, outNameWhole, outFormat, tmpPath, sixsLUTCoeffs, aotLUT, scaleFactor, brdfBeta=1, outIncidenceAngle=0, outExitanceAngle=0)
 
                         print("Setting Band Names...")
-                        sensorClass.setBandNames(srefImage)
+                        sensorClass.setBandNames(stdSREFImg)
                         if fullImgOuts:
-                            sensorClass.setBandNames(sref6SWholeImage)
+                            sensorClass.setBandNames(stdSREFWholeImg)
 
                         if calcStatsPy:
                             print("Calculating Statistics...")
@@ -1090,11 +1126,13 @@ class ARCSIRun (object):
 
         except ARCSIException as e:
             print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
-            print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
+            if outBaseName is not None:
+                print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
             print("Error: {}".format(e), file=sys.stderr)
         except Exception as e:
             print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
-            print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
+            if outBaseName is not None:
+                print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
             print("Error: {}".format(e), file=sys.stderr)
         finally:
             failedProdsList = []
@@ -1106,7 +1144,8 @@ class ARCSIRun (object):
                 print("Error: The following products were not generated:", file=sys.stderr)
                 print(" ".join(failedProdsList), file=sys.stderr)
                 print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
-                print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
+                if outBaseName is not None:
+                    print('Output Basename: \'' + outBaseName + '\'', file=sys.stderr)
                 print('\n\n', file=sys.stderr) # Put gap into output log to easier to see where one ends and the next starts.
 
 

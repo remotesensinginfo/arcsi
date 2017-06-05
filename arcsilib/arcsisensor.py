@@ -35,10 +35,10 @@ Module that contains the ARCSIAbstractSensor class.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
+# Import updated print function into python 2.7
 from __future__ import print_function
+# Import updated division operator into python 2.7
 from __future__ import division
-from __future__ import unicode_literals
 # import abstract base class stuff
 from abc import ABCMeta, abstractmethod
 # Import the datetime module
@@ -87,6 +87,8 @@ from osgeo import osr
 from .arcsiutils import ARCSIUtils
 # Import OS path module for manipulating the file system
 import os.path
+# Import the python OS module
+import os
 # Import the numpy module
 import numpy
 # Import the RIOS RAT library
@@ -103,6 +105,12 @@ import scipy.interpolate
 import json
 # Import shutil module
 import shutil
+# Import scikit-learn classification 
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import ExtraTreesClassifier
+# Import HDF5 python binding.
+import h5py
+
 
 class ARCSIAbstractSensor (object):
     """
@@ -141,8 +149,8 @@ class ARCSIAbstractSensor (object):
         self.inWKT = ""
         self.solarZenith = 0.0
         self.solarAzimuth = 0.0
-        self.senorZenith = 0.0
-        self.senorAzimuth = 0.0
+        self.sensorZenith = 0.0
+        self.sensorAzimuth = 0.0
         self.epsgCodes = dict()
         self.epsgCodes["WGS84UTM1N"] = 32601
         self.epsgCodes["WGS84UTM2N"] = 32602
@@ -340,8 +348,8 @@ class ARCSIAbstractSensor (object):
         acqDict['Time'] = acqTimeDict
         acqDict['SolarZenith'] = self.solarZenith
         acqDict['SolarAzimuth'] = self.solarAzimuth
-        acqDict['SenorZenith'] = self.senorZenith
-        acqDict['SenorAzimuth'] = self.senorAzimuth
+        acqDict['sensorZenith'] = self.sensorZenith
+        acqDict['sensorAzimuth'] = self.sensorAzimuth
 
         locDict = dict()
         locGeogDict = dict()
@@ -466,8 +474,17 @@ class ARCSIAbstractSensor (object):
     def imgNeedMosaicking(self):
         return False
 
+    def inImgsDiffRes(self):
+        return False
+
     @abstractmethod
-    def mosaicImageTiles(self): pass
+    def mosaicImageTiles(self, outputPath): pass
+
+    @abstractmethod
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'): pass
+
+    @abstractmethod
+    def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat): pass
 
     def hasThermal(self):
         return False
@@ -535,8 +552,8 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def generateImageSaturationMask(self, outputPath, outputName, outFormat): pass
 
-    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
-        return None
+    @abstractmethod
+    def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat): pass
 
     def generateImageFootprint(self, validMaskImage, outputPath, outputName):
         print("Creating Vector Footprint...")
@@ -583,7 +600,7 @@ class ARCSIAbstractSensor (object):
         outDatasource = driver.CreateDataSource(outShpLayerNamePath+ ".shp")
         raster_srs = osr.SpatialReference()
         raster_srs.ImportFromWkt(ratDataset.GetProjectionRef())
-        outLayer = outDatasource.CreateLayer(outShpLayerNamePath, srs=raster_srs) #ratDataset.GetProjection()
+        outLayer = outDatasource.CreateLayer(outShpLayerNamePath, srs=raster_srs)
 
         fieldYearDefn = ogr.FieldDefn('Year', ogr.OFTInteger)
         fieldYearDefn.SetWidth(6)
@@ -634,19 +651,17 @@ class ARCSIAbstractSensor (object):
         print("Create and Add Polygons...")
         for i in range(numFeats):
             wktStr = "POLYGON((" + str(minXXValsSub[i]) + " " + str(minXYValsSub[i]) + ", " + str(maxYXValsSub[i]) + " " + str(maxYYValsSub[i]) + ", " + str(maxXXValsSub[i]) + " " + str(maxXYValsSub[i]) + ", " + str(minYXValsSub[i]) + " " + str(minYYValsSub[i]) + ", " + str(minXXValsSub[i]) + " " + str(minXYValsSub[i]) + "))"
-            #print(str(i) + ": " + wktStr)
             poly = ogr.CreateGeometryFromWkt(wktStr)
             feat = ogr.Feature( outLayer.GetLayerDefn())
             feat.SetGeometry(poly)
-            #print(
             feat.SetField("Year", self.acquisitionTime.year)
             feat.SetField("Month", self.acquisitionTime.month)
             feat.SetField("Day", self.acquisitionTime.day)
             feat.SetField("BaseName", self.generateOutputBaseName())
             feat.SetField("SolZen", self.solarZenith)
             feat.SetField("SolAzi", self.solarAzimuth)
-            feat.SetField("SenZen", self.senorZenith)
-            feat.SetField("SenAzi", self.senorAzimuth)
+            feat.SetField("SenZen", self.sensorZenith)
+            feat.SetField("SenAzi", self.sensorAzimuth)
             feat.SetField("CenLat", self.latCentre)
             feat.SetField("CenLon", self.lonCentre)
 
@@ -696,6 +711,213 @@ class ARCSIAbstractSensor (object):
 
     @abstractmethod
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor): pass
+
+    @abstractmethod
+    def createCloudMaskDataArray(self, inImgDataArr): pass
+
+    def generateCloudMaskML(self, inputReflImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, cloudTrainFile, otherTrainFile, numCores=1):
+        """
+        A function to generate a cloud mask using Extra Random Forest...
+        """
+        outCloudMask = os.path.join(outputPath, outputName)
+
+        basename = os.path.splitext(os.path.basename(inputReflImage))[0]
+        imgTmpDIR = os.path.join(tmpPath, basename)
+        if os.path.exists(imgTmpDIR):
+             shutil.rmtree(imgTmpDIR, ignore_errors=True)
+        os.makedirs(imgTmpDIR)
+        
+        numVals = 0
+        numVars = 0
+        
+        fH5 = h5py.File(cloudTrainFile)
+        inCloudData = fH5['DATA/DATA']
+        cloudTrainDataArr = self.createCloudMaskDataArray(inCloudData)
+        numInVars = inCloudData.shape[1]
+        fH5.close()
+        
+        fH5 = h5py.File(otherTrainFile)
+        inOtherData = fH5['DATA/DATA']
+        otherTrainDataArr = self.createCloudMaskDataArray(inOtherData)
+        fH5.close()
+            
+        if cloudTrainDataArr.shape[1] is not otherTrainDataArr.shape[1]:
+            raise Exception("The number of variables is different between the cloud and other class training samples.")
+            
+        numVars = cloudTrainDataArr.shape[1]
+        numVals = cloudTrainDataArr.shape[0] + otherTrainDataArr.shape[0]
+        
+        dataArr = numpy.zeros([numVals, numVars], dtype=float)
+        classArr = numpy.zeros([numVals], dtype=int)
+        
+        dataArr[0:cloudTrainDataArr.shape[0]] = cloudTrainDataArr
+        classArr[0:cloudTrainDataArr.shape[0]] = 1
+        
+        dataArr[cloudTrainDataArr.shape[0]:cloudTrainDataArr.shape[0]+otherTrainDataArr.shape[0]] = otherTrainDataArr
+        classArr[cloudTrainDataArr.shape[0]:cloudTrainDataArr.shape[0]+otherTrainDataArr.shape[0]] = 2
+        
+        searchSampleCloud = math.floor(cloudTrainDataArr.shape[0] * 0.2)
+        searchSampleOther = math.floor(otherTrainDataArr.shape[0] * 0.2)
+        
+        numSampVals = searchSampleCloud + searchSampleOther
+        
+        dataSampArr = numpy.zeros([numSampVals, numVars], dtype=float)
+        classSampArr = numpy.zeros([numSampVals], dtype=int)
+        
+        sampleCloudIdxs = numpy.random.randint(0, high=cloudTrainDataArr.shape[0], size=searchSampleCloud)
+        dataSampArr[0:searchSampleCloud] = cloudTrainDataArr[sampleCloudIdxs]
+        classSampArr[0:searchSampleCloud] = 1
+        
+        sampleOtherIdxs = numpy.random.randint(0, high=otherTrainDataArr.shape[0], size=searchSampleOther)
+        dataSampArr[searchSampleCloud:searchSampleCloud+searchSampleOther] = otherTrainDataArr[sampleOtherIdxs]
+        classSampArr[searchSampleCloud:searchSampleCloud+searchSampleOther] = 2
+        
+        cloudTrainDataArr = None
+        otherTrainDataArr = None
+
+        print("Optimising Classifier Parameters")
+        gridSearch=GridSearchCV(ExtraTreesClassifier(bootstrap=True, n_jobs=numCores), {'n_estimators':[50,100,200,500], 'criterion':['gini','entropy'], 'max_features':[2,3,'sqrt','log2',None]})
+        gridSearch.fit(dataSampArr, classSampArr)
+        if not gridSearch.refit:
+            raise Exception("Grid Search did no find a fit therefore failed...")
+        print("Best score was {} and has parameters {}.".format(gridSearch.best_score_, gridSearch.best_params_))
+
+        dataSampArr = None
+        classSampArr = None
+
+        # Get the best classifier    
+        skClassifier = gridSearch.best_estimator_
+        skClassifier.oob_score = True
+        
+        print('Training Classifier')
+        skClassifier.fit(dataArr, classArr)
+        print("Completed")
+        
+        print('Calc Classifier Accuracy')
+        accVal = skClassifier.score(dataArr, classArr)
+        print('Classifier Train Score = {}%'.format(round(accVal*100, 2)))
+        oobScore = skClassifier.oob_score_
+        print('Classifier Out of Bag = {}%'.format(round(oobScore*100, 2)))  
+
+        print('Applying Classification')
+        initSceneClass = os.path.join(imgTmpDIR, basename+'_initSceneClass.kea')
+        reader = ImageReader([inputValidImg, inputReflImage], windowxsize=200, windowysize=200)
+        writer = None
+        for (info, blocks) in reader:
+            validImgBlock, toaImgBlock = blocks
+            outClassVals = numpy.zeros_like(validImgBlock, dtype=numpy.uint32)
+            if numpy.any(validImgBlock == 1):
+                # Flatten
+                outClassVals = outClassVals.flatten()
+                imgMaskVals = validImgBlock.flatten()
+                
+                # flatten bands individually.
+                imgData2Class = numpy.zeros((outClassVals.shape[0], numInVars), dtype=numpy.float)
+                classVarsIdx = 0
+                for i in range(toaImgBlock.shape[0]):
+                    imgData2Class[...,classVarsIdx] = toaImgBlock[i].flatten()
+                    classVarsIdx = classVarsIdx + 1
+                
+                # Mask
+                ID = numpy.arange(imgMaskVals.shape[0])
+                imgData2Class = imgData2Class[imgMaskVals==1]
+                ID = ID[imgMaskVals==1]
+
+                # Check data in Finite
+                ID = ID[numpy.isfinite(imgData2Class).all(axis=1)]
+                imgData2Class = imgData2Class[numpy.isfinite(imgData2Class).all(axis=1)]
+                
+                # Check for input with all zeros.
+                ID = ID[(imgData2Class!=0).all(axis=1)]
+                imgData2Class = imgData2Class[(imgData2Class!=0).all(axis=1)]
+                
+                if imgData2Class.shape[0] > 0:
+                    # Calc extra columns
+                    classVars = self.createCloudMaskDataArray(imgData2Class)
+                    
+                    # Apply classifier
+                    predClass = skClassifier.predict(classVars)
+                    
+                    # Sort out the output
+                    outClassVals[ID] = predClass
+                # Reshape output for writing output file.
+                outClassVals = numpy.expand_dims(outClassVals.reshape((validImgBlock.shape[1],validImgBlock.shape[2])), axis=0)
+            if writer is None:
+                writer = ImageWriter(initSceneClass, info=info, firstblock=outClassVals, drivername='KEA')
+            else:
+                writer.write(outClassVals)
+        writer.close(calcStats=False)
+        print('Finished Classification')
+        rsgislib.rastergis.populateStats(clumps=initSceneClass, addclrtab=True, calcpyramids=True, ignorezero=True)
+        
+        ## Check there are clouds!
+        ratDataset = gdal.Open(initSceneClass, gdal.GA_Update)
+        Histogram = rat.readColumn(ratDataset, 'Histogram')
+        ratDataset = None
+        
+        if Histogram.shape[0] < 2:
+            # make output the valid image with all valid area a pixel value of 1.
+            rsgislib.imagecalc.imageMath(inputValidImg, outCloudMask, 'b1==1?1:0', 'KEA', rsgislib.TYPE_8UINT)
+            rsgislib.rastergis.populateStats(clumps=outCloudMask, addclrtab=True, calcpyramids=True, ignorezero=True)
+        else:
+            totPxls = Histogram[1] + Histogram[2]
+            propCloud = float(Histogram[1]) / float(totPxls)
+            propOther = float(Histogram[2]) / float(totPxls)
+            
+            if propCloud > 0.98:
+                # 98% clouds - make it all cloud.
+                rsgislib.imagecalc.imageMath(inputValidImg, outCloudMask, 'b1==1?1:0', 'KEA', rsgislib.TYPE_8UINT)
+                rsgislib.rastergis.populateStats(clumps=outCloudMask, addclrtab=True, calcpyramids=True, ignorezero=True)
+            elif propOther > 0.99:
+                # 99% not cloud don't consider cloud.
+                rsgislib.imagecalc.imageMath(inputValidImg, outCloudMask, 'b1==1?0:0', 'KEA', rsgislib.TYPE_8UINT)
+                rsgislib.rastergis.populateStats(clumps=outCloudMask, addclrtab=True, calcpyramids=True, ignorezero=True)
+            else:
+                # Else. Tidy up the cloud regions and export.
+                initCloudClass = os.path.join(imgTmpDIR, basename+'_initCloudClass.kea')
+                rsgislib.imagecalc.imageMath(initSceneClass, initCloudClass, 'b1==1?1:0', 'KEA', rsgislib.TYPE_8UINT)
+                rsgislib.rastergis.populateStats(clumps=initCloudClass, addclrtab=True, calcpyramids=True, ignorezero=True)
+                
+                initCloudClassClumps = os.path.join(imgTmpDIR, basename+'_initclouds_clumps.kea')
+                rsgislib.segmentation.clump(initCloudClass, initCloudClassClumps, 'KEA', False, 0, False)
+                rsgislib.rastergis.populateStats(clumps=initCloudClassClumps, addclrtab=True, calcpyramids=True, ignorezero=True)
+                
+                initCloudClassClumpsRMSmall = os.path.join(imgTmpDIR, basename+'_initclouds_clumps_rmsmall.kea')
+                rsgislib.segmentation.rmSmallClumps(initCloudClassClumps, initCloudClassClumpsRMSmall, 5, 'KEA')
+                rsgislib.rastergis.populateStats(clumps=initCloudClassClumpsRMSmall, addclrtab=True, calcpyramids=True, ignorezero=True)
+                    
+                cloudsRmSmallClass = os.path.join(imgTmpDIR, basename+'_CloudsRmSmallClass.kea')
+                rsgislib.imagecalc.imageMath(initCloudClassClumpsRMSmall, cloudsRmSmallClass, 'b1>0?1:0', 'KEA', rsgislib.TYPE_8UINT)
+                rsgislib.rastergis.populateStats(clumps=cloudsRmSmallClass, addclrtab=True, calcpyramids=True, ignorezero=True)
+                
+                dist2Clouds = os.path.join(imgTmpDIR, basename+'_dist2Clouds.kea')
+                rsgislib.imagecalc.calcDist2ImgVals(cloudsRmSmallClass, dist2Clouds, 1, valsImgBand=1, gdalFormat='KEA', maxDist=20, noDataVal=20, unitGEO=False)
+                rsgislib.imageutils.popImageStats(dist2Clouds, usenodataval=True, nodataval=0, calcpyramids=True)
+                
+                rsgislib.imagecalc.imageMath(dist2Clouds, outCloudMask, 'b1<5?1:0', 'KEA', rsgislib.TYPE_8UINT)
+                rsgislib.rastergis.populateStats(clumps=outCloudMask, addclrtab=True, calcpyramids=True, ignorezero=True)
+        
+        ratDataset = gdal.Open(outCloudMask, gdal.GA_Update)
+        Red = rat.readColumn(ratDataset, 'Red')
+        Green = rat.readColumn(ratDataset, 'Green')
+        Blue = rat.readColumn(ratDataset, 'Blue')
+        
+        Red[...] = 0
+        Green[...] = 0
+        Blue[...] = 0
+        
+        Red[1] = 0
+        Green[1] = 0
+        Blue[1] = 255
+        
+        rat.writeColumn(ratDataset, "Red", Red)
+        rat.writeColumn(ratDataset, "Green", Green)
+        rat.writeColumn(ratDataset, "Blue", Blue)
+        ratDataset = None
+    
+        shutil.rmtree(imgTmpDIR, ignore_errors=True)
+
+        return outCloudMask
 
     def generateClearSkyMask(self, cloudsImg, inputValidImg, outputPath, outputName, outFormat, tmpPath,  initClearSkyRegionDist=3000, initClearSkyRegionMinSize=3000, finalClearSkyRegionDist=1000, morphSize=21):
         try:
@@ -840,15 +1062,12 @@ class ARCSIAbstractSensor (object):
     def calcDarkTargetOffsetsForBand(self, inputTOAImage, offsetImage, band, outFormat, histBinWidth, minObjSize, darkPxlPercentile, tmpDarkPxlsImg, tmpDarkPxlsClumpsImg, tmpDarkPxlsClumpsRMSmallImg, tmpDarkObjsImg):
         print("Band: ", band)
         bandHist = rsgislib.imagecalc.getHistogram(inputTOAImage, band, histBinWidth, False, 1, 10000)
-        #print(bandHist)
         sumPxls = numpy.sum(bandHist[0])
-        #print("Total Num Pixels: ", sumPxls)
         findTargets = True
 
         while findTargets:
             findTargets = False
             numPxlThreshold = sumPxls * darkPxlPercentile #0.001 # 1th percentile
-            #print("Number of pixels = ", numPxlThreshold)
 
             pxlThreshold = 0
             pxlCount = 0
@@ -1071,7 +1290,6 @@ class ARCSIAbstractSensor (object):
             for i in range(len(out)):
                 minVal = numpy.min(block[i])
                 maxVal = numpy.max(block[i])
-                #print("Band: ", i+1, " Min = ", minVal, " Max = ", maxVal)
                 if ((maxVal - minVal) > 5):
                     data = block[i].flatten()
                     data = data[data != 0]
@@ -1085,9 +1303,6 @@ class ARCSIAbstractSensor (object):
                         histo, histoBins = numpy.histogram(data, bins=numBins, range=(float(minVal), float(maxVal)))
                         numValues = numpy.sum(histo)
                         numValsPercentile = math.floor(numValues * darkPxlPercentile)
-                        #print("Num Values: ", numValues, " percentile: ", numValsPercentile)
-                        #print("Histo: ", histo)
-                        #print("Bins: ", histoBins)
                         binValCount = 0
                         threshold = 0.0
                         for n in range(histo.shape[0]):
@@ -1096,7 +1311,6 @@ class ARCSIAbstractSensor (object):
                             else:
                                 binValCount =  binValCount + histo[n]
                                 threshold = histoBins[n+1]
-                        #print("Threshold = ", threshold)
                         out[i, ((block[i] <= threshold) & (block[i] > 0))] = 1
                     else:
                         out[i,...] = 0
@@ -1282,8 +1496,6 @@ class ARCSIAbstractSensor (object):
 
             maxObjSizeArrIdx = numpy.where(Histogram == numpy.max(Histogram))
 
-            #print("maxObjSizeArrIdx = ", maxObjSizeArrIdx[0][0])
-
             reflTOA = MeanTOARefl[maxObjSizeArrIdx][0]
             reflDOS = reflTOA - bandOff
             if reflDOS < dosOutRefl:
@@ -1291,11 +1503,6 @@ class ARCSIAbstractSensor (object):
             reflDOS = reflDOS/1000
             radVal = MeanRad[maxObjSizeArrIdx][0]
             elevVal = MeanElev[maxObjSizeArrIdx][0]
-
-            #print("reflTOA = ", reflTOA)
-            #print("reflDOS = ", reflDOS)
-            #print("radVal = ", radVal)
-            #print("elevVal = ", elevVal)
 
             if not self.debugMode:
                 gdalDriver = gdal.GetDriverByName(outFormat)
@@ -1386,7 +1593,11 @@ class ARCSIAbstractSensor (object):
         writer.close(calcStats=True)
         print("Interpolating Image - Complete")
 
+
+    @abstractmethod
+    def cleanLocalFollowProcessing(self): pass
+
     def cleanFollowProcessing(self):
-        print("")
+        self.cleanLocalFollowProcessing()
 
 

@@ -36,10 +36,10 @@ Module that contains the ARCSILandsat5MSSSensor class.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
+# Import updated print function into python 2.7
 from __future__ import print_function
+# Import updated division operator into python 2.7
 from __future__ import division
-from __future__ import unicode_literals
 # import abstract base class stuff
 from .arcsisensor import ARCSIAbstractSensor
 # Import the ARCSI exception class
@@ -320,8 +320,14 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         raise ARCSIException("Landsat 5 MSS does not provide any image masks, do not use the MASK option.")
 
-    def mosaicImageTiles(self):
+    def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
+
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
+        raise ARCSIException("Image data does not need resampling")
+
+    def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat):
+        raise ARCSIException("Image sharpening is not available for this sensor.")
 
     def generateValidImageDataMask(self, outputPath, outputMaskName, viewAngleImg, outFormat):
         print("Create the valid data mask")
@@ -329,7 +335,14 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         tmpValidPxlMsk = os.path.join(outputPath, tmpBaseName+'vldpxlmsk.kea')
         outputImage = os.path.join(outputPath, outputMaskName)
         inImages = [self.band1File, self.band2File, self.band3File, self.band4File]
-        rsgislib.imageutils.genValidMask(inimages=inImages, outimage=tmpValidPxlMsk, format='KEA', nodata=0.0)
+        rsgislib.imageutils.genValidMask(inimages=inImages, outimage=tmpValidPxlMsk, gdalformat='KEA', nodata=0.0)
+        rsgislib.rastergis.populateStats(tmpValidPxlMsk, True, False, True)
+        # Check there is valid data
+        ratDS = gdal.Open(tmpValidPxlMsk, gdal.GA_ReadOnly)
+        Histogram = rat.readColumn(ratDS, "Histogram")
+        ratDS = None
+        if Histogram.shape[0] < 2:
+            raise ARCSIException("There is no valid data in this image.")
         if not os.path.exists(viewAngleImg):
             rsgislib.rastergis.spatialExtent(clumps=tmpValidPxlMsk, minXX='MinXX', minXY='MinXY', maxXX='MaxXX', maxXY='MaxXY', minYX='MinYX', minYY='MinYY', maxYX='MaxYX', maxYY='MaxYY', ratband=1)
             rsgislib.imagecalibration.calcNadirImgViewAngle(tmpValidPxlMsk, viewAngleImg, 'KEA', 705000.0, 'MinXX', 'MinXY', 'MaxXX', 'MaxXY', 'MinYX', 'MinYY', 'MaxYX', 'MaxYY')
@@ -382,6 +395,28 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
 
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("Cloud Masking Not Implemented for LS5 MSS.")
+
+    def createCloudMaskDataArray(self, inImgDataArr):
+        # Calc Whiteness
+        meanArr = numpy.mean(inImgDataArr, axis=1)
+        whitenessArr = numpy.absolute((inImgDataArr[...,0] - meanArr)/meanArr) + numpy.absolute((inImgDataArr[...,1] - meanArr)/meanArr) + numpy.absolute((inImgDataArr[...,2] - meanArr)/meanArr) + numpy.absolute((inImgDataArr[...,3] - meanArr)/meanArr)
+        # Calc NDVI
+        ndvi = (inImgDataArr[...,3] - inImgDataArr[...,1]) / (inImgDataArr[...,3] + inImgDataArr[...,1])
+        
+        # Create and populate the output array.
+        inShape = inImgDataArr.shape
+        outShape = [inShape[0], inShape[1]+3]    
+        outArr = numpy.zeros(outShape, dtype=float)
+        
+        for i in range(inShape[1]):
+            outArr[...,i] = inImgDataArr[...,i]
+        
+        idx = inShape[1]
+        outArr[...,idx] = meanArr
+        outArr[...,idx+1] = whitenessArr
+        outArr[...,idx+2] = ndvi
+        
+        return outArr
 
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((4, 6), dtype=numpy.float32)
@@ -467,7 +502,7 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.apply6SCoeffSingleParam(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, imgBandCoeffs)
         return outputImage
 
-    def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor, elevCoeffs):
+    def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor, elevCoeffs=None):
         print("Converting to Surface Reflectance")
         outputImage = os.path.join(outputPath, outputName)
 
@@ -706,4 +741,9 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
         dataset.GetRasterBand(3).SetDescription("NIR1")
         dataset.GetRasterBand(4).SetDescription("NIR2")
         dataset = None
+
+    def cleanLocalFollowProcessing(self):
+        print("")
+
+
 

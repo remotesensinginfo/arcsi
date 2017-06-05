@@ -39,10 +39,10 @@ Module that contains the ARSCI command to build lists of commands for arcsi.py.
 #
 ############################################################################
 
-# Import the future functionality (for Python 2)
+# Import updated print function into python 2.7
 from __future__ import print_function
+# Import updated division operator into python 2.7
 from __future__ import division
-from __future__ import unicode_literals
 # Import the python os.path module
 import os.path
 # Import the python sys module
@@ -79,7 +79,8 @@ class ARCSIBuildCommands (object):
                      atmosozone, atmoswater, aerowater,
                      aerodust, aerooceanic, aerosoot, aot, vis, tmpath,
                      minaot, maxaot, dem, localdos, dosout, simpledos,
-                     scalefac, outwkt, outproj4, projabbv, interp, checkouts, fullimgouts):
+                     scalefac, outwkt, outproj4, projabbv, interp, checkouts, fullimgouts,
+                     classmlclouds, cloudtrainclouds, cloudtrainother):
 
         inputPath = os.path.abspath(inputPath)
         outputFile = os.path.abspath(outputFile)
@@ -168,6 +169,12 @@ class ARCSIBuildCommands (object):
                 cmd = cmd + " --checkouts "
             if fullimgouts:
                 cmd = cmd + " --fullimgouts "
+            if classmlclouds:
+                cmd = cmd + " --classmlclouds "
+                if not cloudtrainclouds == None:
+                    cmd = cmd + " --cloudtrainclouds \"" + str(cloudtrainclouds) + "\""
+                if not cloudtrainother == None:
+                    cmd = cmd + " --cloudtrainother \"" + str(cloudtrainother) + "\""
                 
             print(cmd)
             outFile.write(cmd + "\n")
@@ -350,10 +357,22 @@ if __name__ == '__main__':
                         help='''Specifies interpolation algorithm when reprojecting the imagery
                                 (Note. the options are those in gdalwarp).''')
 
-    parser.add_argument("--checkouts", action='store_false', default=True,
+    parser.add_argument("--checkouts", action='store_true', default=False,
                     help='''Specifies that the output path should be checked for files with the same base name.
                     If a file with the same base name is found then processing will not proceed - i.e., files will
                     not be overwritten.''')
+
+    parser.add_argument("--classmlclouds", action='store_true', default=False,
+                        help='''Specifies that the generic machine learning based clouds classification process
+                        should be used. Note. --cloudtrainclouds and --cloudtrainother need to be specified if this 
+                        option is used. ''')
+
+    parser.add_argument("--cloudtrainclouds", type=str,
+                        help='''Specify a hdf5 file with the training for classifying clouds.''')
+
+    parser.add_argument("--cloudtrainother", type=str,
+                        help='''Specify a hdf5 file with the training for classifying non-clouds''')
+
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -374,5 +393,6 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, args.aerowater,
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath,
                      args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos,
-                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.checkouts, args.fullimgouts)
+                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.checkouts, args.fullimgouts,
+                     args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother)
 

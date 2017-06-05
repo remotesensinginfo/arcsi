@@ -36,11 +36,11 @@ from distutils.core import setup
 import os
 
 setup(name='ARCSI',
-    version='1.0.1',
+    version='1.4.1',
     description='Atmospheric and Radiometic Correction of Satellite Imagery',
     author='Pete Bunting and Dan Clewley',
     author_email='pfb@aber.ac.uk, daniel.clewley@gmail.com',
-    scripts=['bin/arcsi.py', 'bin/arcsisolarirradiance.py', 'bin/arcsispecresponsefuncs.py', 'bin/arcsiextractdata.py', 'bin/arcsibuildcmdslist.py', 'bin/arcsisortlandsat.py', 'bin/arcsiextractroistats.py', 'bin/arcsiplotextractedstats.py', 'bin/arcsisensitivity.py', 'bin/arcsibuildextractfilecmds.py', 'bin/arcsibuildfilenameslu.py', 'bin/arcsifindnotprocessed.py', 'bin/arcsiremoveduplicates.py', 'bin/arcsicheckfilespresent.py', 'bin/arcsiarchivesnotextracted.py'],
+    scripts=['bin/arcsi.py', 'bin/arcsisolarirradiance.py', 'bin/arcsispecresponsefuncs.py', 'bin/arcsiextractdata.py', 'bin/arcsibuildcmdslist.py', 'bin/arcsisortlandsat.py', 'bin/arcsiextractroistats.py', 'bin/arcsiplotextractedstats.py', 'bin/arcsisensitivity.py', 'bin/arcsibuildextractfilecmds.py', 'bin/arcsibuildfilenameslu.py', 'bin/arcsifindnotprocessed.py', 'bin/arcsiremoveduplicates.py', 'bin/arcsicheckfilespresent.py', 'bin/arcsiarchivesnotextracted.py', 'bin/arcsicreatepy6scall.py', 'bin/arcsisplitsen2granules.py'],
     packages=['arcsilib'],
     package_dir={'arcsilib': 'arcsilib'},
     data_files=[(os.path.join('share','arcsi'),
@@ -58,4 +58,5 @@ setup(name='ARCSI',
           'Programming Language :: Python :: 3.2',
           'Programming Language :: Python :: 3.3',
           'Programming Language :: Python :: 3.4',
-          'Programming Language :: Python :: 3.5'])
+          'Programming Language :: Python :: 3.5',
+          'Programming Language :: Python :: 3.6'])
