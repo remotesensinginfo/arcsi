@@ -75,6 +75,8 @@ from rios import rat
 import glob
 # Import subprocess module
 import subprocess
+# Import the shutil module
+import shutil
 
 class ARCSISen2SpectralBandObj(object):
     """
