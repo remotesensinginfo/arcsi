@@ -438,6 +438,9 @@ class ARCSIRun (object):
             cloudsImage=""
             clearskyImage=""
             outDEMName=""
+            demNoDataVal = -32768.0
+            if not (demFile == None):
+                demNoDataVal = rsgisUtils.getImageNoDataValue(demFile)
             topoShadowImage=""
             footprintShpFile=""
             metaDataFile=""
@@ -833,7 +836,7 @@ class ARCSIRun (object):
                     # Interpolate DEM image to output refl image resolution and convert projection to the same as the output image.
                     if (not (demFile == None)) and (outDEMName == ""):
                         outDEMNameTmp = os.path.join(outFilePath, (outBaseName + "_demtmp" + arcsiUtils.getFileExtension(outFormat)))
-                        rsgislib.imageutils.createCopyImage(radianceImage, outDEMNameTmp, 1, -32768.0, outFormat, rsgislib.TYPE_32FLOAT)
+                        rsgislib.imageutils.createCopyImage(radianceImage, outDEMNameTmp, 1, demNoDataVal, outFormat, rsgislib.TYPE_32FLOAT)
 
                         inDEMDS = gdal.Open(demFile, gdal.GA_ReadOnly)
                         outDEMDS = gdal.Open(outDEMNameTmp, gdal.GA_Update)
@@ -845,20 +848,20 @@ class ARCSIRun (object):
 
                         outDEMName = os.path.join(outFilePath, (outBaseName + "_dem" + arcsiUtils.getFileExtension(outFormat)))
                         print("Output DEM: ", outDEMName)
-                        rsgislib.imageutils.maskImage(outDEMNameTmp, validMaskImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
+                        rsgislib.imageutils.maskImage(outDEMNameTmp, validMaskImage, outDEMName, outFormat, rsgislib.TYPE_32FLOAT, demNoDataVal, 0)
 
                         outDEMNameMsk = os.path.join(outFilePath, (outBaseName + "_demmsk" + arcsiUtils.getFileExtension(outFormat)))
                         if prodsToCalc["CLEARSKY"]:
-                            rsgislib.imageutils.maskImage(outDEMName, clearskyImage, outDEMNameMsk, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, 0)
+                            rsgislib.imageutils.maskImage(outDEMName, clearskyImage, outDEMNameMsk, outFormat, rsgislib.TYPE_32FLOAT, demNoDataVal, 0)
                         elif prodsToCalc["CLOUDS"]:
-                            rsgislib.imageutils.maskImage(outDEMName, cloudsImage, outDEMNameMsk, outFormat, rsgislib.TYPE_32FLOAT, -32768.0, [1,2,3])
+                            rsgislib.imageutils.maskImage(outDEMName, cloudsImage, outDEMNameMsk, outFormat, rsgislib.TYPE_32FLOAT, demNoDataVal, [1,2,3])
                         else:
                             outDEMNameMsk = outDEMName
 
                         # Calculate DEM statistics and set no data value.
                         if prodsToCalc["CLEARSKY"] or prodsToCalc["CLOUDS"]:
-                            rsgislib.imageutils.popImageStats(outDEMNameMsk, True, -32768.0, True)
-                        rsgislib.imageutils.popImageStats(outDEMName, True, -32768.0, True)
+                            rsgislib.imageutils.popImageStats(outDEMNameMsk, True, demNoDataVal, True)
+                        rsgislib.imageutils.popImageStats(outDEMName, True, demNoDataVal, True)
 
                         # Remove tmp DEM file.
                         rsgisUtils.deleteFileWithBasename(outDEMNameTmp)
@@ -996,7 +999,7 @@ class ARCSIRun (object):
                             calcdOutVals['ARCSI_ELEVATION_VALUE'] = surfaceAltitude
                         else:
                             # Calc Min, Max Elevation for region intersecting with the image.
-                            statsElev = rsgislib.imagecalc.getImageStatsInEnv(outDEMName, 1, -32768.0, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
+                            statsElev = rsgislib.imagecalc.getImageStatsInEnv(outDEMName, 1, demNoDataVal, sensorClass.latTL, sensorClass.latBR, sensorClass.lonBR, sensorClass.lonTL)
 
                             print("Minimum Elevation = ", statsElev[0])
                             print("Maximum Elevation = ", statsElev[1])
