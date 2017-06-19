@@ -458,13 +458,12 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
 
     def applyImageDataMask(self, inputHeader, inputImage, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile):
         print("Apply Input Image Mask to Input Image File")
+        rsgisUtils = rsgislib.RSGISPyUtils()
         outputImage = os.path.join(outputPath, outputImgName)
         outputMaskImage = os.path.join(outputPath, outputMaskName)
-        #print(outputImage)
         dataDIR = os.path.split(inputHeader)[0]
-        #print(dataDIR)
         maskDIR = os.path.join(dataDIR, "gap_mask")
-        #print(maskDIR)
+
         if os.path.exists(maskDIR) and os.path.isdir(maskDIR):
             maskList = glob.glob(os.path.join(maskDIR, "*.TIF.gz"))
             if len(maskList) > 0:
@@ -476,23 +475,24 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             if not len(maskList) > 0:
                 raise Exception("Could not find mask files.")
 
-            #print(maskList)
             stackImageMasks = []
             bandImgIDs = ['GM_B1', 'GM_B2', 'GM_B3', 'GM_B4', 'GM_B5', 'GM_B7']
-            for bandID in bandImgIDs:
+            bandImgIDs2 = ['B1', 'B2', 'B3', 'B4', 'B5', 'B7']
+            for bandIDIdx in range(len(bandImgIDs)):
                 for imgMask in maskList:
-                    if imgMask.count(bandID) > 0:
-                        stackImageMasks.append(rsgislib.imagecalc.BandDefn(bandID, imgMask, 1))
-                        #stackImageMasks.append(imgMask)
+                    if (bandImgIDs[bandIDIdx] in imgMask) or (bandImgIDs2[bandIDIdx] in imgMask):
+                        stackImageMasks.append(rsgislib.imagecalc.BandDefn(bandImgIDs[bandIDIdx], imgMask, 1))
                         break
 
-            #print(stackImageMasks)
-            #rsgislib.imageutils.stackImageBands(stackImageMasks, bandImgIDs, outputMaskImage, None, 0, outFormat, rsgislib.TYPE_8UINT)
+            if not(len(stackImageMasks) == rsgisUtils.getImageBandCount(inputImage)):
+                raise ARCSIException('Could not find image masks for all the input image bands')
+    
             outputMaskImageInit = outputMaskImage
             if not outWKTFile is None:
                 outputMaskImageInit = os.path.join(outputPath, "InitMask_arcsi_" + outputMaskName)
 
             rsgislib.imagecalc.bandMath(outputMaskImageInit, "GM_B1*GM_B2*GM_B3*GM_B4*GM_B5*GM_B7", outFormat, rsgislib.TYPE_8UINT, stackImageMasks)
+
             if not outWKTFile is None:
                 refImgDS = gdal.Open(inputImage, gdal.GA_ReadOnly)
                 if refImgDS is None:
