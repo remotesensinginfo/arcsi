@@ -319,6 +319,50 @@ class ARCSIUtils (object):
         longVal = point.GetX()
         return latVal, longVal
 
+    def convertVisabilityToAOD(self, vis):
+        return (3.9449/vis)+0.08498
+
+    def findMinimumElev(self, elev):
+        elevVal = -500
+        outElev = 0
+        for i in range(50):
+            if (elev > elevVal) & (elev < (elevVal+100)):
+                outElev = elevVal
+                break
+            elevVal = elevVal + 100
+        return outElev
+
+    def findMaximumElev(self, elev):
+        elevVal = -500
+        outElev = 0
+        for i in range(90):
+            if (elev > elevVal) & (elev < (elevVal+100)):
+                outElev = elevVal + 100
+                break
+            elevVal = elevVal + 100
+        return outElev
+
+
+    def findMinimumAOT(self, aot):
+        aotVal = 0
+        outAOT = 0
+        for i in range(200):
+            if (aot > aotVal) & (aot < (aotVal+0.05)):
+                outAOT = aotVal
+                break
+            aotVal = aotVal + 0.05
+        return aotVal
+
+    def findMaximumAOT(self, aot):
+        aotVal = 0
+        outAOT = 0
+        for i in range(200):
+            if (aot > aotVal) & (aot < (aotVal+0.05)):
+                outAOT = aotVal+ 0.05
+                break
+            aotVal = aotVal + 0.05
+        return aotVal
+
 
 class ARCSILandsatMetaUtils(object):
     """

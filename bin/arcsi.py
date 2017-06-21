@@ -117,8 +117,13 @@ don't currently support the sensor you require.''')
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument to define the debug mode for arcsi.
     parser.add_argument("--debug", action='store_true', default=False,
-                        help='''If define the debug mode will be activated,
+                        help='''If defined the debug mode will be activated,
                         therefore intermediate files will not be deleted.''')
+    # Define the argument to define the multi image mode.
+    parser.add_argument("--multi", action='store_true', default=False,
+                        help='''If defined the multiple mode will be activated,
+                        therefore --inputheader needs to be a text file listing
+                        a series of input image header files.''')
     # Define the argument for specifying the input images header file.
     parser.add_argument("-i", "--inputheader", type=str,
                         help='''Specify the input image header file.''')
@@ -189,12 +194,13 @@ don't currently support the sensor you require.''')
                                 Optional, if not provided the input image resolution is used.''')
     # Define the argument which specifies the standard aersol profile to use.
     parser.add_argument("--aeropro", type=str, choices=['NoAerosols', 'Continental',
-    'Maritime', 'Urban', 'Desert', 'BiomassBurning', 'Stratospheric'],
+                        'Maritime', 'Urban', 'Desert', 'BiomassBurning', 'Stratospheric'],
                         help='''Specify the 6S defined aersol profile to use.
                         (NoAerosols, Continental, Maritime, Urban, Desert, BiomassBurning, Stratospheric)''')
     # Define the argument which specifies the standard atompheric profile to use.
     parser.add_argument("--atmospro", type=str, choices=['NoGaseousAbsorption', 'Tropical',
-    'MidlatitudeSummer', 'MidlatitudeWinter', 'SubarcticSummer', 'SubarcticWinter', 'USStandard1962'],
+                        'MidlatitudeSummer', 'MidlatitudeWinter', 'SubarcticSummer', 'SubarcticWinter', 
+                        'USStandard1962'],
                         help='''Specify the 6S defined atmospheric profile to use.
                         (NoGaseousAbsorption, Tropical, MidlatitudeSummer, MidlatitudeWinter,
                         SubarcticSummer, SubarcticWinter, USStandard1962)''')
@@ -327,6 +333,9 @@ don't currently support the sensor you require.''')
                                 same resolution as the lower resolution images (Default: lower resolution are 
                                 resampled to the higher resolution). Example, using this switch will mean Sentinel-2
                                 imagery outputted at 20m rather than 10m resolution.''')
+    parser.add_argument("--ncores", type=int, default=1,
+                        help='''Number of cores available for processing when using the --multi option.
+                                If a value of -1 is provided then all available cores will be used.''')
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -344,13 +353,11 @@ don't currently support the sensor you require.''')
         # Check that the input header parameter has been specified.
         if args.inputheader == None:
             print("Error: No input header image file has been provided.\n")
-            parser.print_help()
             sys.exit()
 
         # Check that the senor parameter has been specified.
         if args.sensor == None:
             print("Error: No sensor has been provided.\n")
-            parser.print_help()
             sys.exit()
 
         # Check that the output image format has been specified.
@@ -359,7 +366,6 @@ don't currently support the sensor you require.''')
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUT_FORMAT")
             if envVar == None:
                 print("Error: No output image format provided.\n")
-                parser.print_help()
                 sys.exit()
             else:
                 print("Taking output format from environment variable.")
@@ -371,7 +377,6 @@ don't currently support the sensor you require.''')
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_OUTPUT_PATH")
             if envVar == None:
                 print("Error: No output file path has been provided.\n")
-                parser.print_help()
                 sys.exit()
             else:
                 print("Taking output file path from environment variable.")
@@ -382,7 +387,6 @@ don't currently support the sensor you require.''')
             os.makedirs(args.outpath)
         elif not os.path.isdir(args.outpath):
             print("ERROR: Output Path exists but is not a directory...\n")
-            parser.print_help()
             sys.exit()
 
         if not args.outwkt is None:
@@ -402,7 +406,6 @@ don't currently support the sensor you require.''')
         if args.classmlclouds:
             if (args.cloudtrainclouds == None) or (args.cloudtrainother == None):
                 print("Error: If --classmlclouds if specified then --cloudtrainclouds and --cloudtrainother are also required.\n")
-                parser.print_help()
                 sys.exit()
 
         needAOD = False
@@ -437,7 +440,6 @@ don't currently support the sensor you require.''')
             envVarMinAOT = arcsiUtils.getEnvironmentVariable("ARCSI_MIN_AOT")
             if envVarMinAOT == None:
                 print("Error: The min and max AOT values for the search should be specified.\n")
-                parser.print_help()
                 sys.exit()
             else:
                 print("Taking min AOT from environment variable.")
@@ -446,7 +448,6 @@ don't currently support the sensor you require.''')
             envVarMaxAOT = arcsiUtils.getEnvironmentVariable("ARCSI_MAX_AOT")
             if envVarMaxAOT == None:
                 print("Error: The min and max AOT values for the search should be specified.\n")
-                parser.print_help()
                 sys.exit()
             else:
                 print("Taking max AOT from environment variable.")
@@ -465,14 +466,12 @@ don't currently support the sensor you require.''')
 
         if needAOD and (args.aot == None) and (args.vis == None) and (not needAODMinMax) and (not args.aotfile):
             print("Error: Either the AOT or the Visability need to specified. Or --aotfile needs to be provided.\n")
-            parser.print_help()
             sys.exit()
 
         if needTmp and args.tmpath == None:
             envVar = arcsiUtils.getEnvironmentVariable("ARCSI_TMP_PATH")
             if envVar == None:
                 print("Error: If the DDVAOT, DOS, DOSAOTSGL, CLOUDS or TOPOSHADOW product is set then a tempory path needs to be provided.\n")
-                parser.print_help()
                 sys.exit()
             else:
                 print("Taking temp path from environment variable.")
@@ -484,7 +483,6 @@ don't currently support the sensor you require.''')
                 os.makedirs(args.tmpath)
             if not os.path.isdir(args.tmpath):
                 print("Error: The temp path specified is not a directory, please correct and run again.\n")
-                parser.print_help()
                 sys.exit()
 
         if args.dem == None:
@@ -496,7 +494,6 @@ don't currently support the sensor you require.''')
         if needDEM:
             if (args.dem == None) or (not os.path.exists(args.dem)):
                 print("Error: A file path to a DEM has either not been specified or does exist, please check it and run again.\n")
-                parser.print_help()
                 sys.exit()
 
         if args.aeroimg == None:
@@ -544,11 +541,9 @@ don't currently support the sensor you require.''')
         atmosOZoneWaterSpecified = False
         if (not args.atmosozone == None) and (args.atmoswater == None):
             print("Error: If the atmospheric ozone is defined then the atmospheric water needs to be specfied --atmoswater.\n")
-            parser.print_help()
             sys.exit()
         elif (not args.atmoswater == None) and (args.atmosozone == None):
             print("Error: If the atmospheric water is defined then the atmospheric ozone needs to be specfied --atmosozone.\n")
-            parser.print_help()
             sys.exit()
         elif (not args.atmoswater == None) and (not args.atmosozone == None):
             atmosOZoneWaterSpecified = True
@@ -581,18 +576,34 @@ don't currently support the sensor you require.''')
                 args.simpledos = False
                 print("Not using simple DOS method due to environment variable.")
 
+        envVar = arcsiUtils.getEnvironmentVariable("ARCSI_SCALE_FACTOR")
+        if not envVar == None:
+            args.scalefac = int(envVar)
+
         runTimer = rsgislib.RSGISTime()
         runTimer.start(True)
-        arcsiObj.runARCSI(args.inputheader, args.imagefile, args.cloudmask, args.sensor, args.inwkt, args.format, args.outpath,
-                     args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro,
-                     args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude,
-                     args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater,
-                     args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified,
-                     args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot,
-                     args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug,
-                     args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, 
-                     args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, 
-                     args.cloudtrainother, args.resample2lowres)
+        if args.multi:
+            arcsiObj.runARCSIMulti(args.inputheader, args.cloudmask, args.sensor, args.inwkt, args.format, args.outpath,
+                                    args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, 
+                                    args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude,
+                                    args.prods, args.stats, args.aeropro, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, 
+                                    args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified,
+                                    args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot,
+                                    args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug,
+                                    args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, 
+                                    args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, 
+                                    args.cloudtrainother, args.resample2lowres, args.ncores)
+        else:
+            arcsiObj.runARCSI(args.inputheader, args.imagefile, args.cloudmask, args.sensor, args.inwkt, args.format, args.outpath,
+                         args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro,
+                         args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude,
+                         args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater,
+                         args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified,
+                         args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot,
+                         args.dem, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug,
+                         args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, 
+                         args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, 
+                         args.cloudtrainother, args.resample2lowres)
 
         runTimer.end(True, "ARCSI took ", " to process the input image. Thank you for using ARCSI.")
         print("\n\n")
