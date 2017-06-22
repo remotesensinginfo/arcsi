@@ -1052,6 +1052,196 @@ class ARCSIRun (object):
                 print("")
             paramsObj.prodsCalculated["DOS"] = True
 
+    def estimateSceneAOD(self, paramsObj):
+        # Use image to estimate AOD values
+        if paramsObj.prodsToCalc["DOSAOTSGL"]:
+            paramsObj.calcdOutVals['ARCSI_AOT_RANGE_MIN'] = paramsObj.minAOT
+            paramsObj.calcdOutVals['ARCSI_AOT_RANGE_MAX'] = paramsObj.maxAOT
+            paramsObj.aotVal = paramsObj.sensorClass.estimateSingleAOTFromDOS(paramsObj.radianceImage, paramsObj.toaImage, paramsObj.outDEMName, paramsObj.tmpPath, paramsObj.outBaseName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.minAOT, paramsObj.maxAOT, paramsObj.dosOutRefl)
+            paramsObj.minAOT = paramsObj.aotVal - paramsObj.lowAOT
+            if paramsObj.minAOT < 0.01:
+                paramsObj.minAOT = 0.05
+            paramsObj.maxAOT = paramsObj.aotVal + paramsObj.upAOT
+            print("AOT Search Range = [" + str(paramsObj.minAOT) + ", " + str(paramsObj.maxAOT) + "]")
+            paramsObj.calcdOutVals['ARCSI_AOT_VALUE'] = paramsObj.aotVal
+            paramsObj.prodsCalculated["DOSAOTSGL"] = True
+
+        if paramsObj.prodsToCalc["DDVAOT"]:
+            outName = paramsObj.outBaseName + "_ddvaod" + paramsObj.outFormatExt
+            paramsObj.aotFile = paramsObj.sensorClass.estimateImageToAODUsingDDV(paramsObj.radianceImage, paramsObj.toaImage, paramsObj.outDEMName, paramsObj.topoShadowImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.minAOT, paramsObj.maxAOT)
+            dataset = gdal.Open(aotFile, gdal.GA_Update)
+            dataset.GetRasterBand(1).SetDescription("AOT")
+            dataset = None
+            if paramsObj.calcStatsPy:
+                print("Calculating Statistics...")
+                rsgislib.imageutils.popImageStats(paramsObj.aotFile, True, 0.0, True)
+            paramsObj.finalOutFiles["AOTIMG_DDV"] = paramsObj.aotFile
+            paramsObj.calcdOutVals['ARCSI_AOT_RANGE_MIN'] = paramsObj.minAOT
+            paramsObj.calcdOutVals['ARCSI_AOT_RANGE_MAX'] = paramsObj.maxAOT
+            paramsObj.prodsCalculated["DDVAOT"] = True
+            print("")
+
+        if paramsObj.prodsToCalc["DOSAOT"]:
+            outName = paramsObj.outBaseName + "_dosaod" + paramsObj.outFormatExt
+            paramsObj.aotFile = paramsObj.sensorClass.estimateImageToAODUsingDOS(paramsObj.radianceImage, paramsObj.toaImage, paramsObj.outDEMName, paramsObj.topoShadowImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.minAOT, paramsObj.maxAOT, paramsObj.globalDOS, paramsObj.simpleDOS, paramsObj.dosOutRefl)
+            dataset = gdal.Open(aotFile, gdal.GA_Update)
+            dataset.GetRasterBand(1).SetDescription("AOT")
+            dataset = None
+            if paramsObj.calcStatsPy:
+                print("Calculating Statistics...")
+                rsgislib.imageutils.popImageStats(paramsObj.aotFile, True, 0.0, True)
+            paramsObj.finalOutFiles["AOTIMG_DOS"] = paramsObj.aotFile
+            paramsObj.calcdOutVals['ARCSI_AOT_RANGE_MIN'] = paramsObj.minAOT
+            paramsObj.calcdOutVals['ARCSI_AOT_RANGE_MAX'] = paramsObj.maxAOT
+            paramsObj.prodsCalculated["DOSAOT"] = True
+            print("")
+
+    def calculateSREF(self, paramsObj):
+        # Convert to Surface Reflectance using 6S Standard Models
+        if paramsObj.prodsToCalc["SREF"]:
+            arcsiUtils = ARCSIUtils()
+            if (paramsObj.prodsToCalc["DDVAOT"] or paramsObj.prodsToCalc["DOSAOT"]) and (not paramsObj.aotFile == ""):
+                imgDS = gdal.Open(paramsObj.aotFile, gdal.GA_ReadOnly )
+                imgBand = imgDS.GetRasterBand(1)
+                (min,max,mean,stddev) = imgBand.ComputeStatistics(False)
+                print("AOT Mean (Std Dev) = " + str(mean) + " (" + str(stddev) + ")")
+                print("AOT [Min, Max] = [" + str(min) + "," + str(max) + "]")
+                aotVal = mean
+                if aotVal < 0.01:
+                    print("WARNING: Something has gone wrong as AOT value is 0 or below. Setting to 0.05")
+                    aotVal = 0.05
+                imgDS = None
+
+            if (paramsObj.aotVal == None) and (paramsObj.visVal == None) and (paramsObj.aotFile == ""):
+                raise ARCSIException("Either the AOT or the visability need to specified.")
+            elif (paramsObj.aotVal == None) and (paramsObj.aotFile == ""):
+                print("Convert to vis to aot...")
+                paramsObj.aotVal = arcsiUtils.convertVisabilityToAOD(paramsObj.visVal)
+
+            if not (paramsObj.aotVal == None):
+                print("AOT Value: {}".format(paramsObj.aotVal))
+                paramsObj.calcdOutVals['ARCSI_AOT_VALUE'] = paramsObj.aotVal
+
+            if (paramsObj.demFile == None):
+                processSREFStr = '_rad_sref'
+                outName = paramsObj.outBaseName + paramsObj.processStageStr + paramsObj.processSREFStr + paramsObj.outFormatExt
+                paramsObj.srefImage = paramsObj.sensorClass.convertImageToSurfaceReflSglParam(paramsObj.radianceImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.surfaceAltitude, paramsObj.aotVal, paramsObj.useBRDF, paramsObj.scaleFactor)
+                if paramsObj.fullImgOuts:
+                    outName = outBaseName + processStageWholeImgStr + processSREFStr + paramsObj.outFormatExt
+                    paramsObj.sref6SWholeImage = paramsObj.sensorClass.convertImageToSurfaceReflSglParam(paramsObj.radianceImageWhole, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.surfaceAltitude, paramsObj.aotVal, paramsObj.useBRDF, paramsObj.scaleFactor)
+                paramsObj.calcdOutVals['ARCSI_ELEVATION_VALUE'] = paramsObj.surfaceAltitude
+            else:
+                # Calc Min, Max Elevation for region intersecting with the image.
+                statsElev = rsgislib.imagecalc.getImageStatsInEnv(paramsObj.outDEMName, 1, paramsObj.demNoDataVal, paramsObj.sensorClass.latTL, paramsObj.sensorClass.latBR, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.lonTL)
+
+                print("Minimum Elevation = ", statsElev[0])
+                print("Maximum Elevation = ", statsElev[1])
+
+                paramsObj.minElev = arcsiUtils.findMinimumElev(statsElev[0])
+                paramsObj.maxElev = arcsiUtils.findMaximumElev(statsElev[1])
+
+                paramsObj.calcdOutVals['ARCSI_LUT_ELEVATION_MIN'] = paramsObj.minElev
+                paramsObj.calcdOutVals['ARCSI_LUT_ELEVATION_MAX'] = paramsObj.maxElev
+
+                elevRange = (maxElev - minElev) / 100
+                numElevSteps = math.ceil(elevRange) + 1
+                print("Elevation Ranges from ", minElev, " to ", maxElev, " an LUT with ", numElevSteps, " will be created.")
+
+                if (paramsObj.aotFile == None) or (paramsObj.aotFile == ""):
+                    print("Build an DEM LUT with AOT == " + str(paramsObj.aotVal) + "...")
+                    processSREFStr = '_rad_srefdem'
+                    outName = paramsObj.outBaseName + paramsObj.processStageStr + processSREFStr + paramsObj.outFormatExt
+                    paramsObj.srefImage, paramsObj.sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflDEMElevLUT(paramsObj.radianceImage, paramsObj.outDEMName, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.aotVal, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.scaleFactor)
+                    if paramsObj.fullImgOuts:
+                        outName = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + processSREFStr + paramsObj.outFormatExt
+                        paramsObj.sref6SWholeImage, sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflDEMElevLUT(paramsObj.radianceImageWhole, paramsObj.outDEMName, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.aotVal, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.scaleFactor, paramsObj.sixsLUTCoeffs)
+                    paramsObj.calcdOutVals['ARCSI_6S_COEFFICENTS'] = paramsObj.sixsLUTCoeffs
+                    paramsObj.aotLUT = False
+                else:
+                    print("Build an AOT and DEM LUT...")
+                    statsAOT = rsgislib.imagecalc.getImageStatsInEnv(paramsObj.aotFile, 1, -9999, paramsObj.sensorClass.latTL, paramsObj.sensorClass.latBR, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.lonTL)
+
+                    paramsObj.minAOT = arcsiUtils.findMinimumAOT(statsAOT[0])
+                    if minAOT < 0.01:
+                        minAOT = 0.05
+                    paramsObj.maxAOT = arcsiUtils.findMaximumAOT(statsAOT[1])
+
+                    paramsObj.calcdOutVals['ARCSI_LUT_AOT_MIN'] = paramsObj.minAOT
+                    paramsObj.calcdOutVals['ARCSI_LUT_AOT_MAX'] = paramsObj.maxAOT
+
+                    aotRange = (paramsObj.maxAOT - paramsObj.minAOT) / 0.05
+                    numAOTSteps = math.ceil(aotRange) + 1
+                    print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
+                    processSREFStr = '_rad_srefdemaot'
+                    outName = paramsObj.outBaseName + paramsObj.processStageStr + processSREFStr + paramsObj.outFormatExt
+                    paramsObj.srefImage, paramsObj.sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(paramsObj.radianceImage, paramsObj.outDEMName, paramsObj.aotFile, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.minAOT, paramsObj.maxAOT, paramsObj.scaleFactor)
+                    if paramsObj.fullImgOuts:
+                        outName = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + processSREFStr + paramsObj.outFormatExt
+                        paramsObj.sref6SWholeImage, sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(paramsObj.radianceImageWhole, paramsObj.outDEMName, paramsObj.aotFile, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.minAOT, paramsObj.maxAOT, paramsObj.scaleFactor, paramsObj.sixsLUTCoeffs)
+                    paramsObj.calcdOutVals['ARCSI_6S_COEFFICENTS'] = paramsObj.sixsLUTCoeffs
+                    paramsObj.aotLUT = True
+
+            print("Setting Band Names...")
+            paramsObj.sensorClass.setBandNames(paramsObj.srefImage)
+            if paramsObj.fullImgOuts:
+                paramsObj.sensorClass.setBandNames(paramsObj.sref6SWholeImage)
+                paramsObj.finalOutFiles["SREF_DOS_IMG_WHOLE"] = paramsObj.sref6SWholeImage
+
+            if paramsObj.calcStatsPy:
+                print("Calculating Statistics...")
+                rsgislib.imageutils.popImageStats(paramsObj.srefImage, True, 0.0, True)
+                if paramsObj.fullImgOuts:
+                    rsgislib.imageutils.popImageStats(paramsObj.sref6SWholeImage, True, 0.0, True)
+            paramsObj.finalOutFiles["SREF_6S_IMG"] = paramsObj.srefImage
+            if paramsObj.fullImgOuts:
+                paramsObj.finalOutFiles["SREF_6S_WHOLE_IMG"] = paramsObj.sref6SWholeImage
+            paramsObj.prodsCalculated["SREF"] = True
+            print("")
+
+    def calculateStandarisedSREF(self, paramsObj):
+        if paramsObj.prodsToCalc["STDSREF"]:
+            if paramsObj.sixsLUTCoeffs is None:
+                raise ARCSIException("To calculate standardised reflectance \'STDSREF\' you need to have a LUT within 6S.\nTherefore, a DEM is required and optional an AOT surface should be calculated.")
+            if not paramsObj.fullImgOuts:
+                paramsObj.sref6SWholeImage = None
+            processSREFStr = processSREFStr + '_stdsref'
+            outName = paramsObj.outBaseName + paramsObj.processStageStr + processSREFStr + paramsObj.outFormatExt
+            outNameWhole = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + processSREFStr + paramsObj.outFormatExt
+            paramsObj.stdSREFImg, paramsObj.stdSREFWholeImg = paramsObj.sensorClass.convertSREF2StdisedSREF(paramsObj.srefImage, paramsObj.sref6SWholeImage, paramsObj.outDEMName, paramsObj.topoShadowImage, paramsObj.outFilePath, outName, outNameWhole, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.sixsLUTCoeffs, paramsObj.aotLUT, paramsObj.scaleFactor, brdfBeta=1, outIncidenceAngle=0, outExitanceAngle=0)
+
+            print("Setting Band Names...")
+            paramsObj.sensorClass.setBandNames(paramsObj.stdSREFImg)
+            if paramsObj.fullImgOuts:
+                paramsObj.sensorClass.setBandNames(paramsObj.stdSREFWholeImg)
+
+            if paramsObj.calcStatsPy:
+                print("Calculating Statistics...")
+                rsgislib.imageutils.popImageStats(paramsObj.stdSREFImg, True, 0.0, True)
+                if paramsObj.fullImgOuts:
+                    rsgislib.imageutils.popImageStats(paramsObj.stdSREFWholeImg, True, 0.0, True)
+            paramsObj.finalOutFiles["STD_SREF_IMG"] = paramsObj.stdSREFImg
+            if paramsObj.fullImgOuts:
+                paramsObj.finalOutFiles["STD_SREF_WHOLE_IMG"] = paramsObj.stdSREFWholeImg
+            paramsObj.prodsCalculated["STDSREF"] = True
+            print("")
+
+    def exportMetaData(self, paramsObj):
+        if paramsObj.prodsToCalc["METADATA"]:
+            print("Exporting Meta-data file")
+            outName = paramsObj.outBaseName + "_meta.json"
+            paramsObj.finalOutFiles["METADATA"] = outName
+
+            validMaskImagePath = ""
+            if not paramsObj.validMaskImage is None:
+                if paramsObj.reproject:
+                    validMaskImagePath = paramsObj.validMaskImageProj
+                else:
+                    validMaskImagePath = paramsObj.validMaskImage
+
+            paramsObj.sensorClass.generateMetaDataFile(paramsObj.outFilePath, outName, paramsObj.productsStr, validMaskImagePath, paramsObj.prodsToCalc["FOOTPRINT"], paramsObj.calcdOutVals, paramsObj.finalOutFiles)
+            paramsObj.prodsCalculated["METADATA"] = True
+            print("")
+
     def runARCSI(self, inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg):
         """
         A function contains the main flow of the software
@@ -1108,6 +1298,38 @@ class ARCSIRun (object):
 
                     # Perfrom Dark Object Subtraction (DOS)
                     self.performDOS(paramsObj)
+
+                    # Estimate AOD for the scene
+                    self.estimateSceneAOD(paramsObj)
+
+                    # Calculate SREF
+                    self.calculateSREF(paramsObj)
+
+                    # Calculate Standarised SREF
+                    self.calculateStandarisedSREF(paramsObj)
+
+                else:
+                    keys2Del = []
+                    for key in paramsObj.prodsToCalc.keys():
+                        if paramsObj.prodsToCalc[key] is not paramsObj.prodsCalculated[key]:
+                            if key in ['DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'STDSREF', 'TOPOSHADOW']:
+                                keys2Del.append(key)
+                    for key in keys2Del:
+                        del paramsObj.prodsToCalc[key]
+            else:
+                keys2Del = []
+                for key in paramsObj.prodsToCalc.keys():
+                    if paramsObj.prodsToCalc[key] is not paramsObj.prodsCalculated[key]:
+                        if key in ['CLEARSKY', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'DOS', 'STDSREF', 'TOPOSHADOW']:
+                            keys2Del.append(key)
+                for key in keys2Del:
+                    del paramsObj.prodsToCalc[key]
+
+            # Export metadata output file.
+            self.exportMetaData(paramsObj)
+
+            print('Clean up anything left over...')
+            paramsObj.sensorClass.cleanFollowProcessing()
             
             print("...Finished...")
         except ARCSIException as e:
@@ -1133,7 +1355,6 @@ class ARCSIRun (object):
                 print('Input Header: \'' + paramsObj.inputHeader + '\'', file=sys.stderr)
                 if paramsObj.outBaseName is not None:
                     print('Output Basename: \'' + paramsObj.outBaseName + '\'', file=sys.stderr)
-                print('\n\n', file=sys.stderr) # Put gap into output log to easier to see where one ends and the next starts.
 
     def runARCSIMulti(self, inputHeaders, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg, ncores):
         print("--multi option not yet implemented.")
