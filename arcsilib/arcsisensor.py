@@ -305,6 +305,9 @@ class ARCSIAbstractSensor (object):
         return self.defaultGenBaseOutFileName()
 
     def getJSONDictDefaultMetaData(self, productsStr, validMaskImage="", footprintCalc=False, calcdValuesDict=dict(), outFilesDict=dict()):
+        """
+        
+        """
         softwareDict = dict()
         softwareDict['Name'] = 'ARCSI'
         softwareDict['URL'] = ARCSI_WEBSITE
@@ -329,6 +332,7 @@ class ARCSIAbstractSensor (object):
         filesDict = dict()
         filesDict['FileBaseName'] = self.generateOutputBaseName()
         filesDict['ProviderMetadata'] = self.headerFileName
+
         for key in outFilesDict:
             filesDict[key] = os.path.basename(outFilesDict[key])
 
@@ -673,6 +677,7 @@ class ARCSIAbstractSensor (object):
 
         outDatasource.Destroy()
         ratDataset = None
+        return outShpLayerNamePath+".shp"
 
     def generateTopoDirectShadowMask(self,  inputDEMImage, outputPath, outputName, outFormat, tmpPath):
         try:

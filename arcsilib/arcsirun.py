@@ -614,6 +614,7 @@ class ARCSIRun (object):
 
     def createValidMaskViewAngle(self, paramsObj):
         # Get the valid image data maskImage
+        rsgisUtils = rsgislib.RSGISPyUtils()
         outName = paramsObj.outBaseName + "_valid" + paramsObj.outFormatExt
         paramsObj.viewAngleImg = os.path.join(paramsObj.outFilePath, paramsObj.outBaseName + "_viewangle" + paramsObj.outFormatExt)
         paramsObj.validMaskImage = paramsObj.sensorClass.generateValidImageDataMask(paramsObj.outFilePath, outName, paramsObj.viewAngleImg, paramsObj.outFormat)
@@ -660,7 +661,7 @@ class ARCSIRun (object):
                 raise ARCSIException('Reprojected valid image mask is not present: ' + paramsObj.validMaskImageProj)
             else:
                 rsgislib.rastergis.populateStats(paramsObj.validMaskImageProj, True, True)
-            finalOutFiles["VALID_MASK"] = paramsObj.validMaskImageProj
+            paramsObj.finalOutFiles["VALID_MASK"] = paramsObj.validMaskImageProj
             print("")
 
         if paramsObj.reproject and ((not paramsObj.viewAngleImg is "") and (not paramsObj.viewAngleImg is None)):
@@ -717,6 +718,7 @@ class ARCSIRun (object):
     def createSaturatedImage(self, paramsObj):
         if paramsObj.prodsToCalc["SATURATE"]:
             # Execute generation of the saturation image
+            rsgisUtils = rsgislib.RSGISPyUtils()
             outName = paramsObj.outBaseName + "_sat" + paramsObj.outFormatExt
             paramsObj.saturateImage = paramsObj.sensorClass.generateImageSaturationMask(paramsObj.outFilePath, outName, paramsObj.outFormat)
 
@@ -793,14 +795,14 @@ class ARCSIRun (object):
                     cmd = 'gdalwarp -t_srs ' + paramsObj.reProjStr + ' -tr ' + str(paramsObj.xPxlRes) + ' ' + str(paramsObj.yPxlRes) + ' -ot Float32 -wt Float32 ' \
                     + '-te ' + str(paramsObj.projImgBBOX['MinX']) + ' ' + str(paramsObj.projImgBBOX['MinY']) + ' ' + str(paramsObj.projImgBBOX['MaxX']) + ' ' + str(paramsObj.projImgBBOX['MaxY']) \
                     + ' -r ' + paramsObj.interpAlgor + ' -tap -srcnodata 0 -dstnodata 0 -of ' + paramsObj.outFormat + ' -overwrite ' \
-                    + paramsObj.radianceImage + ' ' + paramsObj.outRadImagePath
+                    + paramsObj.radianceImage + ' ' + outRadImagePath
                     print(cmd)
                     try:
                         subprocess.call(cmd, shell=True)
                     except OSError as e:
                         raise ARCSIException('Could not re-projection radiance image: ' + cmd)
-                    if not os.path.exists(paramsObj.outRadImagePath):
-                        raise ARCSIException('Reprojected radiance image is not present: ' + paramsObj.outRadImagePath)
+                    if not os.path.exists(outRadImagePath):
+                        raise ARCSIException('Reprojected radiance image is not present: ' + outRadImagePath)
                     else:
                         rsgisUtils.deleteFileWithBasename(paramsObj.radianceImage)
                         paramsObj.radianceImage = outRadImagePath
@@ -810,13 +812,13 @@ class ARCSIRun (object):
                     cmd = 'gdalwarp -t_srs ' + paramsObj.reProjStr + ' -tr ' + str(paramsObj.xPxlRes) + ' ' + str(paramsObj.yPxlRes) + ' -ot Float32 -wt Float32 ' \
                     + '-te ' + str(paramsObj.projImgBBOX['MinX']) + ' ' + str(paramsObj.projImgBBOX['MinY']) + ' ' + str(paramsObj.projImgBBOX['MaxX']) + ' ' + str(paramsObj.projImgBBOX['MaxY']) \
                     + ' -r ' + paramsObj.interpAlgor + ' -tap -srcnodata 0 -dstnodata 0 -of ' + paramsObj.outFormat + ' -overwrite ' \
-                    + paramsObj.thermalRadImage + ' ' + paramsObj.outThermRadImagePath
+                    + paramsObj.thermalRadImage + ' ' + outThermRadImagePath
                     try:
                         subprocess.call(cmd, shell=True)
                     except OSError as e:
                         raise ARCSIException('Could not re-projection thermal radiance image: ' + cmd)
-                    if not os.path.exists(paramsObj.outThermRadImagePath):
-                        raise ARCSIException('Reprojected thermal radiance image is not present: ' + paramsObj.outThermRadImagePath)
+                    if not os.path.exists(outThermRadImagePath):
+                        raise ARCSIException('Reprojected thermal radiance image is not present: ' + outThermRadImagePath)
                     else:
                         rsgisUtils.deleteFileWithBasename(paramsObj.thermalRadImage)
                         paramsObj.thermalRadImage = outThermRadImagePath
@@ -1123,11 +1125,11 @@ class ARCSIRun (object):
                 paramsObj.calcdOutVals['ARCSI_AOT_VALUE'] = paramsObj.aotVal
 
             if (paramsObj.demFile == None):
-                processSREFStr = '_rad_sref'
+                paramsObj.processSREFStr = '_rad_sref'
                 outName = paramsObj.outBaseName + paramsObj.processStageStr + paramsObj.processSREFStr + paramsObj.outFormatExt
                 paramsObj.srefImage = paramsObj.sensorClass.convertImageToSurfaceReflSglParam(paramsObj.radianceImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.surfaceAltitude, paramsObj.aotVal, paramsObj.useBRDF, paramsObj.scaleFactor)
                 if paramsObj.fullImgOuts:
-                    outName = outBaseName + processStageWholeImgStr + processSREFStr + paramsObj.outFormatExt
+                    outName = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + paramsObj.processSREFStr + paramsObj.outFormatExt
                     paramsObj.sref6SWholeImage = paramsObj.sensorClass.convertImageToSurfaceReflSglParam(paramsObj.radianceImageWhole, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.surfaceAltitude, paramsObj.aotVal, paramsObj.useBRDF, paramsObj.scaleFactor)
                 paramsObj.calcdOutVals['ARCSI_ELEVATION_VALUE'] = paramsObj.surfaceAltitude
             else:
@@ -1143,17 +1145,17 @@ class ARCSIRun (object):
                 paramsObj.calcdOutVals['ARCSI_LUT_ELEVATION_MIN'] = paramsObj.minElev
                 paramsObj.calcdOutVals['ARCSI_LUT_ELEVATION_MAX'] = paramsObj.maxElev
 
-                elevRange = (maxElev - minElev) / 100
+                elevRange = (paramsObj.maxElev - paramsObj.minElev) / 100
                 numElevSteps = math.ceil(elevRange) + 1
-                print("Elevation Ranges from ", minElev, " to ", maxElev, " an LUT with ", numElevSteps, " will be created.")
+                print("Elevation Ranges from ", paramsObj.minElev, " to ", paramsObj.maxElev, " an LUT with ", numElevSteps, " will be created.")
 
                 if (paramsObj.aotFile == None) or (paramsObj.aotFile == ""):
                     print("Build an DEM LUT with AOT == " + str(paramsObj.aotVal) + "...")
-                    processSREFStr = '_rad_srefdem'
-                    outName = paramsObj.outBaseName + paramsObj.processStageStr + processSREFStr + paramsObj.outFormatExt
+                    paramsObj.processSREFStr = '_rad_srefdem'
+                    outName = paramsObj.outBaseName + paramsObj.processStageStr + paramsObj.processSREFStr + paramsObj.outFormatExt
                     paramsObj.srefImage, paramsObj.sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflDEMElevLUT(paramsObj.radianceImage, paramsObj.outDEMName, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.aotVal, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.scaleFactor)
                     if paramsObj.fullImgOuts:
-                        outName = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + processSREFStr + paramsObj.outFormatExt
+                        outName = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + paramsObj.processSREFStr + paramsObj.outFormatExt
                         paramsObj.sref6SWholeImage, sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflDEMElevLUT(paramsObj.radianceImageWhole, paramsObj.outDEMName, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.aotVal, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.scaleFactor, paramsObj.sixsLUTCoeffs)
                     paramsObj.calcdOutVals['ARCSI_6S_COEFFICENTS'] = paramsObj.sixsLUTCoeffs
                     paramsObj.aotLUT = False
@@ -1172,11 +1174,11 @@ class ARCSIRun (object):
                     aotRange = (paramsObj.maxAOT - paramsObj.minAOT) / 0.05
                     numAOTSteps = math.ceil(aotRange) + 1
                     print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
-                    processSREFStr = '_rad_srefdemaot'
-                    outName = paramsObj.outBaseName + paramsObj.processStageStr + processSREFStr + paramsObj.outFormatExt
+                    paramsObj.processSREFStr = '_rad_srefdemaot'
+                    outName = paramsObj.outBaseName + paramsObj.processStageStr + paramsObj.processSREFStr + paramsObj.outFormatExt
                     paramsObj.srefImage, paramsObj.sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(paramsObj.radianceImage, paramsObj.outDEMName, paramsObj.aotFile, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.minAOT, paramsObj.maxAOT, paramsObj.scaleFactor)
                     if paramsObj.fullImgOuts:
-                        outName = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + processSREFStr + paramsObj.outFormatExt
+                        outName = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + paramsObj.processSREFStr + paramsObj.outFormatExt
                         paramsObj.sref6SWholeImage, sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(paramsObj.radianceImageWhole, paramsObj.outDEMName, paramsObj.aotFile, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.minAOT, paramsObj.maxAOT, paramsObj.scaleFactor, paramsObj.sixsLUTCoeffs)
                     paramsObj.calcdOutVals['ARCSI_6S_COEFFICENTS'] = paramsObj.sixsLUTCoeffs
                     paramsObj.aotLUT = True
@@ -1204,9 +1206,9 @@ class ARCSIRun (object):
                 raise ARCSIException("To calculate standardised reflectance \'STDSREF\' you need to have a LUT within 6S.\nTherefore, a DEM is required and optional an AOT surface should be calculated.")
             if not paramsObj.fullImgOuts:
                 paramsObj.sref6SWholeImage = None
-            processSREFStr = processSREFStr + '_stdsref'
-            outName = paramsObj.outBaseName + paramsObj.processStageStr + processSREFStr + paramsObj.outFormatExt
-            outNameWhole = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + processSREFStr + paramsObj.outFormatExt
+            paramsObj.processSREFStr = paramsObj.processSREFStr + '_stdsref'
+            outName = paramsObj.outBaseName + paramsObj.processStageStr + paramsObj.processSREFStr + paramsObj.outFormatExt
+            outNameWhole = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + paramsObj.processSREFStr + paramsObj.outFormatExt
             paramsObj.stdSREFImg, paramsObj.stdSREFWholeImg = paramsObj.sensorClass.convertSREF2StdisedSREF(paramsObj.srefImage, paramsObj.sref6SWholeImage, paramsObj.outDEMName, paramsObj.topoShadowImage, paramsObj.outFilePath, outName, outNameWhole, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.sixsLUTCoeffs, paramsObj.aotLUT, paramsObj.scaleFactor, brdfBeta=1, outIncidenceAngle=0, outExitanceAngle=0)
 
             print("Setting Band Names...")
@@ -1248,6 +1250,7 @@ class ARCSIRun (object):
         """
         try:
             # Initialise and parameters object.
+            paramsObj = None
             paramsObj = self. prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg)
 
             # Check Input image(s) is valid before proceeding.
@@ -1331,30 +1334,29 @@ class ARCSIRun (object):
             print('Clean up anything left over...')
             paramsObj.sensorClass.cleanFollowProcessing()
             
-            print("...Finished...")
         except ARCSIException as e:
-            print('Input Header: \'' + paramsObj.inputHeader + '\'', file=sys.stderr)
-            if paramsObj.outBaseName is not None:
+            print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
+            if (paramsObj is not None) and (paramsObj.outBaseName is not None):
                 print('Output Basename: \'' + paramsObj.outBaseName + '\'', file=sys.stderr)
             print("Error: {}".format(e), file=sys.stderr)
         except Exception as e:
-            print('Input Header: \'' + paramsObj.inputHeader + '\'', file=sys.stderr)
-            if paramsObj.outBaseName is not None:
+            print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
+            if (paramsObj is not None) and (paramsObj.outBaseName is not None):
                 print('Output Basename: \'' + paramsObj.outBaseName + '\'', file=sys.stderr)
             print("Error: {}".format(e), file=sys.stderr)
         finally:
-            print("\n\n**** IN FINALLY ****\n\n")
-            failedProdsList = []
-            # Check all requested products have been created
-            for key in paramsObj.prodsToCalc.keys():
-                if paramsObj.prodsToCalc[key] is not paramsObj.prodsCalculated[key]:
-                    failedProdsList.append(key)
-            if len(failedProdsList) > 0:
-                print("Error: The following products were not generated:", file=sys.stderr)
-                print(" ".join(failedProdsList), file=sys.stderr)
-                print('Input Header: \'' + paramsObj.inputHeader + '\'', file=sys.stderr)
-                if paramsObj.outBaseName is not None:
-                    print('Output Basename: \'' + paramsObj.outBaseName + '\'', file=sys.stderr)
+            if paramsObj is not None:
+                failedProdsList = []
+                # Check all requested products have been created
+                for key in paramsObj.prodsToCalc.keys():
+                    if paramsObj.prodsToCalc[key] is not paramsObj.prodsCalculated[key]:
+                        failedProdsList.append(key)
+                if len(failedProdsList) > 0:
+                    print("Error: The following products were not generated:", file=sys.stderr)
+                    print(" ".join(failedProdsList), file=sys.stderr)
+                    print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
+                    if paramsObj.outBaseName is not None:
+                        print('Output Basename: \'' + paramsObj.outBaseName + '\'', file=sys.stderr)
 
     def runARCSIMulti(self, inputHeaders, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg, ncores):
         print("--multi option not yet implemented.")
