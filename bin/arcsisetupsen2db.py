@@ -158,10 +158,10 @@ if __name__ == '__main__':
     """
     The command line user interface to ARCSI setup Sentinel-2 DB.
     """
-    parser = argparse.ArgumentParser(prog='arcsiextractdata.py',
+    parser = argparse.ArgumentParser(prog='arcsisetupsen2db.py',
                                     description='''ARSCI command to set up 
                                                    database of Sentinel-2 imagery''',
-                                    epilog='''A tools to set up a sqlite database
+                                    epilog='''A tool to set up a sqlite database
                                               with the Google Sentinel-2 imagery
                                               list.''')
     # Request the version number.
