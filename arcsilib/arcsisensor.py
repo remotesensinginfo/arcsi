@@ -111,7 +111,6 @@ from sklearn.ensemble import ExtraTreesClassifier
 # Import HDF5 python binding.
 import h5py
 
-
 class ARCSIAbstractSensor (object):
     """
     An abstract class which represents a sensor and allows
@@ -957,14 +956,13 @@ class ARCSIAbstractSensor (object):
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal): pass
 
     def buildElevation6SCoeffLUT(self, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax):
-        elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
         lut = list()
         elevRange = (surfaceAltitudeMax - surfaceAltitudeMin) / 100
         numElevSteps = int(math.ceil(elevRange) + 1)
         elevVal = surfaceAltitudeMin
         for i in range(numElevSteps):
             print("Building LUT Elevation ", elevVal)
-            lut.append(elevLUTFeat(Elev=elevVal, Coeffs=self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, (float(elevVal)/1000), aotVal, useBRDF)))
+            lut.append(rsgislib.imagecalibration.ElevLUTFeat(Elev=elevVal, Coeffs=self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, (float(elevVal)/1000), aotVal, useBRDF)))
             elevVal = elevVal + 100
         return lut
 
@@ -972,8 +970,6 @@ class ARCSIAbstractSensor (object):
     def convertImageToSurfaceReflDEMElevLUT(self, inputRadImage, inputDEMFile, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, aotVal, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, scaleFactor, elevCoeffs=None): pass
 
     def buildElevationAOT6SCoeffLUT(self, aeroProfile, atmosProfile, grdRefl, useBRDF, surfaceAltitudeMin, surfaceAltitudeMax, aotMin, aotMax):
-        elevLUTFeat = collections.namedtuple('ElevLUTFeat', ['Elev', 'Coeffs'])
-        aotLUTFeat = collections.namedtuple('AOTLUTFeat', ['AOT', 'Coeffs'])
         lut = list()
         elevRange = (surfaceAltitudeMax - surfaceAltitudeMin) / 100
         numElevSteps = int(math.ceil(elevRange) + 1)
@@ -988,9 +984,9 @@ class ARCSIAbstractSensor (object):
             aotVal = aotMin
             aotCoeffLUT = list()
             for j in range(numAOTSteps):
-                aotCoeffLUT.append(aotLUTFeat(AOT=aotVal,  Coeffs=self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, (float(elevVal)/1000), aotVal, useBRDF)))
+                aotCoeffLUT.append(rsgislib.imagecalibration.AOTLUTFeat(AOT=aotVal,  Coeffs=self.calc6SCoefficients(aeroProfile, atmosProfile, grdRefl, (float(elevVal)/1000), aotVal, useBRDF)))
                 aotVal = aotVal + 0.05
-            lut.append(elevLUTFeat(Elev=elevVal, Coeffs=aotCoeffLUT))
+            lut.append(rsgislib.imagecalibration.ElevLUTFeat(Elev=elevVal, Coeffs=aotCoeffLUT))
             elevVal = elevVal + 100
         return lut
 
@@ -1414,11 +1410,11 @@ class ARCSIAbstractSensor (object):
             outputImage = os.path.join(outputPath, outputName)
 
             if offsetsList is None:
+                OffValDOS = collections.namedtuple('DOSOffset', ['offset'])
                 percentiles = rsgislib.imagecalc.bandPercentile(inputTOAImage, 0.01, 0)
                 offsetsList = list()
-                OffVal = collections.namedtuple('DOSOffset', ['offset'])
                 for val in percentiles:
-                    offsetsList.append(OffVal(offset=val))
+                    offsetsList.append(OffValDOS(offset=val))
 
             rsgislib.imagecalibration.applySubtractSingleOffsets(inputTOAImage, outputImage, outFormat, rsgislib.TYPE_16UINT, True, True, 0.0, dosOutRefl, offsetsList)
 

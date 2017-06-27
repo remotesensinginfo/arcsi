@@ -319,7 +319,7 @@ class ARCSIUtils (object):
         longVal = point.GetX()
         return latVal, longVal
 
-    def convertVisabilityToAOD(self, vis):
+    def convertVisabilityToAOT(self, vis):
         return (3.9449/vis)+0.08498
 
     def findMinimumElev(self, elev):
