@@ -245,7 +245,7 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif (filePrefix3 == 'LC8') or (filePrefix3 == 'LC08'):
+            elif (filePrefix3 == 'LC8') or (filePrefix4 == 'LC08'):
                 outputFileDIR = os.path.join(outputDir, "LS8")
                 if (not createdLS8DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
