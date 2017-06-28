@@ -150,7 +150,6 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
         try:
             self.headerFileName = os.path.split(inputHeader)[1]
             
-            print("Reading header file")
             tree = ET.parse(inputHeader)
             root = tree.getroot()
 
@@ -195,7 +194,6 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
             tmpAcquasitionTime = imageInfoTag.find('FIRSTLINETIME').text.strip()
             tmpAcquasitionTime = tmpAcquasitionTime.replace('Z', '')
             self.acquisitionTime = datetime.datetime.strptime(tmpAcquasitionTime, "%Y-%m-%dT%H:%M:%S.%f")
-            print("Acqusition Time: ", self.acquisitionTime)
 
             self.solarZenithMin = 90-float(imageInfoTag.find('MINSUNEL').text.strip())
             self.solarZenithMax = 90-float(imageInfoTag.find('MAXSUNEL').text.strip())
@@ -327,8 +325,6 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
                 self.effBandWidthSWIRB8 = float(topLevelInfo.find('BAND_S8').find('EFFECTIVEBANDWIDTH').text.strip())
             else: 
                 raise ARCSIException("Do not reconise the product type.")
-
-            print("Processing Input File: ", self.fileName)
 
         except Exception as e:
             raise e
@@ -750,8 +746,6 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
         else: 
             raise ARCSIException("Do not reconise the product type.")
 
-        for band in imgBandCoeffs:
-            print(band)
         rsgislib.imagecalibration.apply6SCoeffSingleParam(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, imgBandCoeffs)
         return outputImage
 

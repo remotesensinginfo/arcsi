@@ -518,16 +518,11 @@ class ARCSIAbstractSensor (object):
         point.AssignSpatialReference(srcProj)
         point.TransformTo(tarProj)
 
-        print("Pxl Res: [{0}, {1} ({2})]".format(xPxlRes, yPxlRes, yPxlResAbs))
-
         minXPt = (math.floor(point.GetX()/xPxlRes)*xPxlRes)
         maxYPt = (math.ceil(point.GetY()/yPxlResAbs)*yPxlResAbs)
 
         projImgBBOX['MinX'] = minXPt
         projImgBBOX['MaxY'] = maxYPt
-
-        print("MinX: [{0}, {1}]".format(point.GetX(), minXPt))
-        print("MaxY: [{0}, {1}]".format(point.GetY(), maxYPt))
 
         wktPt = 'POINT(%s %s)' % (self.xBR, self.yBR)
         point = ogr.CreateGeometryFromWkt(wktPt)
@@ -540,11 +535,7 @@ class ARCSIAbstractSensor (object):
         projImgBBOX['MaxX'] = maxXPt
         projImgBBOX['MinY'] = minYPt
 
-        print("MaxX: [{0}, {1}]".format(point.GetX(), maxXPt))
-        print("MinY: [{0}, {1}]".format(point.GetY(), minYPt))
-
         return projImgBBOX
-
 
     @abstractmethod
     def applyImageDataMask(self, inputHeader, outputPath, outputMaskName, outputImgName, outFormat, outWKTFile): pass
@@ -651,7 +642,6 @@ class ARCSIAbstractSensor (object):
         fieldCenLonDefn.SetPrecision(6)
         outLayer.CreateField(fieldCenLonDefn)
 
-        print("Create and Add Polygons...")
         for i in range(numFeats):
             wktStr = "POLYGON((" + str(minXXValsSub[i]) + " " + str(minXYValsSub[i]) + ", " + str(maxYXValsSub[i]) + " " + str(maxYYValsSub[i]) + ", " + str(maxXXValsSub[i]) + " " + str(maxXYValsSub[i]) + ", " + str(minYXValsSub[i]) + " " + str(minYYValsSub[i]) + ", " + str(minXXValsSub[i]) + " " + str(minXYValsSub[i]) + "))"
             poly = ogr.CreateGeometryFromWkt(wktStr)
@@ -806,6 +796,14 @@ class ARCSIAbstractSensor (object):
         print('Classifier Train Score = {}%'.format(round(accVal*100, 2)))
         oobScore = skClassifier.oob_score_
         print('Classifier Out of Bag = {}%'.format(round(oobScore*100, 2)))  
+
+        featImportances = skClassifier.feature_importances_
+        featIndices = numpy.argsort(featImportances)[::-1]
+
+        # Print the feature ranking
+        print("Feature ranking:")
+        for f in range(dataArr.shape[1]):
+            print("\t{0}. feature {1} ({2})".format(f + 1, featIndices[f], featImportances[featIndices[f]]))
 
         print('Applying Classification')
         initSceneClass = os.path.join(imgTmpDIR, basename+'_initSceneClass.kea')
