@@ -1414,8 +1414,6 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         imgBandCoeffs.append(rsgislib.imagecalibration.Band6SCoeff(band=9, aX=float(sixsCoeffs[8,0]), bX=float(sixsCoeffs[8,1]), cX=float(sixsCoeffs[8,2]), DirIrr=float(sixsCoeffs[8,3]), DifIrr=float(sixsCoeffs[8,4]), EnvIrr=float(sixsCoeffs[8,5])))
         imgBandCoeffs.append(rsgislib.imagecalibration.Band6SCoeff(band=10, aX=float(sixsCoeffs[9,0]), bX=float(sixsCoeffs[9,1]), cX=float(sixsCoeffs[9,2]), DirIrr=float(sixsCoeffs[9,3]), DifIrr=float(sixsCoeffs[9,4]), EnvIrr=float(sixsCoeffs[9,5])))
 
-        for band in imgBandCoeffs:
-            print(band)
         rsgislib.imagecalibration.apply6SCoeffSingleParam(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, imgBandCoeffs)
         return outputImage
 

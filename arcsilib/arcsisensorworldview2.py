@@ -123,7 +123,6 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
         try:
             self.headerFileName = os.path.split(inputHeader)[1]
             
-            print("Reading header file")
             tree = ET.parse(inputHeader)
             root = tree.getroot()
 
@@ -138,9 +137,6 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             imageInfoTag = topLevelInfo.find('IMAGE')
             if imageInfoTag == None:
                  raise ARCSIException("Cannot open \'IMAGE\' section within \'IMD\'")
-
-            #for child in topLevelInfo:
-            #   print(child.tag, child.attrib)
 
             mapProjInfoTag = topLevelInfo.find('MAP_PROJECTED_PRODUCT')
             if mapProjInfoTag == None:
@@ -157,7 +153,6 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             tmpAcquasitionTime = imageInfoTag.find('FIRSTLINETIME').text.strip()
             tmpAcquasitionTime = tmpAcquasitionTime.replace('Z', '')
             self.acquisitionTime = datetime.datetime.strptime(tmpAcquasitionTime, "%Y-%m-%dT%H:%M:%S.%f")
-            print("Acqusition Time: ", self.acquisitionTime)
 
             self.solarZenithMin = 90-float(imageInfoTag.find('MINSUNEL').text.strip())
             self.solarZenithMax = 90-float(imageInfoTag.find('MAXSUNEL').text.strip())
@@ -187,7 +182,6 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             inProj.ImportFromEPSG(epsgCode)
             if self.inWKT == "":
                 self.inWKT = inProj.ExportToWkt()
-            #print("WKT: ", self.inWKT)
 
             self.xTL = float(imageTileInfoTag.find('ULX').text.strip())
             self.yTL = float(imageTileInfoTag.find('ULY').text.strip())
@@ -213,14 +207,12 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             wgs84latlonProj.ImportFromEPSG(4326)
 
             wktPt = 'POINT(%s %s)' % (self.xCentre, self.yCentre)
-            #print(wktPt)
             point = ogr.CreateGeometryFromWkt(wktPt)
             point.AssignSpatialReference(inProj)
             point.TransformTo(wgs84latlonProj)
 
             self.latCentre = point.GetY()
             self.lonCentre = point.GetX()
-            #print("Lat: " + str(self.latCentre) + " Long: " + str(self.lonCentre))
 
             filesDIR = os.path.dirname(inputHeader)
             if not self.userSpInputImage is None:
@@ -252,8 +244,6 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             # NIR 2
             self.absCalFactB8 = float(topLevelInfo.find('BAND_N2').find('ABSCALFACTOR').text.strip())
             self.effBandWidthB8 = float(topLevelInfo.find('BAND_N2').find('EFFECTIVEBANDWIDTH').text.strip())
-
-            print("Processing Input File: ", self.fileName)
 
         except Exception as e:
             raise e
@@ -487,8 +477,6 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
         imgBandCoeffs.append(rsgislib.imagecalibration.Band6SCoeff(band=7, aX=float(sixsCoeffs[6,0]), bX=float(sixsCoeffs[6,1]), cX=float(sixsCoeffs[6,2]), DirIrr=float(sixsCoeffs[6,3]), DifIrr=float(sixsCoeffs[6,4]), EnvIrr=float(sixsCoeffs[6,5])))
         imgBandCoeffs.append(rsgislib.imagecalibration.Band6SCoeff(band=8, aX=float(sixsCoeffs[7,0]), bX=float(sixsCoeffs[7,1]), cX=float(sixsCoeffs[7,2]), DirIrr=float(sixsCoeffs[7,3]), DifIrr=float(sixsCoeffs[7,4]), EnvIrr=float(sixsCoeffs[7,5])))
 
-        for band in imgBandCoeffs:
-            print(band)
         rsgislib.imagecalibration.apply6SCoeffSingleParam(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, imgBandCoeffs)
         return outputImage
 

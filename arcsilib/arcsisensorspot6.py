@@ -121,7 +121,6 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         try:
             self.headerFileName = os.path.split(inputHeader)[1]
             
-            print("Reading header file")
             tree = ET.parse(inputHeader)
             root = tree.getroot()
             
@@ -393,8 +392,6 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
             if not os.path.exists(self.roiMask):
                 self.roiMask = None
 
-            print("Processing Input File: ", self.fileName)
-
         except Exception as e:
             raise e
 
@@ -651,8 +648,6 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         imgBandCoeffs.append(rsgislib.imagecalibration.Band6SCoeff(band=3, aX=float(sixsCoeffs[2,0]), bX=float(sixsCoeffs[2,1]), cX=float(sixsCoeffs[2,2]), DirIrr=float(sixsCoeffs[2,3]), DifIrr=float(sixsCoeffs[2,4]), EnvIrr=float(sixsCoeffs[2,5])))
         imgBandCoeffs.append(rsgislib.imagecalibration.Band6SCoeff(band=4, aX=float(sixsCoeffs[3,0]), bX=float(sixsCoeffs[3,1]), cX=float(sixsCoeffs[3,2]), DirIrr=float(sixsCoeffs[3,3]), DifIrr=float(sixsCoeffs[3,4]), EnvIrr=float(sixsCoeffs[3,5])))
 
-        for band in imgBandCoeffs:
-            print(band)
         rsgislib.imagecalibration.apply6SCoeffSingleParam(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, 0, True, imgBandCoeffs)
         return outputImage
 
