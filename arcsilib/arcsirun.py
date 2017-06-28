@@ -880,6 +880,7 @@ def calcTOAReflectance(paramsObj):
 def performCloudMasking(paramsObj):
     # Generate Cloud and Apply Cloud Masks
     if paramsObj.prodsToCalc["CLOUDS"]:
+        print("Perform Cloud Classification...")
         rsgisUtils = rsgislib.RSGISPyUtils()
         outName = paramsObj.outBaseName + "_clouds" + paramsObj.outFormatExt
         if paramsObj.cloudMaskUsrImg == None:

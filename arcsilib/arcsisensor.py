@@ -735,13 +735,17 @@ class ARCSIAbstractSensor (object):
         numVars = 0
         
         fH5 = h5py.File(cloudTrainFile)
-        inCloudData = fH5['DATA/DATA']
+        inCloudData = numpy.array(fH5['DATA/DATA'])
+        inCloudData = inCloudData[numpy.isfinite(inCloudData).all(axis=1)]
+        inCloudData = inCloudData[(inCloudData!=0).all(axis=1)]
         cloudTrainDataArr = self.createCloudMaskDataArray(inCloudData)
         numInVars = inCloudData.shape[1]
         fH5.close()
         
         fH5 = h5py.File(otherTrainFile)
-        inOtherData = fH5['DATA/DATA']
+        inOtherData = numpy.array(fH5['DATA/DATA'])
+        inOtherData = inOtherData[numpy.isfinite(inOtherData).all(axis=1)]
+        inOtherData = inOtherData[(inOtherData!=0).all(axis=1)]
         otherTrainDataArr = self.createCloudMaskDataArray(inOtherData)
         fH5.close()
             
@@ -780,7 +784,7 @@ class ARCSIAbstractSensor (object):
         otherTrainDataArr = None
 
         print("Optimising Classifier Parameters")
-        gridSearch=GridSearchCV(ExtraTreesClassifier(bootstrap=True, n_jobs=numCores), {'n_estimators':[50,100,200,500], 'criterion':['gini','entropy'], 'max_features':[2,3,'sqrt','log2',None]})
+        gridSearch=GridSearchCV(ExtraTreesClassifier(bootstrap=True, n_jobs=numCores), {'n_estimators':[10,50,100,200,500], 'criterion':['gini','entropy'], 'max_features':[2,3,'sqrt','log2',None]})
         gridSearch.fit(dataSampArr, classSampArr)
         if not gridSearch.refit:
             raise Exception("Grid Search did no find a fit therefore failed...")
@@ -910,9 +914,10 @@ class ARCSIAbstractSensor (object):
         Green[...] = 0
         Blue[...] = 0
         
-        Red[1] = 0
-        Green[1] = 0
-        Blue[1] = 255
+        if Red.shape[0] > 1:
+            Red[1] = 0
+            Green[1] = 0
+            Blue[1] = 255
         
         rat.writeColumn(ratDataset, "Red", Red)
         rat.writeColumn(ratDataset, "Green", Green)
