@@ -1,12 +1,12 @@
 #! /usr/bin/env python
 
 """
-Module that contains the ARSCI command to query database of Sentinel-2 imagery
+Module that contains the ARSCI command to query database of Landsat imagery
 and create a list of image download commands.
 """
 
 ############################################################################
-#  arcsigensen2downlst.py
+#  arcsigenlandsatdownlst.py
 #
 #  Copyright 2017 ARCSI.
 #
@@ -26,12 +26,12 @@ and create a list of image download commands.
 #  along with ARCSI.  If not, see <http://www.gnu.org/licenses/>.
 #
 #
-# Purpose:  A script to query the database created by the arcsisetupsen2db.py
+# Purpose:  A script to query the database created by the arcsisetuplandsatdb.py
 #           command and create a list of URLs to download the imagery.
 #
 # Author: Pete Bunting
 # Email: pfb@aber.ac.uk
-# Date: 26/06/2017
+# Date: 28/06/2017
 # Version: 1.0
 #
 # History:
@@ -60,17 +60,31 @@ from arcsilib.arcsiexception import ARCSIException
 # Import rsgislib module
 import rsgislib
 
-def genSen2DownloadList(dbFile, tile, outFile, outpath, cloudCover=None, startDate=None, endDate=None, multiDwn=False):
+def genLandsatDownloadList(dbFile, lsPath, lsRow, outFile, outpath, sensorID=None, spacecraftID=None, collection=None, cloudCover=None, startDate=None, endDate=None, multiDwn=False):
     """
     Using sqlite database query and create a list of files to download
     """
     try:
-        ggSen2DBConn = sqlite3.connect(dbFile)
-        ggSen2DBCursor = ggSen2DBConn.cursor()
+        ggLandsatDBConn = sqlite3.connect(dbFile)
+        ggLandsatDBCursor = ggLandsatDBConn.cursor()
         
-        queryVar = [tile]
-        query = 'SELECT BASE_URL FROM SEN2 WHERE MGRS_TILE = ?'
+        queryVar = [lsPath, lsRow]
+        query = 'SELECT BASE_URL FROM LANDSAT WHERE WRS_PATH = ? AND WRS_ROW = ?'
         
+        if not sensorID is None:
+            query = query + ' AND SENSOR_ID = ?'
+            queryVar.append(sensorID)
+
+        if not spacecraftID is None:
+            query = query + ' AND SPACECRAFT_ID = ?'
+            queryVar.append(spacecraftID)
+
+        if not collection is None:
+            if collection == 'PRE':
+                collection == 'N/A'
+            query = query + ' AND COLLECTION_CATEGORY = ?'
+            queryVar.append(collection)
+
         if not cloudCover is None:
             query = query + ' AND CLOUD_COVER < ?'
             queryVar.append(cloudCover)
@@ -82,13 +96,13 @@ def genSen2DownloadList(dbFile, tile, outFile, outpath, cloudCover=None, startDa
         if not endDate is None:
             query = query + ' AND date(SENSING_TIME) < date(?)'
             queryVar.append(endDate)
-
+        
         multiStr = ''
         if multiDwn:
             multiStr = '-m'
-        
+
         cmdLst = []
-        for row in ggSen2DBCursor.execute(query,  queryVar):
+        for row in ggLandsatDBCursor.execute(query,  queryVar):
             cmdLst.append("gsutil "+multiStr+" cp -r " + row[0] + " " + outpath)
         
         rsgisUtils = rsgislib.RSGISPyUtils()
@@ -101,28 +115,32 @@ def genSen2DownloadList(dbFile, tile, outFile, outpath, cloudCover=None, startDa
 
 if __name__ == '__main__':
     """
-    The command line user interface to ARCSI generate Sentinel-2 file download list.
+    The command line user interface to ARCSI generate Landsat file download list.
     """
-    parser = argparse.ArgumentParser(prog='arcsigensen2downlst.py',
+    parser = argparse.ArgumentParser(prog='arcsigenlandsatdownlst.py',
                                     description='''ARSCI command to query 
-                                                   database of Sentinel-2 imagery''',
+                                                   database of Landsat imagery''',
                                     epilog='''A tool to query the sqlite database
-                                              with the Google Sentinel-2 imagery
+                                              with the Google Landsat imagery
                                               to create a list of URLs to download.''')
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input directory to be processed.
     parser.add_argument("-f", "--dbfile", type=str, required=True, help='''Path to the database file.''')
-    parser.add_argument("-t", "--tile", type=str, required=True, help='''Sentinel-2 tile - note remove the preceeding 'T'.''')
+    parser.add_argument("-p", "--path", type=str, required=True, help='''Landsat path.''')
+    parser.add_argument("-r", "--row", type=str, required=True, help='''Landsat row.''')
     parser.add_argument("-o", "--output", type=str, required=True, help='''Output file with a list of files to download.''')
-    parser.add_argument("--outpath", type=str, required=True, help='''Output path for the sentinel-2 SAFE files to download to on your system.''')
+    parser.add_argument("--outpath", type=str, required=True, help='''Output path for the landsat files to download to on your system.''')
+    parser.add_argument("--sensor", type=str, choices=['OLI_TIRS', 'ETM', 'MSS', 'MSS'], help='''Specify the landsat sensor you are interested''')
+    parser.add_argument("--spacecraft", type=str, choices=['LANDSAT_8', 'LANDSAT_7', 'LANDSAT_5', 'LANDSAT_4', 'LANDSAT_3', 'LANDSAT_2', 'LANDSAT_1'], help='''Specify the landsat spacecraft you are interested''')
+    parser.add_argument("--collection", type=str, choices=['T1', 'T2', 'RT', 'PRE'], help='''Specify the landsat collection you are interested. For more information see https://landsat.usgs.gov/landsat-collections''')
     parser.add_argument("--cloudcover", type=float, help='''Specify an upper limit for acceptable cloud cover.''')
     parser.add_argument("--startdate", type=str, help='''Specify a start date (YYYY-MM-DD).''')
     parser.add_argument("--enddate", type=str, help='''Specify a end date (YYYY-MM-DD).''')
     parser.add_argument("--multi", action='store_true', default=False, help='''Adds -m option to the gsutil download command.''')
-
+    
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
-    genSen2DownloadList(args.dbfile, args.tile, args.output, args.outpath, args.cloudcover, args.startdate, args.enddate, args.multi)
+    genLandsatDownloadList(args.dbfile, args.path, args.row, args.output, args.outpath, args.sensor, args.spacecraft, args.collection, args.cloudcover, args.startdate, args.enddate, args.multi)
 
