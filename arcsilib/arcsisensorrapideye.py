@@ -546,36 +546,29 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         return outputImage
 
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
-        print("Generating Cloud Mask")
-        try:
-            arcsiUtils = ARCSIUtils()
-            tmpBaseName = os.path.splitext(outputName)[0]
-            imgExtension = arcsiUtils.getFileExtension(outFormat)
-            stretchedImg = os.path.join(tmpPath, tmpBaseName + "_stchd" + imgExtension)
-            outputCloudsImage = os.path.join(outputPath, outputName)
-            outputCloudsImage = outputCloudsImage.replace(imgExtension, ".tif")
-
-            rsgislib.imageutils.stretchImage(inputReflImage, stretchedImg, False, "", True, False, outFormat, rsgislib.TYPE_8UINT, rsgislib.imageutils.STRETCH_LINEARSTDDEV, 2)
-
-            cloudsCmd = "recloud"
-            cloudsOpts = "-i " + inputReflImage + " -s " + stretchedImg + " -o " + outputCloudsImage
-            print(cloudsCmd + " " + cloudsOpts)
-
-            os.system(cloudsCmd + " " + cloudsOpts)
-            #subprocess.call([cloudsCmd, cloudsOpts]) # TODO: WHY DID THIS NOT WORK!?!?!?
-
-            arcsiUtils.setImgThematic(outputCloudsImage)
-
-            if not self.debugMode:
-                gdalDriver = gdal.GetDriverByName(outFormat)
-                gdalDriver.Delete(stretchedImg)
-
-            return outputCloudsImage
-        except Exception as e:
-            raise e
+        raise ARCSIException("Cloud Masking Not Implemented for Rapideye.")
 
     def createCloudMaskDataArray(self, inImgDataArr):
-        return inImgDataArr
+        # Calc Whiteness
+        meanArr = numpy.mean(inImgDataArr, axis=1)
+        whitenessArr = numpy.absolute((inImgDataArr[...,0] - meanArr)/meanArr) + numpy.absolute((inImgDataArr[...,1] - meanArr)/meanArr) + numpy.absolute((inImgDataArr[...,2] - meanArr)/meanArr) + numpy.absolute((inImgDataArr[...,3] - meanArr)/meanArr) + numpy.absolute((inImgDataArr[...,4] - meanArr)/meanArr)
+        # Calc NDVI
+        ndvi = (inImgDataArr[...,4] - inImgDataArr[...,2]) / (inImgDataArr[...,4] + inImgDataArr[...,2])
+        
+        # Create and populate the output array.
+        inShape = inImgDataArr.shape
+        outShape = [inShape[0], inShape[1]+3]    
+        outArr = numpy.zeros(outShape, dtype=float)
+        
+        for i in range(inShape[1]):
+            outArr[...,i] = inImgDataArr[...,i]
+        
+        idx = inShape[1]
+        outArr[...,idx] = meanArr
+        outArr[...,idx+1] = whitenessArr
+        outArr[...,idx+2] = ndvi
+        
+        return outArr
 
 
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
