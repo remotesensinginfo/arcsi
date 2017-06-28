@@ -149,7 +149,7 @@ class ARCSISortLandsatData (object):
             if '.DS_Store' in file:
                 print('Skipping .DS_Store file')
                 pass
-            elif filePrefix3 == 'LM1':
+            elif filePrefix3 == 'LM1' or filePrefix4 == 'LM01':
                 outputFileDIR = os.path.join(outputDir, "LM1")
                 if (not createdLM1DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -161,7 +161,7 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif filePrefix3 == 'LM2':
+            elif filePrefix3 == 'LM2' or filePrefix4 == 'LM02':
                 outputFileDIR = os.path.join(outputDir, "LM2")
                 if (not createdLM2DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -173,7 +173,7 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif filePrefix3 == 'LM3':
+            elif filePrefix3 == 'LM3' or filePrefix4 == 'LM03':
                 outputFileDIR = os.path.join(outputDir, "LM3")
                 if (not createdLM3DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -185,7 +185,7 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif filePrefix3 == 'LM4':
+            elif filePrefix3 == 'LM4' or filePrefix4 == 'LM04':
                 outputFileDIR = os.path.join(outputDir, "LM4")
                 if (not createdLM4DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -197,7 +197,7 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif filePrefix3 == 'LM5':
+            elif filePrefix3 == 'LM5' or filePrefix4 == 'LM05':
                 outputFileDIR = os.path.join(outputDir, "LM5")
                 if (not createdLM5DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
@@ -245,7 +245,7 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif (filePrefix3 == 'LC8') or (filePrefix4 == 'LC08'):
+            elif filePrefix3 == 'LC8' or filePrefix4 == 'LS08' or filePrefix4 == 'LC08':
                 outputFileDIR = os.path.join(outputDir, "LS8")
                 if (not createdLS8DIR) and (not os.path.isdir(outputFileDIR)):
                     self.createDIRStruct(outputFileDIR, noDIRStruct)
