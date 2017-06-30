@@ -49,6 +49,8 @@ import os.path
 import sys
 # Import the python glob module
 import glob
+#  import the fnmatch module
+import fnmatch
 # Import the python Argument parser
 import argparse
 # Import the arcsi version number
@@ -69,7 +71,7 @@ class ARCSIBuildCommands (object):
         for dirName, subdirList, fileList in os.walk(searchDIR):
             for fname in fileList:
                 fname = str(fname)
-                if fname.endswith(headerEnding):
+                if fnmatch.fnmatch(fname, headerEnding):
                     outFiles.append(os.path.abspath(os.path.join(dirName, fname)))
         return outFiles
 
