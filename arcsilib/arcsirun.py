@@ -1154,7 +1154,7 @@ def calculateSREF(paramsObj):
                 if paramsObj.fullImgOuts:
                     outName = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + paramsObj.processSREFStr + paramsObj.outFormatExt
                     paramsObj.sref6SWholeImage, sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflDEMElevLUT(paramsObj.radianceImageWhole, paramsObj.outDEMName, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.aotVal, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.scaleFactor, paramsObj.sixsLUTCoeffs)
-                paramsObj.calcdOutVals['ARCSI_6S_COEFFICENTS'] = paramsObj.sixsLUTCoeffs
+                #paramsObj.calcdOutVals['ARCSI_6S_COEFFICENTS'] = paramsObj.sixsLUTCoeffs
                 paramsObj.aotLUT = False
             else:
                 print("Build an AOT and DEM LUT...")
@@ -1177,7 +1177,7 @@ def calculateSREF(paramsObj):
                 if paramsObj.fullImgOuts:
                     outName = paramsObj.outBaseName + paramsObj.processStageWholeImgStr + paramsObj.processSREFStr + paramsObj.outFormatExt
                     paramsObj.sref6SWholeImage, sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(paramsObj.radianceImageWhole, paramsObj.outDEMName, paramsObj.aotFile, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.minAOT, paramsObj.maxAOT, paramsObj.scaleFactor, paramsObj.sixsLUTCoeffs)
-                paramsObj.calcdOutVals['ARCSI_6S_COEFFICENTS'] = paramsObj.sixsLUTCoeffs
+                #paramsObj.calcdOutVals['ARCSI_6S_COEFFICENTS'] = paramsObj.sixsLUTCoeffs
                 paramsObj.aotLUT = True
 
         print("Setting Band Names...")
