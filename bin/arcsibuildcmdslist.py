@@ -63,33 +63,34 @@ from arcsilib.arcsiutils import ARCSIUtils
 from arcsilib import ARCSI_SENSORS_LIST
 # Import the list of products arcsi supports
 from arcsilib import ARCSI_PRODUCTS_LIST
+# Import the ARCSI exception class
+from arcsilib.arcsiexception import ARCSIException
 
 class ARCSIBuildCommands (object):
 
-    def getListOfFiles(self, searchDIR, headerEnding):
+    def getListOfFiles(self, searchDIR, searchStr, depth):
+        inDIRCount = searchDIR.count(os.path.sep)
         outFiles = []
         for dirName, subdirList, fileList in os.walk(searchDIR):
             for fname in fileList:
                 fname = str(fname)
-                if fnmatch.fnmatch(fname, headerEnding):
+                if fnmatch.fnmatch(fname, searchStr):
                     outFiles.append(os.path.abspath(os.path.join(dirName, fname)))
+            dirLevel = dirName.count(os.path.sep)-inDIRCount
+            if dirLevel >= depth:
+                subdirList[:] = []
         return outFiles
 
-    def buildCmds(self, inputPath, inputIsDIR, outputFile, headerEnding, sensor, inwkt,
-                     format, outpath, prods, stats, aeropro, atmospro,
-                     aeroimg, atmosimg, grdrefl, surfacealtitude,
-                     atmosozone, atmoswater, aerowater,
-                     aerodust, aerooceanic, aerosoot, aot, vis, tmpath,
-                     minaot, maxaot, dem, localdos, dosout, simpledos,
-                     scalefac, outwkt, outproj4, projabbv, interp, checkouts, fullimgouts,
-                     classmlclouds, cloudtrainclouds, cloudtrainother):
+    def buildCmds(self, inputPath, inputIsDIR, outputFile, headerSearchStr, searchDepth, sensor, inwkt, format, outpath, prods, stats, aeropro, atmospro, aeroimg, atmosimg, grdrefl, surfacealtitude, atmosozone, atmoswater, aerowater, aerodust, aerooceanic, aerosoot, aot, vis, tmpath, minaot, maxaot, dem, localdos, dosout, simpledos, scalefac, outwkt, outproj4, projabbv, interp, checkouts, fullimgouts, classmlclouds, cloudtrainclouds, cloudtrainother, resample2lowres):
 
         inputPath = os.path.abspath(inputPath)
         outputFile = os.path.abspath(outputFile)
 
         headersFilesList = []
         if inputIsDIR:
-            headersFilesList = self.getListOfFiles(inputPath, headerEnding)
+            if headerSearchStr.count('*') == 0:
+                raise Exception("The search string you have provided does not have any '*' - which is needed for searching.")
+            headersFilesList = self.getListOfFiles(inputPath, headerSearchStr, searchDepth)
         else:
             arcsiUtils = ARCSIUtils()
             headersFilesList = arcsiUtils.readTextFile2List(inputPath)
@@ -177,7 +178,9 @@ class ARCSIBuildCommands (object):
                     cmd = cmd + " --cloudtrainclouds \"" + str(cloudtrainclouds) + "\""
                 if not cloudtrainother == None:
                     cmd = cmd + " --cloudtrainother \"" + str(cloudtrainother) + "\""
-                
+            if resample2lowres:
+                cmd = cmd + " --resample2lowres "
+
             print(cmd)
             outFile.write(cmd + "\n")
         outFile.flush()
@@ -203,7 +206,10 @@ if __name__ == '__main__':
                         help='''Output text file (shell script) with the list of commands.''')
 
     parser.add_argument("-e", "--header", type=str, required=False,
-                        help='''The extension / unquie file ending for the input header files.''')
+                        help='''A \'UNIX\' search string for identifying the image headers. Note, multiple \'*\' can be used for the search string. If no \'*\' is provided then ''')
+
+    parser.add_argument("-d", "--depth", type=int, required=False, default=1000,
+                        help='''The depth within the directory tree from the input path which should be searched for image header files.''')
 
     # Define the argument for specifying the sensor.
     parser.add_argument("-s", "--sensor", required=True, choices=ARCSI_SENSORS_LIST,
@@ -355,8 +361,8 @@ if __name__ == '__main__':
                         help='''Transform the outputs to the projection defined using a proj4 string and provided within a text file.''')
 
     parser.add_argument("--interp", type=str,
-                        choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos'],
-                        help='''Specifies interpolation algorithm when reprojecting the imagery
+                        choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average', 'mode', 'max', 'min', 'med'],
+                        help='''Specifies interpolation algorithm when reprojecting/resampling the imagery
                                 (Note. the options are those in gdalwarp).''')
 
     parser.add_argument("--checkouts", action='store_true', default=False,
@@ -375,6 +381,13 @@ if __name__ == '__main__':
     parser.add_argument("--cloudtrainother", type=str,
                         help='''Specify a hdf5 file with the training for classifying non-clouds''')
 
+    parser.add_argument("--resample2lowres", action='store_true', default=False, 
+                        help='''If image data is provided at multiple image spatial resolutions then this
+                                switch specifies that the higher resolution images should be resampled to the 
+                                same resolution as the lower resolution images (Default: lower resolution are 
+                                resampled to the higher resolution). Example, using this switch will mean Sentinel-2
+                                imagery outputted at 20m rather than 10m resolution.''')
+
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -389,12 +402,12 @@ if __name__ == '__main__':
 
     arcsiObj = ARCSIBuildCommands()
 
-    arcsiObj.buildCmds(args.input, inputIsDIR, args.output, args.header, args.sensor, args.inwkt,
+    arcsiObj.buildCmds(args.input, inputIsDIR, args.output, args.header, args.depth, args.sensor, args.inwkt,
                      args.format, args.outpath, args.prods, args.stats, args.aeropro, args.atmospro,
                      args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude,
                      args.atmosozone, args.atmoswater, args.aerowater,
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath,
                      args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos,
                      args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.checkouts, args.fullimgouts,
-                     args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother)
+                     args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres)
 
