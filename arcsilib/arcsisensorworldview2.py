@@ -283,7 +283,7 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
     def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
 
-    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic', multicore=False):
         raise ARCSIException("Image data does not need resampling")
 
     def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat):
