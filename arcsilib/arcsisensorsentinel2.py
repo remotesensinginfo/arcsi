@@ -915,33 +915,33 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
     def mosaicImageTiles(self, outputPath):
         raise ARCSIException("Image data does not need mosaicking")
 
-    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'):
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic', multicore=False):
         outBaseName = self.generateOutputBaseName()
         if resampleToLowResImg:
             # Resample to 20 m
             self.sen2ImgB02_20m = os.path.join(outputPath, outBaseName+'_B02_20m.kea')
-            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB02, self.sen2ImgB02_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB02, self.sen2ImgB02_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT, 0.0, multicore)
             self.sen2ImgB03_20m = os.path.join(outputPath, outBaseName+'_B03_20m.kea')
-            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB03, self.sen2ImgB03_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB03, self.sen2ImgB03_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT, 0.0, multicore)
             self.sen2ImgB04_20m = os.path.join(outputPath, outBaseName+'_B04_20m.kea')
-            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB04, self.sen2ImgB04_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB04, self.sen2ImgB04_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT, 0.0, multicore)
             self.sen2ImgB08_20m = os.path.join(outputPath, outBaseName+'_B08_20m.kea')
-            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB08, self.sen2ImgB08_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB05, self.sen2ImgB08, self.sen2ImgB08_20m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT, 0.0, multicore)
             self.resampleTo20m = True
         else:
             # Resample to 10 m
             self.sen2ImgB05_10m = os.path.join(outputPath, outBaseName+'_B05_10m.kea')
-            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB05, self.sen2ImgB05_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB05, self.sen2ImgB05_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT, 0.0, multicore)
             self.sen2ImgB06_10m = os.path.join(outputPath, outBaseName+'_B06_10m.kea')
-            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB06, self.sen2ImgB06_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB06, self.sen2ImgB06_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT, 0.0, multicore)
             self.sen2ImgB07_10m = os.path.join(outputPath, outBaseName+'_B07_10m.kea')
-            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB07, self.sen2ImgB07_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB07, self.sen2ImgB07_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT, 0.0, multicore)
             self.sen2ImgB8A_10m = os.path.join(outputPath, outBaseName+'_B08A_10m.kea')
-            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB8A, self.sen2ImgB8A_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB8A, self.sen2ImgB8A_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT, 0.0, multicore)
             self.sen2ImgB11_10m = os.path.join(outputPath, outBaseName+'_B11_10m.kea')
-            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB11, self.sen2ImgB11_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB11, self.sen2ImgB11_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT, 0.0, multicore)
             self.sen2ImgB12_10m = os.path.join(outputPath, outBaseName+'_B12_10m.kea')
-            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB12, self.sen2ImgB12_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.resampleImage2Match(self.sen2ImgB02, self.sen2ImgB12, self.sen2ImgB12_10m, 'KEA', resampleMethod, rsgislib.TYPE_16UINT, 0.0, multicore)
             self.resampleTo20m = False
 
     def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat):
@@ -1039,7 +1039,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         del ds
         ################################
         rsgislib.imageutils.popImageStats(tmpViewAngleImg, usenodataval=True, nodataval=1000, calcpyramids=False)
-        rsgislib.imageutils.resampleImage2Match(outputImage, tmpViewAngleImg, viewAngleImg, outFormat, 'nearestneighbour', datatype=None)
+        rsgislib.imageutils.resampleImage2Match(outputImage, tmpViewAngleImg, viewAngleImg, outFormat, 'nearestneighbour', datatype=None, multicore=False)
         dataset = gdal.Open(viewAngleImg, gdal.GA_Update)
         if not dataset is None:
             dataset.GetRasterBand(1).SetDescription("SatelliteAzimuth")
@@ -1184,11 +1184,11 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             tmpDIRExisted = False
 
         sen2ImgB01_tmp = os.path.join(tmpBaseDIR, tmpBaseName+'_B01.kea')
-        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB01, sen2ImgB01_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT)
+        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB01, sen2ImgB01_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT, multicore=False)
         sen2ImgB09_tmp = os.path.join(tmpBaseDIR, tmpBaseName+'_B09.kea')
-        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB09, sen2ImgB09_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT)
+        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB09, sen2ImgB09_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT, multicore=False)
         sen2ImgB10_tmp = os.path.join(tmpBaseDIR, tmpBaseName+'_B10.kea')
-        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB10, sen2ImgB10_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT)
+        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB10, sen2ImgB10_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT, multicore=False)
 
         tmpTOAImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmasktmpTOA.kea')
         if self.imgIntScaleFactor != 10000:

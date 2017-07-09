@@ -601,7 +601,7 @@ def resampleBands(paramsObj):
             else:
                 paramsObj.interpAlgorRSGISLib = 'cubic'
                 print("\t'cubic'.\n", file=sys.stderr)
-        paramsObj.sensorClass.resampleImgRes(paramsObj.outFilePath, paramsObj.resample2LowResImg, paramsObj.interpAlgorRSGISLib)
+        paramsObj.sensorClass.resampleImgRes(paramsObj.outFilePath, paramsObj.resample2LowResImg, paramsObj.interpAlgorRSGISLib, False)
 
 def mosaicInputImages(paramsObj):
     if paramsObj.sensorClass.imgNeedMosaicking():

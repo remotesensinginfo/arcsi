@@ -484,7 +484,7 @@ class ARCSIAbstractSensor (object):
     def mosaicImageTiles(self, outputPath): pass
 
     @abstractmethod
-    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic'): pass
+    def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic', multicore=False): pass
 
     @abstractmethod
     def sharpenLowResRadImgBands(self, inputImg, outputImage, outFormat): pass
@@ -774,7 +774,7 @@ class ARCSIAbstractSensor (object):
         otherTrainDataArr = None
 
         print("Optimising Classifier Parameters")
-        gridSearch=GridSearchCV(ExtraTreesClassifier(bootstrap=True, n_jobs=numCores), {'n_estimators':[10,50,100,200,500], 'criterion':['gini','entropy'], 'max_features':[2,3,'sqrt','log2',None]})
+        gridSearch=GridSearchCV(ExtraTreesClassifier(bootstrap=True, n_jobs=numCores), {'n_estimators':[50,100,200], 'criterion':['gini','entropy'], 'max_features':[2,3,'sqrt','log2',None]})
         gridSearch.fit(dataSampArr, classSampArr)
         if not gridSearch.refit:
             raise Exception("Grid Search did no find a fit therefore failed...")
