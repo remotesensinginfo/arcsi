@@ -487,6 +487,8 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
     def createCloudMaskDataArray(self, inImgDataArr):
         return inImgDataArr
 
+    def defineDarkShadowImageBand(self):
+        return 4
 
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((6, 6), dtype=numpy.float32)

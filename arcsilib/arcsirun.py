@@ -885,7 +885,7 @@ def performCloudMasking(paramsObj):
         outName = paramsObj.outBaseName + "_clouds" + paramsObj.outFormatExt
         if paramsObj.cloudMaskUsrImg == None:
             if paramsObj.classmlclouds:
-                paramsObj.cloudsImage = paramsObj.sensorClass.generateCloudMaskML(paramsObj.toaImage, paramsObj.validMaskImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.cloudtrainclouds, paramsObj.cloudtrainother, numCores=1)
+                paramsObj.cloudsImage = paramsObj.sensorClass.generateCloudMaskML(paramsObj.toaImage, paramsObj.validMaskImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.cloudtrainclouds, paramsObj.cloudtrainother, paramsObj.scaleFactor, numCores=1)
             else:
                 paramsObj.cloudsImage = paramsObj.sensorClass.generateCloudMask(paramsObj.toaImage, paramsObj.saturateImage, paramsObj.thermalBrightImage, paramsObj.validMaskImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.scaleFactor)
             if paramsObj.calcStatsPy:

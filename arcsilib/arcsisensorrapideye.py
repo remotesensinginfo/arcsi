@@ -570,6 +570,8 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         
         return outArr
 
+    def defineDarkShadowImageBand(self):
+        return 5
 
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((5, 6), dtype=numpy.float32)

@@ -709,7 +709,10 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def createCloudMaskDataArray(self, inImgDataArr): pass
 
-    def generateCloudMaskML(self, inputReflImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, cloudTrainFile, otherTrainFile, numCores=1):
+    @abstractmethod
+    def defineDarkShadowImageBand(self): pass
+
+    def generateCloudMaskML(self, inputReflImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, cloudTrainFile, otherTrainFile, scaleFactor, numCores=1):
         """
         A function to generate a cloud mask using Extra Random Forest...
         """
@@ -900,8 +903,17 @@ class ARCSIAbstractSensor (object):
                 rsgislib.imagecalc.calcDist2ImgVals(cloudsRmSmallClass, dist2Clouds, 1, valsImgBand=1, gdalFormat='KEA', maxDist=20, noDataVal=20, unitGEO=False)
                 rsgislib.imageutils.popImageStats(dist2Clouds, usenodataval=True, nodataval=0, calcpyramids=True)
                 
-                rsgislib.imagecalc.imageMath(dist2Clouds, outCloudMask, 'b1<5?1:0', 'KEA', rsgislib.TYPE_8UINT)
+                finalCloudMask = os.path.join(imgTmpDIR, basename+'_finalCloudMask.kea')
+                rsgislib.imagecalc.imageMath(dist2Clouds, finalCloudMask, 'b1<5?1:0', 'KEA', rsgislib.TYPE_8UINT)
+                rsgislib.rastergis.populateStats(clumps=finalCloudMask, addclrtab=True, calcpyramids=True, ignorezero=True)
+
+                cloudShadowMask = os.path.join(imgTmpDIR, basename+'_cloudshadowmsk.kea')
+                cloudShadowMaskTmp = os.path.join(imgTmpDIR, basename+'_CloudMaskTmp')
+                rsgislib.imagecalibration.calcCloudShadowMask(finalCloudMask, inputReflImage, inputValidImg, cloudShadowMask, self.defineDarkShadowImageBand(), 'KEA', scaleFactor, cloudShadowMaskTmp, '.kea', self.solarAzimuth, self.solarZenith, self.sensorAzimuth, self.sensorZenith, True)
+
+                rsgislib.imagecalc.bandMath(outCloudMask, "CM==1?1:CSM==1?2:0", outFormat, rsgislib.TYPE_8UINT, [rsgislib.imagecalc.BandDefn('CM', finalCloudMask, 1), rsgislib.imagecalc.BandDefn('CSM', cloudShadowMask, 1)])
                 rsgislib.rastergis.populateStats(clumps=outCloudMask, addclrtab=True, calcpyramids=True, ignorezero=True)
+
         
         ratDataset = gdal.Open(outCloudMask, gdal.GA_Update)
         Red = rat.readColumn(ratDataset, 'Red')
@@ -916,6 +928,10 @@ class ARCSIAbstractSensor (object):
             Red[1] = 0
             Green[1] = 0
             Blue[1] = 255
+            if Red.shape[0] > 2:
+                Red[2] = 0
+                Green[2] = 255
+                Blue[2] = 255
         
         rat.writeColumn(ratDataset, "Red", Red)
         rat.writeColumn(ratDataset, "Green", Green)
