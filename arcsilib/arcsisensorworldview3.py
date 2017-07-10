@@ -490,6 +490,17 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
     def createCloudMaskDataArray(self, inImgDataArr):
         return inImgDataArr
 
+    def defineDarkShadowImageBand(self):
+        if self.bandsProd == 'MS1':
+            return 4
+        elif self.bandsProd == 'Multi':
+            return 8
+        elif self.bandsProd == 'All-S':
+            return 1
+        else:
+            raise ARCSIException("Don't recognise product type.")
+
+
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((8, 6), dtype=numpy.float32)
         # Set up 6S model

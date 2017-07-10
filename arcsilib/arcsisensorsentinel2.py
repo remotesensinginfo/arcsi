@@ -1267,6 +1267,9 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
     def createCloudMaskDataArray(self, inImgDataArr):
         return inImgDataArr
 
+    def defineDarkShadowImageBand(self):
+        return 7
+
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((10, 6), dtype=numpy.float32)
         # Set up 6S model

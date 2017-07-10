@@ -414,6 +414,9 @@ class ARCSILandsat4MSSSensor (ARCSIAbstractSensor):
         
         return outArr
 
+    def defineDarkShadowImageBand(self):
+        return 4
+
     def calc6SCoefficients(self, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF):
         sixsCoeffs = numpy.zeros((4, 6), dtype=numpy.float32)
         # Set up 6S model
