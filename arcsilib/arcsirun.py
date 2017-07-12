@@ -532,6 +532,8 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
         paramsObj.xPxlRes = paramsObj.xPxlResUsr
         paramsObj.yPxlRes = paramsObj.yPxlResUsr
 
+    paramsObj.sensorClass.setReProjectOutputs(paramsObj.reproject)
+
     paramsObj.validMaskImage=None
     paramsObj.validMaskImageProj=""
     paramsObj.viewAngleImg=""
@@ -866,6 +868,14 @@ def calcTOAReflectance(paramsObj):
     if paramsObj.prodsToCalc["TOA"]:
         outName = paramsObj.outBaseName + paramsObj.processStageStr +"_rad_toa" + paramsObj.outFormatExt
         paramsObj.toaImage = paramsObj.sensorClass.convertImageToTOARefl(paramsObj.radianceImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.scaleFactor)
+
+        rsgisUtils = rsgislib.RSGISPyUtils()
+        if not rsgisUtils.doGDALLayersHaveSameProj(paramsObj.radianceImage, paramsObj.toaImage):
+            tmpImg = os.path.join(paramsObj.tmpPath, paramsObj.outBaseName+rsgisUtils.uidGenerator()+'_toaimg'+paramsObj.outFormatExt)
+            rsgisUtils.renameGDALLayer(paramsObj.toaImage, tmpImg)
+            rsgislib.imageutils.resampleImage2Match(paramsObj.radianceImage, tmpImg, paramsObj.toaImage, 'KEA', paramsObj.interpAlgor, rsgislib.TYPE_16UINT, multicore=False)
+            rsgisUtils.deleteFileWithBasename(tmpImg)
+
         print("Setting Band Names...")
         paramsObj.sensorClass.setBandNames(paramsObj.toaImage)
         if paramsObj.calcStatsPy:
@@ -887,7 +897,7 @@ def performCloudMasking(paramsObj):
             if paramsObj.classmlclouds:
                 paramsObj.cloudsImage = paramsObj.sensorClass.generateCloudMaskML(paramsObj.toaImage, paramsObj.validMaskImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.cloudtrainclouds, paramsObj.cloudtrainother, paramsObj.scaleFactor, numCores=1)
             else:
-                paramsObj.cloudsImage = paramsObj.sensorClass.generateCloudMask(paramsObj.toaImage, paramsObj.saturateImage, paramsObj.thermalBrightImage, paramsObj.validMaskImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.scaleFactor)
+                paramsObj.cloudsImage = paramsObj.sensorClass.generateCloudMask(paramsObj.toaImage, paramsObj.saturateImage, paramsObj.thermalBrightImage, paramsObj.viewAngleImg, paramsObj.validMaskImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.scaleFactor)
             if paramsObj.calcStatsPy:
                 print("Calculating Statistics...")
                 rsgislib.rastergis.populateStats(paramsObj.cloudsImage, False, True)

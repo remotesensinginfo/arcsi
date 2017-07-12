@@ -365,7 +365,7 @@ class ARCSISPOT5Sensor (ARCSIAbstractSensor):
 
         return outputImage
 
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("SPOT5 does not have a cloud masking implementation in ARCSI.")
 
     def createCloudMaskDataArray(self, inImgDataArr):

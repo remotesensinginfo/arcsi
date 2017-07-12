@@ -389,7 +389,7 @@ class ARCSILandsat3MSSSensor (ARCSIAbstractSensor):
 
         return outputImage
 
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         raise ARCSIException("Cloud Masking Not Implemented for LS3 MSS.")
 
     def createCloudMaskDataArray(self, inImgDataArr):

@@ -146,6 +146,7 @@ class ARCSIAbstractSensor (object):
         self.xCentre = 0.0
         self.yCentre = 0.0
         self.inWKT = ""
+        self.reprojectOutputs = False
         self.solarZenith = 0.0
         self.solarAzimuth = 0.0
         self.sensorZenith = 0.0
@@ -274,6 +275,12 @@ class ARCSIAbstractSensor (object):
 
     @abstractmethod
     def extractHeaderParameters(self, inputHeader, wktStr): pass
+
+    def setReProjectOutputs(self, reproj=False):
+        self.reprojectOutputs = reproj
+
+    def getReProjectOutputs(self, reproj=False):
+        return self.reprojectOutputs
 
     @abstractmethod
     def getSolarIrrStdSolarGeom(self): pass
@@ -704,7 +711,7 @@ class ARCSIAbstractSensor (object):
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor): pass
 
     @abstractmethod
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor): pass
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor): pass
 
     @abstractmethod
     def createCloudMaskDataArray(self, inImgDataArr): pass
