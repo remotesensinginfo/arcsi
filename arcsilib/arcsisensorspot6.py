@@ -540,7 +540,7 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrradianceVals)
         return outputImage
 
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         outputCloudMaskImg = os.path.join(outputPath, outputName)
         if self.cloudsMask == None:
             rsgislib.imageutils.createCopyImage(inputReflImage, outputCloudMaskImg, 1, 0, outFormat, rsgislib.TYPE_8UINT)

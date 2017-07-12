@@ -179,8 +179,6 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
 
         self.epsgCode = 0
 
-        self.viewAnglesFmaskImg = None
-
         self.imgIntScaleFactor = 1000
 
     ################################
@@ -1049,8 +1047,6 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         dataset = None
         drvr.Delete(tmpViewAngleImg)
 
-        self.viewAnglesFmaskImg = viewAngleImg
-
         return outputImage
 
     def generateImageSaturationMask(self, outputPath, outputName, outFormat):
@@ -1090,7 +1086,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         print("Converting to Radiance")
         outputReflImage = os.path.join(outputPath, outputReflName)
         outputThermalImage = None
-
+        
         inImgBands = list()
         if self.resampleTo20m:
             inImgBands.append(self.sen2ImgB02_20m)
@@ -1165,7 +1161,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         self.imgIntScaleFactor = scaleFactor
         return outputImage
 
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         outputImage = os.path.join(outputPath, outputName)
         tmpBaseName = os.path.splitext(outputName)[0]
         tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
@@ -1207,7 +1203,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         fmaskReflImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskRefl.kea')
         rsgislib.imageutils.selectImageBands(tmpTOAImg, fmaskReflImg, 'KEA', rsgislib.TYPE_16UINT, [11,1,2,3,4,5,6,7,8,12,13,9,10])
 
-        anglesInfo = config.AnglesFileInfo(self.viewAnglesFmaskImg, 3, self.viewAnglesFmaskImg, 2, self.viewAnglesFmaskImg, 1, self.viewAnglesFmaskImg, 0)        
+        anglesInfo = config.AnglesFileInfo(inputViewAngleImg, 3, inputViewAngleImg, 2, inputViewAngleImg, 1, inputViewAngleImg, 0)        
 
         fmaskCloudsImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskCloudsResult.kea')
         fmaskFilenames = config.FmaskFilenames()
