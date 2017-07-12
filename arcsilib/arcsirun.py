@@ -824,7 +824,7 @@ def convertInputImageToRadiance(paramsObj):
             print("Sharpen radiance image...")
             paramsObj.processStageStr = paramsObj.processStageStr + "_sharp"
             outRadSharpImageName = paramsObj.outBaseName + paramsObj.processStageStr + "_rad" + paramsObj.outFormatExt
-            outRadSharpImage = os.path.join(outFilePath, outRadSharpImageName)
+            outRadSharpImage = os.path.join(paramsObj.outFilePath, outRadSharpImageName)
             paramsObj.sensorClass.sharpenLowResRadImgBands(paramsObj.radianceImage, outRadSharpImage, paramsObj.outFormat)
             rsgisUtils.deleteFileWithBasename(paramsObj.radianceImage)
             paramsObj.radianceImage = outRadSharpImage
