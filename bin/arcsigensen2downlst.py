@@ -60,7 +60,7 @@ from arcsilib.arcsiexception import ARCSIException
 # Import rsgislib module
 import rsgislib
 
-def genSen2DownloadList(dbFile, tile, outFile, outpath, cloudCover=None, startDate=None, endDate=None, multiDwn=False):
+def genSen2DownloadList(dbFile, tile, outFile, outpath, cloudCover=None, startDate=None, endDate=None, multiDwn=False, lstCmds=False):
     """
     Using sqlite database query and create a list of files to download
     """
@@ -89,7 +89,10 @@ def genSen2DownloadList(dbFile, tile, outFile, outpath, cloudCover=None, startDa
         
         cmdLst = []
         for row in ggSen2DBCursor.execute(query,  queryVar):
-            cmdLst.append("gsutil "+multiStr+" cp -r " + row[0] + " " + outpath)
+            if lstCmds:
+                cmdLst.append("gsutil "+multiStr+" cp -r " + row[0] + " " + outpath)
+            else:
+                cmdLst.append(row[0])
         
         rsgisUtils = rsgislib.RSGISPyUtils()
         rsgisUtils.writeList2File(cmdLst, outFile)
@@ -115,14 +118,15 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--dbfile", type=str, required=True, help='''Path to the database file.''')
     parser.add_argument("-t", "--tile", type=str, required=True, help='''Sentinel-2 tile - note remove the preceeding 'T'.''')
     parser.add_argument("-o", "--output", type=str, required=True, help='''Output file with a list of files to download.''')
-    parser.add_argument("--outpath", type=str, required=True, help='''Output path for the sentinel-2 SAFE files to download to on your system.''')
+    parser.add_argument("--outpath", type=str, help='''Output path for the sentinel-2 SAFE files to download to on your system.''')
     parser.add_argument("--cloudcover", type=float, help='''Specify an upper limit for acceptable cloud cover.''')
     parser.add_argument("--startdate", type=str, help='''Specify a start date (YYYY-MM-DD).''')
     parser.add_argument("--enddate", type=str, help='''Specify a end date (YYYY-MM-DD).''')
     parser.add_argument("--multi", action='store_true', default=False, help='''Adds -m option to the gsutil download command.''')
+    parser.add_argument("--lstcmds", action='store_true', default=False, help='''List download commands rather than just list of URLs''')
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
-    genSen2DownloadList(args.dbfile, args.tile, args.output, args.outpath, args.cloudcover, args.startdate, args.enddate, args.multi)
+    genSen2DownloadList(args.dbfile, args.tile, args.output, args.outpath, args.cloudcover, args.startdate, args.enddate, args.multi, args.lstcmds)
 
