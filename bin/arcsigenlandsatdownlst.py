@@ -60,7 +60,7 @@ from arcsilib.arcsiexception import ARCSIException
 # Import rsgislib module
 import rsgislib
 
-def genLandsatDownloadList(dbFile, lsPath, lsRow, outFile, outpath, sensorID=None, spacecraftID=None, collection=None, cloudCover=None, startDate=None, endDate=None, multiDwn=False):
+def genLandsatDownloadList(dbFile, lsPath, lsRow, outFile, outpath, sensorID=None, spacecraftID=None, collection=None, cloudCover=None, startDate=None, endDate=None, multiDwn=False, lstCmds=False):
     """
     Using sqlite database query and create a list of files to download
     """
@@ -103,7 +103,10 @@ def genLandsatDownloadList(dbFile, lsPath, lsRow, outFile, outpath, sensorID=Non
 
         cmdLst = []
         for row in ggLandsatDBCursor.execute(query,  queryVar):
-            cmdLst.append("gsutil "+multiStr+" cp -r " + row[0] + " " + outpath)
+            if lstCmds:
+                cmdLst.append("gsutil "+multiStr+" cp -r " + row[0] + " " + outpath)
+            else:
+                cmdLst.append(row[0])
         
         rsgisUtils = rsgislib.RSGISPyUtils()
         rsgisUtils.writeList2File(cmdLst, outFile)
@@ -138,9 +141,10 @@ if __name__ == '__main__':
     parser.add_argument("--startdate", type=str, help='''Specify a start date (YYYY-MM-DD).''')
     parser.add_argument("--enddate", type=str, help='''Specify a end date (YYYY-MM-DD).''')
     parser.add_argument("--multi", action='store_true', default=False, help='''Adds -m option to the gsutil download command.''')
-    
+    parser.add_argument("--lstcmds", action='store_true', default=False, help='''List download commands rather than just list of URLs''')
+
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
-    genLandsatDownloadList(args.dbfile, args.path, args.row, args.output, args.outpath, args.sensor, args.spacecraft, args.collection, args.cloudcover, args.startdate, args.enddate, args.multi)
+    genLandsatDownloadList(args.dbfile, args.path, args.row, args.output, args.outpath, args.sensor, args.spacecraft, args.collection, args.cloudcover, args.startdate, args.enddate, args.multi, args.lstcmds)
 
