@@ -47,17 +47,41 @@ import os.path
 import argparse
 # Import python subprocess module
 import subprocess
-# Import the arcsi version number
-from arcsilib import ARCSI_VERSION
-# Import the ARCSI exception class
-from arcsilib.arcsiexception import ARCSIException
-# Import rsgislib module
-import rsgislib
+
+
+def readTextFile2List(file):
+    """
+    Read a text file into a list where each line 
+    is an element in the list.
+    """
+    outList = []
+    try:
+        dataFile = open(file, 'r')
+        for line in dataFile:
+            line = line.strip()
+            if line != "":
+                outList.append(line)
+        dataFile.close()
+    except Exception as e:
+        raise e
+    return outList
+
+def writeList2File(dataList, outFile):
+    """
+    Write a list a text file, one line per item.
+    """
+    try:
+        f = open(outFile, 'w')
+        for item in dataList:
+           f.write(str(item)+'\n')
+        f.flush()
+        f.close()
+    except Exception as e:
+        raise e
 
 def runGoogleImgDwbld(inFileDwnLst, outDIR, outFailLst=None, multiDwn=False, overwrite=False):
 
-    rsgisUtils = rsgislib.RSGISPyUtils()
-    fileLst = rsgisUtils.readTextFile2List(inFileDwnLst)
+    fileLst = readTextFile2List(inFileDwnLst)
     failsLst = []
 
     multiStr = ''
@@ -80,6 +104,9 @@ def runGoogleImgDwbld(inFileDwnLst, outDIR, outFailLst=None, multiDwn=False, ove
         else:
             print("\tAlready Downloaded...")
 
+        if not outFailLst is None:
+            writeList2File(failsLst, outFailLst)
+
 
 if __name__ == '__main__':
     """
@@ -88,9 +115,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(prog='arcsidwnldgoog.py',
                                     description='''ARSCI command to download imagery from Google bucket''',
                                     epilog='''A tool to download imagery from a Google Bucket.''')
-    # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
-    # Define the argument for specifying the input directory to be processed.
+
     parser.add_argument("-i", "--input", type=str, required=True, help='''Input file which lists gs:// paths to be downloaded.''')
     parser.add_argument("-o", "--outpath", type=str, required=True, help='''Output directory path where downloads to be downloaded to on your system.''')
     parser.add_argument("--fails", type=str, help='''Output file which lists any downloads which fail.''')
