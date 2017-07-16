@@ -36,7 +36,7 @@ from distutils.core import setup
 import os
 
 setup(name='ARCSI',
-    version='2.2.8',
+    version='2.2.9',
     description='Atmospheric and Radiometic Correction of Satellite Imagery',
     author='Pete Bunting and Dan Clewley',
     author_email='pfb@aber.ac.uk, daniel.clewley@gmail.com',
