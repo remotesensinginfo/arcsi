@@ -274,18 +274,26 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             self.orbitNumber = datatakeTag.find('SENSING_ORBIT_NUMBER').text.strip()
             self.orbitDirection = datatakeTag.find('SENSING_ORBIT_DIRECTION').text.strip()
 
+            haveUniqueTileID = False
+            mixedPSD14PSD13 = False
             if hdrFileVersion == 'psd14':
                 prodURI = productInfoTag.find('PRODUCT_URI').text.strip()
-                self.uniqueTileID = prodURI.split('_')[5]
+                prodURIList = prodURI.split('_')
+                if len(prodURIList) >= 6:
+                    self.uniqueTileID = prodURIList[5]
+                    haveUniqueTileID = True
+                else:
+                    haveUniqueTileID = False
+                    mixedPSD14PSD13 = True
 
             # Get the input granule information (e.g., bands).
             granulesTagsLst = list()
-            if hdrFileVersion == 'psd14':
+            if (hdrFileVersion == 'psd14'):
                 granuleListTag = productInfoTag.find('Product_Organisation').find('Granule_List')
                 for granuleLstChild in granuleListTag:
                     if granuleLstChild.tag == 'Granule':
                         granulesTagsLst.append(granuleLstChild)
-            elif hdrFileVersion == 'psd13':
+            elif (hdrFileVersion == 'psd13'):
                 granuleListTags = productInfoTag.find('Product_Organisation')
                 for granulesLstTag in granuleListTags:
                     if granulesLstTag.tag == 'Granule_List':
@@ -296,9 +304,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             granuleIdentifier = ''
             if len(granulesTagsLst) == 0:
                 raise ARCSIException("Could not find any granules within the header file. (Header: " + hdrFileVersion + ")")
-            elif (len(granulesTagsLst) != 1) and (hdrFileVersion == 'psd14'):
-                raise ARCSIException("Only expecting a single granule within the file... The input image you have provided is not supported by ARCSI - please report so we can add support.")
-            elif hdrFileVersion == 'psd13':
+            elif (hdrFileVersion == 'psd13') or ((len(granulesTagsLst) != 1) and (hdrFileVersion == 'psd14') and mixedPSD14PSD13):
                 granulesDIR = os.path.join(self.sen2FileBaseDIR, 'GRANULE')
                 files = os.listdir(path=granulesDIR)
                 granuleFileTags = list()
@@ -311,12 +317,15 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                     granuleTag  = granuleFileTags[0]
                     granuleIdentifier = granuleTag.attrib['granuleIdentifier'].strip()
                     self.uniqueTileID = granuleIdentifier.split('_')[9]
+                    haveUniqueTileID = True
                 else:
                     raise ARCSIException("Only expecting a single granule within the file... The input image you have provided is not supported by ARCSI - please report so we can add support.")
+            elif (len(granulesTagsLst) != 1) and (hdrFileVersion == 'psd14'):
+                raise ARCSIException("Only expecting a single granule within the file... The input image you have provided is not supported by ARCSI - please report so we can add support.")
             else:
                 granuleTag = granulesTagsLst[0]
             
-            if hdrFileVersion == 'psd14':
+            if (hdrFileVersion == 'psd14') and (not mixedPSD14PSD13):
                 for granuleChild in granuleTag:
                     if granuleChild.tag == 'IMAGE_FILE':
                         imgFile = granuleChild.text.strip()
@@ -354,7 +363,9 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                                 raise ARCSIException("Could not associated image file with an expected image band: " + imgFile)
                         else:
                             raise ARCSIException("Could not file image file for: " + imgFile)
-            elif hdrFileVersion == 'psd13':
+                    else:
+                        raise ARCSIException("There is no tag 'IMAGE_FILE'.")
+            elif (hdrFileVersion == 'psd13') or ((hdrFileVersion == 'psd14') and mixedPSD14PSD13):
                 imgsPath = os.path.join(os.path.join(os.path.join(self.sen2FileBaseDIR, 'GRANULE'), granuleIdentifier), 'IMG_DATA')
                 for granuleChild in granuleTag:
                     if granuleChild.tag == 'IMAGE_ID':
@@ -667,7 +678,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
 
             ####### READ GRANULE HEADER FILES ##########
             granuleHdr = ''
-            if hdrFileVersion == 'psd14':
+            if (hdrFileVersion == 'psd14') and (not mixedPSD14PSD13):
                 granuleDIR = os.path.join(self.sen2FileBaseDIR, 'GRANULE')
                 granLC1DIRsIn = os.listdir(granuleDIR)
                 granLC1DIRs = []
@@ -677,7 +688,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                 if len(granLC1DIRs) != 1:
                     raise ARCSIException("Couldn't find the granule directory")
                 granuleHdr = os.path.join(os.path.join(granuleDIR, granLC1DIRs[0]), 'MTD_TL.xml')
-            elif hdrFileVersion == 'psd13':
+            elif (hdrFileVersion == 'psd13') or (mixedPSD14PSD13 and (hdrFileVersion == 'psd14')):
                 granuleDIR = os.path.join(os.path.join(self.sen2FileBaseDIR, 'GRANULE'), granuleIdentifier)
                 granuleTmpFiles = glob.glob(os.path.join(granuleDIR, 'S2A_OPER_MTD_L1C*.xml'))
                 if len(granuleTmpFiles) == 1:
@@ -1235,13 +1246,17 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             blue = rat.readColumn(ratDataset, 'Blue')
             ClassName = numpy.empty_like(red, dtype=numpy.dtype('a255'))
 
-            if(red.shape[0] > 0):
+            red[0] = 0
+            green[0] = 0
+            blue[0] = 0
+
+            if (red.shape[0] == 2) or (red.shape[0] == 3):
                 red[1] = 0
                 green[1] = 0
                 blue[1] = 255
                 ClassName[1] = 'Clouds'
 
-                if(red.shape[0] > 1):
+                if(red.shape[0] == 3):
                     red[2] = 0
                     green[2] = 255
                     blue[2] = 255

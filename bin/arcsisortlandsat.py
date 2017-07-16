@@ -73,11 +73,12 @@ from arcsilib import ARCSI_VERSION
 
 class ARCSISortLandsatData (object):
 
-    def createDIRStruct(self, outputDIR, noDIRStruct):
+    def createDIRStruct(self, outputDIR, noDIRStruct, inputFiles):
         if not os.path.exists(outputDIR):
             os.makedirs(outputDIR)
             if not noDIRStruct:
-                os.makedirs(os.path.join(outputDIR, "RAW"))
+                if inputFiles:
+                    os.makedirs(os.path.join(outputDIR, "RAW"))
                 os.makedirs(os.path.join(outputDIR, "Inputs"))
                 os.makedirs(os.path.join(outputDIR, "Outputs"))
                 os.makedirs(os.path.join(outputDIR, "tmp"))
@@ -106,7 +107,7 @@ class ARCSISortLandsatData (object):
         else:
             shutil.move(cFileLoc, outFileDIR)
 
-    def run(self, inputDir, outputDir, noDIRStruct, userInteract):
+    def runFiles(self, inputDir, outputDir, noDIRStruct, userInteract):
         inputDir = os.path.abspath(inputDir)
         outputDir = os.path.abspath(outputDir)
 
@@ -152,7 +153,7 @@ class ARCSISortLandsatData (object):
             elif filePrefix3 == 'LM1' or filePrefix4 == 'LM01':
                 outputFileDIR = os.path.join(outputDir, "LM1")
                 if (not createdLM1DIR) and (not os.path.isdir(outputFileDIR)):
-                    self.createDIRStruct(outputFileDIR, noDIRStruct)
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, True)
                     createdLM1DIR = True
                 # Move file...
                 inFile = file
@@ -164,7 +165,7 @@ class ARCSISortLandsatData (object):
             elif filePrefix3 == 'LM2' or filePrefix4 == 'LM02':
                 outputFileDIR = os.path.join(outputDir, "LM2")
                 if (not createdLM2DIR) and (not os.path.isdir(outputFileDIR)):
-                    self.createDIRStruct(outputFileDIR, noDIRStruct)
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, True)
                     createdLM2DIR = True
                 # Move file...
                 inFile = os.path.join(inputDir, file)
@@ -176,7 +177,7 @@ class ARCSISortLandsatData (object):
             elif filePrefix3 == 'LM3' or filePrefix4 == 'LM03':
                 outputFileDIR = os.path.join(outputDir, "LM3")
                 if (not createdLM3DIR) and (not os.path.isdir(outputFileDIR)):
-                    self.createDIRStruct(outputFileDIR, noDIRStruct)
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, True)
                     createdLM3DIR = True
                 # Move file...
                 inFile = os.path.join(inputDir, file)
@@ -188,7 +189,7 @@ class ARCSISortLandsatData (object):
             elif filePrefix3 == 'LM4' or filePrefix4 == 'LM04':
                 outputFileDIR = os.path.join(outputDir, "LM4")
                 if (not createdLM4DIR) and (not os.path.isdir(outputFileDIR)):
-                    self.createDIRStruct(outputFileDIR, noDIRStruct)
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, True)
                     createdLM4DIR = True
                 # Move file...
                 inFile = os.path.join(inputDir, file)
@@ -200,7 +201,7 @@ class ARCSISortLandsatData (object):
             elif filePrefix3 == 'LM5' or filePrefix4 == 'LM05':
                 outputFileDIR = os.path.join(outputDir, "LM5")
                 if (not createdLM5DIR) and (not os.path.isdir(outputFileDIR)):
-                    self.createDIRStruct(outputFileDIR, noDIRStruct)
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, True)
                     createdLM5DIR = True
                 # Move file...
                 inFile = os.path.join(inputDir, file)
@@ -209,10 +210,10 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif filePrefix3 == 'LT4' or filePrefix4 == 'LS04' or filePrefix4 == 'LE04':
+            elif filePrefix3 == 'LT4' or filePrefix4 == 'LS04' or filePrefix4 == 'LE04' or filePrefix4 == 'LT04':
                 outputFileDIR = os.path.join(outputDir, "LS4")
                 if (not createdLS4DIR) and (not os.path.isdir(outputFileDIR)):
-                    self.createDIRStruct(outputFileDIR, noDIRStruct)
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, True)
                     createdLS4DIR = True
                 # Move file...
                 inFile = os.path.join(inputDir, file)
@@ -221,10 +222,10 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif filePrefix3 == 'LT5' or filePrefix4 == 'LS05' or filePrefix4 == 'LE05':
+            elif filePrefix3 == 'LT5' or filePrefix4 == 'LS05' or filePrefix4 == 'LE05' or filePrefix4 == 'LT05':
                 outputFileDIR = os.path.join(outputDir, "LS5")
                 if (not createdLS5DIR) and (not os.path.isdir(outputFileDIR)):
-                    self.createDIRStruct(outputFileDIR, noDIRStruct)
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, True)
                     createdLS5DIR = True
                 # Move file...
                 inFile = os.path.join(inputDir, file)
@@ -233,10 +234,10 @@ class ARCSISortLandsatData (object):
                 print("Moving: " + inFile)
                 print("To: " + outputFileDIR)
                 self.moveFile(inFile, outputFileDIR, userInteract)
-            elif filePrefix3 == 'LE7' or filePrefix4 == 'LS07' or filePrefix4 == 'LE07':
+            elif filePrefix3 == 'LE7' or filePrefix4 == 'LS07' or filePrefix4 == 'LE07' or filePrefix4 == 'LT07':
                 outputFileDIR = os.path.join(outputDir, "LS7")
                 if (not createdLS7DIR) and (not os.path.isdir(outputFileDIR)):
-                    self.createDIRStruct(outputFileDIR, noDIRStruct)
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, True)
                     createdLS7DIR = True
                 # Move file...
                 inFile = os.path.join(inputDir, file)
@@ -248,7 +249,7 @@ class ARCSISortLandsatData (object):
             elif filePrefix3 == 'LC8' or filePrefix4 == 'LS08' or filePrefix4 == 'LC08':
                 outputFileDIR = os.path.join(outputDir, "LS8")
                 if (not createdLS8DIR) and (not os.path.isdir(outputFileDIR)):
-                    self.createDIRStruct(outputFileDIR, noDIRStruct)
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, True)
                     createdLS8DIR = True
                 # Move file...
                 inFile = os.path.join(inputDir, file)
@@ -260,6 +261,159 @@ class ARCSISortLandsatData (object):
             else:
                 print("Sensor was not recognised for file: " + file)
 
+    def runFolders(self, inputDir, outputDir, noDIRStruct, userInteract):
+        inputDir = os.path.abspath(inputDir)
+        outputDir = os.path.abspath(outputDir)
+
+        if not os.path.isdir(inputDir):
+            raise ARCSIException("The input directory specified does not exist!")
+        if not os.path.isdir(outputDir):
+            raise ARCSIException("The output directory specified does not exist!")
+
+        inputTmpFiles = os.listdir(inputDir)
+
+        inputFiles = []
+
+        # Navigate the directory tree
+        for fileName in inputTmpFiles:
+            filePath = os.path.join(inputDir, fileName)
+            if os.path.isdir(filePath):
+                inputFiles.append(filePath)
+
+        createdLM1DIR = False
+        createdLM2DIR = False
+        createdLM3DIR = False
+        createdLM4DIR = False
+        createdLS4DIR = False
+        createdLM5DIR = False
+        createdLS5DIR = False
+        createdLS7DIR = False
+        createdLS8DIR = False
+        createdLS05DIR = False
+        createdLS07DIR = False
+        outputFileDIR = ""
+
+        for file in inputFiles:
+            #print(file)
+            basefilename = os.path.basename(file)
+            #print(basefilename)
+            filePrefix3 = basefilename[:3]
+            filePrefix4 = basefilename[:4]
+            #print(filePrefix3)
+            #print(filePrefix4)
+            if '.DS_Store' in file:
+                print('Skipping .DS_Store file')
+                pass
+            elif filePrefix3 == 'LM1' or filePrefix4 == 'LM01':
+                outputFileDIR = os.path.join(outputDir, "LM1")
+                if (not createdLM1DIR) and (not os.path.isdir(outputFileDIR)):
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, False)
+                    createdLM1DIR = True
+                # Move file...
+                inFile = file
+                if not noDIRStruct:
+                    outputFileDIR = os.path.join(outputFileDIR, "Inputs")
+                print("Moving: " + inFile)
+                print("To: " + outputFileDIR)
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LM2' or filePrefix4 == 'LM02':
+                outputFileDIR = os.path.join(outputDir, "LM2")
+                if (not createdLM2DIR) and (not os.path.isdir(outputFileDIR)):
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, False)
+                    createdLM2DIR = True
+                # Move file...
+                inFile = os.path.join(inputDir, file)
+                if not noDIRStruct:
+                    outputFileDIR = os.path.join(outputFileDIR, "Inputs")
+                print("Moving: " + inFile)
+                print("To: " + outputFileDIR)
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LM3' or filePrefix4 == 'LM03':
+                outputFileDIR = os.path.join(outputDir, "LM3")
+                if (not createdLM3DIR) and (not os.path.isdir(outputFileDIR)):
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, False)
+                    createdLM3DIR = True
+                # Move file...
+                inFile = os.path.join(inputDir, file)
+                if not noDIRStruct:
+                    outputFileDIR = os.path.join(outputFileDIR, "Inputs")
+                print("Moving: " + inFile)
+                print("To: " + outputFileDIR)
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LM4' or filePrefix4 == 'LM04':
+                outputFileDIR = os.path.join(outputDir, "LM4")
+                if (not createdLM4DIR) and (not os.path.isdir(outputFileDIR)):
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, False)
+                    createdLM4DIR = True
+                # Move file...
+                inFile = os.path.join(inputDir, file)
+                if not noDIRStruct:
+                    outputFileDIR = os.path.join(outputFileDIR, "Inputs")
+                print("Moving: " + inFile)
+                print("To: " + outputFileDIR)
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LM5' or filePrefix4 == 'LM05':
+                outputFileDIR = os.path.join(outputDir, "LM5")
+                if (not createdLM5DIR) and (not os.path.isdir(outputFileDIR)):
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, False)
+                    createdLM5DIR = True
+                # Move file...
+                inFile = os.path.join(inputDir, file)
+                if not noDIRStruct:
+                    outputFileDIR = os.path.join(outputFileDIR, "Inputs")
+                print("Moving: " + inFile)
+                print("To: " + outputFileDIR)
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LT4' or filePrefix4 == 'LS04' or filePrefix4 == 'LE04' or filePrefix4 == 'LT04':
+                outputFileDIR = os.path.join(outputDir, "LS4")
+                if (not createdLS4DIR) and (not os.path.isdir(outputFileDIR)):
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, False)
+                    createdLS4DIR = True
+                # Move file...
+                inFile = os.path.join(inputDir, file)
+                if not noDIRStruct:
+                    outputFileDIR = os.path.join(outputFileDIR, "Inputs")
+                print("Moving: " + inFile)
+                print("To: " + outputFileDIR)
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LT5' or filePrefix4 == 'LS05' or filePrefix4 == 'LE05' or filePrefix4 == 'LT05':
+                outputFileDIR = os.path.join(outputDir, "LS5")
+                if (not createdLS5DIR) and (not os.path.isdir(outputFileDIR)):
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, False)
+                    createdLS5DIR = True
+                # Move file...
+                inFile = os.path.join(inputDir, file)
+                if not noDIRStruct:
+                    outputFileDIR = os.path.join(outputFileDIR, "Inputs")
+                print("Moving: " + inFile)
+                print("To: " + outputFileDIR)
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LE7' or filePrefix4 == 'LS07' or filePrefix4 == 'LE07' or filePrefix4 == 'LT07':
+                outputFileDIR = os.path.join(outputDir, "LS7")
+                if (not createdLS7DIR) and (not os.path.isdir(outputFileDIR)):
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, False)
+                    createdLS7DIR = True
+                # Move file...
+                inFile = os.path.join(inputDir, file)
+                if not noDIRStruct:
+                    outputFileDIR = os.path.join(outputFileDIR, "Inputs")
+                print("Moving: " + inFile)
+                print("To: " + outputFileDIR)
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            elif filePrefix3 == 'LC8' or filePrefix4 == 'LS08' or filePrefix4 == 'LC08':
+                outputFileDIR = os.path.join(outputDir, "LS8")
+                if (not createdLS8DIR) and (not os.path.isdir(outputFileDIR)):
+                    self.createDIRStruct(outputFileDIR, noDIRStruct, False)
+                    createdLS8DIR = True
+                # Move file...
+                inFile = os.path.join(inputDir, file)
+                if not noDIRStruct:
+                    outputFileDIR = os.path.join(outputFileDIR, "Inputs")
+                print("Moving: " + inFile)
+                print("To: " + outputFileDIR)
+                self.moveFile(inFile, outputFileDIR, userInteract)
+            else:
+                print("Sensor was not recognised for file: " + file)
 
 if __name__ == '__main__':
     """
@@ -286,12 +440,18 @@ if __name__ == '__main__':
                         help='''Specifies that a directory structure should not be built when the new folders are created.''')
     parser.add_argument("--userinteract", action='store_true', default=False,
                         help='''Specifies whether the user should be promoted for decision if two files of same name exist.''')
+    parser.add_argument("--inputdirs", action='store_true', default=False,
+                        help='''Specifies that the inputs are directories and not archive files.''')
+
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
     arcsiObj = ARCSISortLandsatData()
     try:
-        arcsiObj.run(args.input, args.output, args.nodirstruct, args.userinteract)
+        if args.inputdirs:
+            arcsiObj.runFolders(args.input, args.output, args.nodirstruct, args.userinteract)
+        else:
+            arcsiObj.runFiles(args.input, args.output, args.nodirstruct, args.userinteract)
     except ARCSIException as e:
         print("Error: " + str(e))
     except Exception as e:
