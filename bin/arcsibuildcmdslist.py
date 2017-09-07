@@ -61,6 +61,8 @@ import os
 from arcsilib.arcsiutils import ARCSIUtils
 # Import the list of sensors arcsi supports
 from arcsilib import ARCSI_SENSORS_LIST
+# Import the list of gdal file formats arcsi supports
+from arcsilib import ARCSI_GDALFORMATS_LIST
 # Import the list of products arcsi supports
 from arcsilib import ARCSI_PRODUCTS_LIST
 # Import the ARCSI exception class
@@ -221,8 +223,9 @@ if __name__ == '__main__':
                         help='''Specify the WKT projection of the input image''')
 
     # Define the argument for specifying the image file format.
-    parser.add_argument("-f", "--format", type=str,
-                        help='''Specify the image output format (GDAL name).''')
+    parser.add_argument("-f", "--format", type=str, choices=ARCSI_GDALFORMATS_LIST,
+                        help='''Specify the image output format (Note. Current just the KEA file format is supported, 
+                        use gdal_translate to convert to other formats (e.g., GeoTIFF) following completion.).''')
     
     # Define the argument stating that alongsided the masked products should none masked products.
     parser.add_argument("--fullimgouts", action='store_true', default=False,
