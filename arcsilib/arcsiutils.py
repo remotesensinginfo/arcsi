@@ -115,6 +115,18 @@ class ARCSIUtils (object):
         except Exception as e:
             raise e
 
+    def findFile(self, dirPath, fileSearch):
+        """
+        Search for a single file with a path using glob. Therefore, the file 
+        path returned is a true path. Within the fileSearch provide the file
+        name with '*' as wildcard(s).
+        """
+        import glob
+        files = glob.glob(os.path.join(dirPath, fileSearch))
+        if len(files) != 1:
+            raise Exception('Could not find a single file ('+fileSearch+'); found ' + str(len(files)) + ' files.')
+        return files[0]
+
     def stringTokenizer(self, line, delimiter):
         tokens = list()
         token = str()
