@@ -263,6 +263,9 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
     paramsObj.debugMode = debugMode
     paramsObj.scaleFactor = scaleFactor
     paramsObj.interpAlgor = interpAlgor
+    paramsObj.interpAlgorRSGISLib = interpAlgor
+    if paramsObj.interpAlgorRSGISLib == 'near':
+        paramsObj.interpAlgorRSGISLib = 'nearestneighbour'
     paramsObj.initClearSkyRegionDist = initClearSkyRegionDist
     paramsObj.initClearSkyRegionMinSize = initClearSkyRegionMinSize
     paramsObj.finalClearSkyRegionDist = finalClearSkyRegionDist
@@ -562,7 +565,7 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
     elif not (paramsObj.demFile == None):
         paramsObj.demNoDataVal = rsgisUtils.getImageNoDataValue(paramsObj.demFile)
         if paramsObj.demNoDataVal == None:
-            raise rsgislib.ARCSIException("A no data value for the inputted DEM has not been defined - cannot continue without a no data value. A no data value can be define using the --demnodata option.")
+            raise ARCSIException("A no data value for the inputted DEM has not been defined - cannot continue without a no data value. A no data value can be define using the --demnodata option.")
     paramsObj.topoShadowImage=""
     paramsObj.footprintShpFile=""
     paramsObj.metaDataFile=""
