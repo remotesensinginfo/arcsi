@@ -64,9 +64,13 @@ import sys
 import argparse
 # Import the ARCSI exception class
 from arcsilib.arcsiexception import ARCSIException
+# Import the ARCSI Utils class
+from arcsilib.arcsiutils import ARCSIUtils
+# Import the ARCSI sensor factory class
+from arcsilib.arcsiutils import ARCSISensorFactory
 # Import the shutil python module.
 import shutil
-#
+# Import the python file paths module.
 import os.path
 # Import the arcsi version number
 from arcsilib import ARCSI_VERSION
@@ -82,7 +86,6 @@ class ARCSISortLandsatData (object):
                 os.makedirs(os.path.join(outputDIR, "Inputs"))
                 os.makedirs(os.path.join(outputDIR, "Outputs"))
                 os.makedirs(os.path.join(outputDIR, "tmp"))
-
 
     def moveFile(self, cFileLoc, outFileDIR, userInteract):
         ## CHECK IF FILE EXISTS AT outFileDIR
@@ -294,13 +297,9 @@ class ARCSISortLandsatData (object):
         outputFileDIR = ""
 
         for file in inputFiles:
-            #print(file)
             basefilename = os.path.basename(file)
-            #print(basefilename)
             filePrefix3 = basefilename[:3]
             filePrefix4 = basefilename[:4]
-            #print(filePrefix3)
-            #print(filePrefix4)
             if '.DS_Store' in file:
                 print('Skipping .DS_Store file')
                 pass
@@ -415,11 +414,86 @@ class ARCSISortLandsatData (object):
             else:
                 print("Sensor was not recognised for file: " + file)
 
+    def runSort2RowPath(self, inputDir, outputDir, noDIRStruct, userInteract):
+        print("Sorting into ROW / PATH directories...")
+
+        arcsiUtils = ARCSIUtils()
+
+        inputDir = os.path.abspath(inputDir)
+        outputDir = os.path.abspath(outputDir)
+
+        if not os.path.isdir(inputDir):
+            raise ARCSIException("The input directory specified does not exist!")
+        if not os.path.isdir(outputDir):
+            raise ARCSIException("The output directory specified does not exist!")
+
+        inputTmpFiles = os.listdir(inputDir)
+
+        inputLandsatDIR = []
+
+        # Navigate the directory tree
+        for fileName in inputTmpFiles:
+            filePath = os.path.join(inputDir, fileName)
+            if os.path.isdir(filePath):
+                inputLandsatDIR.append(filePath)
+
+        foundRowPath = dict()
+
+        for inLandsatDIR in inputLandsatDIR:
+            lsMTLFile = arcsiUtils.findFile(inLandsatDIR, '*MTL.txt')
+            basefilename = os.path.basename(lsMTLFile)
+            filePrefix3 = basefilename[:3]
+            filePrefix4 = basefilename[:4]
+
+            sensorFact = ARCSISensorFactory()
+            sensorClass = None
+            if filePrefix3 == 'LM1' or filePrefix4 == 'LM01':
+                sensorClass = sensorFact.getSensorClassFromName('ls1', False, None)
+            elif filePrefix3 == 'LM2' or filePrefix4 == 'LM02':
+                sensorClass = sensorFact.getSensorClassFromName('ls2', False, None)
+            elif filePrefix3 == 'LM3' or filePrefix4 == 'LM03':
+                sensorClass = sensorFact.getSensorClassFromName('ls3', False, None)
+            elif filePrefix3 == 'LM4' or filePrefix4 == 'LM04':
+                sensorClass = sensorFact.getSensorClassFromName('ls4mss', False, None)
+            elif filePrefix3 == 'LM5' or filePrefix4 == 'LM05':
+                sensorClass = sensorFact.getSensorClassFromName('ls5mss', False, None)
+            elif filePrefix3 == 'LT4' or filePrefix4 == 'LS04' or filePrefix4 == 'LE04' or filePrefix4 == 'LT04':
+                sensorClass = sensorFact.getSensorClassFromName('ls4tm', False, None)
+            elif filePrefix3 == 'LT5' or filePrefix4 == 'LS05' or filePrefix4 == 'LE05' or filePrefix4 == 'LT05':
+                sensorClass = sensorFact.getSensorClassFromName('ls5tm', False, None)
+            elif filePrefix3 == 'LE7' or filePrefix4 == 'LS07' or filePrefix4 == 'LE07' or filePrefix4 == 'LT07':
+                sensorClass = sensorFact.getSensorClassFromName('ls7', False, None)
+            elif filePrefix3 == 'LC8' or filePrefix4 == 'LS08' or filePrefix4 == 'LC08':
+                sensorClass = sensorFact.getSensorClassFromName('ls8', False, None)
+            else:
+                print("Sensor was not recognised for file: " + file)
+
+            sensorClass.extractHeaderParameters(lsMTLFile, None)
+
+            outdir = 'r'+str(sensorClass.row)+'p'+str(sensorClass.path)
+            outputFileDIR = os.path.join(outputDir, outdir)
+            if not (outdir in foundRowPath):
+                foundRowPath[outdir] = True
+                self.createDIRStruct(outputFileDIR, noDIRStruct, False)
+
+            mv2DIR = outputFileDIR
+            if not noDIRStruct:
+                mv2DIR = os.path.join(outputFileDIR, 'Inputs')
+
+            print("Moving: " + inLandsatDIR)
+            print("To: " + mv2DIR)
+            self.moveFile(inLandsatDIR, mv2DIR, userInteract)
+
+
+
+        
+
 if __name__ == '__main__':
     """
     The command line user interface to ARCSI Landsat Sort Tool.
     """
     parser = argparse.ArgumentParser(prog='arcsisortlandsat.py',
+                                    formatter_class=argparse.RawDescriptionHelpFormatter,
                                     description='''ARCSI command to sort
                                                    Landsat data into a directory
                                                    structure.''',
@@ -442,16 +516,21 @@ if __name__ == '__main__':
                         help='''Specifies whether the user should be promoted for decision if two files of same name exist.''')
     parser.add_argument("--inputdirs", action='store_true', default=False,
                         help='''Specifies that the inputs are directories and not archive files.''')
+    parser.add_argument("--rowpath", action='store_true', default=False,
+                        help='''Specifies that the inputs are directories (not archive files) and sort them into directories based on row and path.''')
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
     arcsiObj = ARCSISortLandsatData()
     try:
-        if args.inputdirs:
-            arcsiObj.runFolders(args.input, args.output, args.nodirstruct, args.userinteract)
+        if args.rowpath:
+            arcsiObj.runSort2RowPath(args.input, args.output, args.nodirstruct, args.userinteract)
         else:
-            arcsiObj.runFiles(args.input, args.output, args.nodirstruct, args.userinteract)
+            if args.inputdirs:
+                arcsiObj.runFolders(args.input, args.output, args.nodirstruct, args.userinteract)
+            else:
+                arcsiObj.runFiles(args.input, args.output, args.nodirstruct, args.userinteract)
     except ARCSIException as e:
         print("Error: " + str(e))
     except Exception as e:
