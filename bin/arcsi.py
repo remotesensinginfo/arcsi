@@ -103,6 +103,7 @@ if len(sys.argv) == 1:
 
 else:
     parser = argparse.ArgumentParser(prog='arcsi',
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter
                                     description='''Software for the Atmospheric
                                                 and Radiometric Correction of
                                                 Satellite Imagery (ARCSI)''',
@@ -287,7 +288,7 @@ don't currently support the sensor you require.''')
                         which is equivalent to 2 percent reflectance.''')
     parser.add_argument("--scalefac", type=int, default=1000,
                         help='''Specifies the scale factor for the reflectance
-                        products.''')
+                        products. (Default 1000)''')
     parser.add_argument("--interp", type=str, default="cubic",
                         choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average', 'mode', 'max', 'min', 'med'],
                         help='''Specifies interpolation algorithm when reprojecting/resampling the imagery
