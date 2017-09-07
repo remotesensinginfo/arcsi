@@ -103,7 +103,7 @@ if len(sys.argv) == 1:
 
 else:
     parser = argparse.ArgumentParser(prog='arcsi',
-                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter
+                                    formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                     description='''Software for the Atmospheric
                                                 and Radiometric Correction of
                                                 Satellite Imagery (ARCSI)''',
@@ -266,11 +266,11 @@ don't currently support the sensor you require.''')
     # Define the argument for specifying the AOT value for the scene
     parser.add_argument("--lowaot", type=float, default=0.1,
                         help='''Specify the lower AOT amount to be removed from the AOT
-                                estimate for defining --minaot within search space. (Default 0.1)''')
+                                estimate for defining --minaot within search space.''')
                         # Define the argument for specifying the AOT value for the scene
     parser.add_argument("--upaot", type=float, default=0.4,
                         help='''Specify the upper AOT amount to be added to the AOT
-                                estimate for defining --maxaot within search space. (Default 0.4)''')
+                                estimate for defining --maxaot within search space.''')
     # Define the argument for specifying the AOT image file for the scene
     parser.add_argument("--aotfile", type=str,
                         help='''Specifiy an image file with AOT values for the
@@ -284,30 +284,37 @@ don't currently support the sensor you require.''')
                         rather than the more complex variable global/local DOS methods.''')
     parser.add_argument("--dosout", type=float, default=20,
                         help='''Specifies the reflectance value to which dark objects
-                        are set to during the dark object subtraction. (Default is 20,
+                        are set to during the dark object subtraction. The default is 20,
                         which is equivalent to 2 percent reflectance.''')
     parser.add_argument("--scalefac", type=int, default=1000,
                         help='''Specifies the scale factor for the reflectance
-                        products. (Default 1000)''')
+                        products.''')
+    
     parser.add_argument("--interp", type=str, default="cubic",
                         choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average', 'mode', 'max', 'min', 'med'],
-                        help='''Specifies interpolation algorithm when reprojecting/resampling the imagery
+                        help='''Specifies interpolation algorithm when reprojecting the imagery
                                 (Note. the options are those in gdalwarp).''')
+    
+    parser.add_argument("--interpresamp", type=str, default="near",
+                        choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average'],
+                        help='''Specifies interpolation algorithm when resampling image bands to a new resolution (e.g., Sentinel-2)
+                                (Note. the options are those in gdalwarp).''')
+
     parser.add_argument("--cs_initdist", type=int, default=3000,
                                      help='''When clear-sky regions are being defined this parameter
                                                is the initial distance (m) from cloud objects to generate the initial
-                                               clear-sky regions. (Default 3000)''')
+                                               clear-sky regions.''')
     parser.add_argument("--cs_initminsize", type=int, default=3000,
                                      help='''When clear-sky regions are being defined this parameter
-                                               is the minimum size (in pixels) of the initial objects (Default 3000)''')
+                                               is the minimum size (in pixels) of the initial objects.''')
     parser.add_argument("--cs_finaldist", type=int, default=1000,
                                      help='''When clear-sky regions are being defined this parameter
                                                is final distance (m) from the cloud objects defining clear sky
-                                               regions. (Default 1000)''')
+                                               regions.''')
     parser.add_argument("--cs_morphop", type=int, default=21,
                                      help='''When clear-sky regions are being defined this parameter
                                                is the size of the morphological opening operator used
-                                               to finalise the result. (Default 21)''')
+                                               to finalise the result.''')
     parser.add_argument("--checkouts", action='store_true', default=False,
                         help='''Specifies that the output path should be checked for files with the same base name.
                         If a file with the same base name is found then processing will not proceed - i.e., files will
@@ -585,9 +592,9 @@ don't currently support the sensor you require.''')
         runTimer = rsgislib.RSGISTime()
         runTimer.start(True)
         if args.multi:
-            arcsilib.arcsirun.runARCSIMulti(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, args.dem, args.demnodata, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres, args.ncores)
+            arcsilib.arcsirun.runARCSIMulti(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, args.dem, args.demnodata, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, args.scalefac, args.interp, args.interpresamp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres, args.ncores)
         else:
-            arcsilib.arcsirun.runARCSI(args.inputheader, args.imagefile, args.cloudmask, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, args.dem, args.demnodata, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, args.scalefac, args.interp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres)
+            arcsilib.arcsirun.runARCSI(args.inputheader, args.imagefile, args.cloudmask, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, args.dem, args.demnodata, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, args.scalefac, args.interp, args.interpresamp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres)
 
         runTimer.end(True, "ARCSI took ", " to process the input image. Thank you for using ARCSI.")
         print("\n\n")
