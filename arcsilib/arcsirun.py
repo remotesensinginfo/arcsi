@@ -294,35 +294,35 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
 
     # Step 3: If aerosol and atmosphere images are specified then sample them to find
     #         the aerosol and atmosphere generic model to use for conversion to SREF
-    if not paramsObj.aeroProfileOptionImg == None:
+    if paramsObj.aeroProfileOptionImg is not None:
         print("Get aero profile from image...")
         aeroProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(paramsObj.aeroProfileOptionImg, 1, 1, None, paramsObj.sensorClass.latTL, paramsObj.sensorClass.latBR, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.lonTL)[0])
 
-        if aeroProfileMode == 1:
+        if aeroProfileMode is 1:
             paramsObj.aeroProfileOption = "Maritime"
-        elif aeroProfileMode == 2:
+        elif aeroProfileMode is 2:
             paramsObj.aeroProfileOption = "Continental"
         else:
             raise Exception("The aerosol profile from the input image was not recognised.")
         print("Aerosol Profile = ", paramsObj.aeroProfileOption)
         print("")
-    if not paramsObj.atmosProfileOptionImg == None:
+    if paramsObj.atmosProfileOptionImg is not None:
         print("Get atmos profile from image...")
         atmosProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(paramsObj.atmosProfileOptionImg, 1, 1, None, paramsObj.sensorClass.latTL, paramsObj.sensorClass.latBR, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.lonTL)[0])
         summerWinter = arcsiUtils.isSummerOrWinter(paramsObj.sensorClass.latCentre, paramsObj.sensorClass.lonCentre, paramsObj.sensorClass.acquisitionTime )
-        if atmosProfileMode == 1:
+        if atmosProfileMode is 1:
             paramsObj.atmosProfileOption = "Tropical"
-        elif atmosProfileMode == 2:
-            if summerWinter == 1:
+        elif atmosProfileMode is 2:
+            if summerWinter is 1:
                 paramsObj.atmosProfileOption = "MidlatitudeSummer"
-            elif summerWinter == 2:
+            elif summerWinter is 2:
                 paramsObj.atmosProfileOption = "MidlatitudeWinter"
             else:
                 raise Exception("Not recognised as being summer or winter.")
-        elif atmosProfileMode == 3:
-            if summerWinter == 1:
+        elif atmosProfileMode is 3:
+            if summerWinter is 1:
                 paramsObj.atmosProfileOption = "SubarcticSummer"
-            elif summerWinter == 2:
+            elif summerWinter is 2:
                 paramsObj.atmosProfileOption = "SubarcticWinter"
             else:
                 raise Exception("Not recognised as being summer or winter.")
@@ -371,21 +371,21 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
     paramsObj.prodsCalculated = copy.copy(paramsObj.prodsToCalc)
     paramsObj.needAtmModel = False
     for prod in paramsObj.productsStr:
-        if prod == 'RAD':
+        if prod is 'RAD':
             paramsObj.prodsToCalc["RAD"] = True
-        elif prod == 'SATURATE':
+        elif prod is 'SATURATE':
             paramsObj.prodsToCalc["SATURATE"] = True
-        elif prod == 'TOA':
+        elif prod is 'TOA':
             paramsObj.prodsToCalc["RAD"] = True
             paramsObj.prodsToCalc["TOA"] = True
-        elif prod == 'CLOUDS':
+        elif prod is 'CLOUDS':
             paramsObj.prodsToCalc["RAD"] = True
             paramsObj.prodsToCalc["TOA"] = True
             paramsObj.prodsToCalc["CLOUDS"] = True
             paramsObj.prodsToCalc["SATURATE"] = True
             if paramsObj.sensorClass.hasThermal():
                 paramsObj.prodsToCalc["THERMAL"] = True
-        elif prod == 'CLEARSKY':
+        elif prod is 'CLEARSKY':
             paramsObj.prodsToCalc["RAD"] = True
             paramsObj.prodsToCalc["TOA"] = True
             paramsObj.prodsToCalc["CLOUDS"] = True
@@ -393,21 +393,21 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
             if paramsObj.sensorClass.hasThermal():
                 paramsObj.prodsToCalc["THERMAL"] = True
             paramsObj.prodsToCalc["CLEARSKY"] = True
-        elif prod == 'DDVAOT':
+        elif prod is 'DDVAOT':
             paramsObj.prodsToCalc["RAD"] = True
             paramsObj.prodsToCalc["TOA"] = True
             paramsObj.prodsToCalc["DDVAOT"] = True
             paramsObj.needAtmModel = True
-        elif prod == 'DOSAOTSGL':
+        elif prod is 'DOSAOTSGL':
             paramsObj.prodsToCalc["RAD"] = True
             paramsObj.prodsToCalc["TOA"] = True
             paramsObj.prodsToCalc["DOSAOTSGL"] = True
             paramsObj.needAtmModel = True
-        elif prod == 'SREF':
+        elif prod is 'SREF':
             paramsObj.prodsToCalc["RAD"] = True
             paramsObj.prodsToCalc["SREF"] = True
             paramsObj.needAtmModel = True
-        elif prod == 'STDSREF':
+        elif prod is 'STDSREF':
             paramsObj.prodsToCalc["RAD"] = True
             paramsObj.prodsToCalc["SREF"] = True
             paramsObj.prodsToCalc["STDSREF"] = True
@@ -415,30 +415,30 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
             paramsObj.needAtmModel = True
             if (paramsObj.demFile is None) or (paramsObj.demFile is ""):
                 raise ARCSIException("STDSREF requires a DEM file to be provided.")
-        elif prod == 'DOS':
+        elif prod is 'DOS':
             paramsObj.prodsToCalc["RAD"] = True
             paramsObj.prodsToCalc["TOA"] = True
             paramsObj.prodsToCalc["DOS"] = True
-        elif prod == 'DOSAOT':
+        elif prod is 'DOSAOT':
             paramsObj.prodsToCalc["RAD"] = True
             paramsObj.prodsToCalc["TOA"] = True
             paramsObj.prodsToCalc["DOSAOT"] = True
             paramsObj.needAtmModel = True
-        elif prod == 'THERMAL':
+        elif prod is 'THERMAL':
             if paramsObj.sensorClass.hasThermal():
                 paramsObj.prodsToCalc["THERMAL"] = True
             else:
                 raise ARCSIException("The sensor does not have thermal bands. Check you inputs.")
-        elif prod == 'TOPOSHADOW':
+        elif prod is 'TOPOSHADOW':
             paramsObj.prodsToCalc["RAD"] = True
             paramsObj.prodsToCalc["TOPOSHADOW"] = True
             if (paramsObj.demFile is None) or (paramsObj.demFile is ""):
                 raise ARCSIException("STDSREF requires a DEM file to be provided.")
-        elif prod == 'FOOTPRINT':
+        elif prod is 'FOOTPRINT':
             paramsObj.prodsToCalc["FOOTPRINT"] = True
-        elif prod == 'METADATA':
+        elif prod is 'METADATA':
             paramsObj.prodsToCalc["METADATA"] = True
-        elif prod == 'SHARP':
+        elif prod is 'SHARP':
             paramsObj.prodsToCalc["RAD"] = True
             paramsObj.prodsToCalc["SHARP"] = True
             if paramsObj.resample2LowResImg:
@@ -453,40 +453,40 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
     paramsObj.useBRDF = False
 
     if paramsObj.needAtmModel:
-        if paramsObj.aeroProfileOption == None:
+        if paramsObj.aeroProfileOption is None:
             raise ARCSIException("An aersol profile has not been specified.")
-        elif paramsObj.aeroProfileOption == "NoAerosols":
+        elif paramsObj.aeroProfileOption is "NoAerosols":
             paramsObj.aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.NoAerosols)
-        elif paramsObj.aeroProfileOption == "Continental":
+        elif paramsObj.aeroProfileOption is "Continental":
             paramsObj.aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Continental)
-        elif paramsObj.aeroProfileOption == "Maritime":
+        elif paramsObj.aeroProfileOption is "Maritime":
             paramsObj.aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Maritime)
-        elif paramsObj.aeroProfileOption == "Urban":
+        elif paramsObj.aeroProfileOption is "Urban":
             paramsObj.aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Urban)
-        elif paramsObj.aeroProfileOption == "Desert":
+        elif paramsObj.aeroProfileOption is "Desert":
             paramsObj.aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Desert)
-        elif paramsObj.aeroProfileOption == "BiomassBurning":
+        elif paramsObj.aeroProfileOption is "BiomassBurning":
             paramsObj.aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.BiomassBurning)
-        elif paramsObj.aeroProfileOption == "Stratospheric":
+        elif paramsObj.aeroProfileOption is "Stratospheric":
             paramsObj.aeroProfile = Py6S.AeroProfile.PredefinedType(Py6S.AeroProfile.Stratospheric)
         else:
             raise ARCSIException("The specified aersol profile is unknown.")
 
-        if paramsObj.atmosProfileOption == None:
+        if paramsObj.atmosProfileOption is None:
             raise ARCSIException("An atmospheric profile has not been specified.")
-        elif paramsObj.atmosProfileOption == "NoGaseousAbsorption":
+        elif paramsObj.atmosProfileOption is "NoGaseousAbsorption":
             paramsObj.atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.NoGaseousAbsorption)
-        elif paramsObj.atmosProfileOption == "Tropical":
+        elif paramsObj.atmosProfileOption is "Tropical":
             paramsObj.atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.Tropical)
-        elif paramsObj.atmosProfileOption == "MidlatitudeSummer":
+        elif paramsObj.atmosProfileOption is "MidlatitudeSummer":
             paramsObj.atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeSummer)
-        elif paramsObj.atmosProfileOption == "MidlatitudeWinter":
+        elif paramsObj.atmosProfileOption is "MidlatitudeWinter":
             paramsObj.atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.MidlatitudeWinter)
-        elif paramsObj.atmosProfileOption == "SubarcticSummer":
+        elif paramsObj.atmosProfileOption is "SubarcticSummer":
             paramsObj.atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticSummer)
-        elif paramsObj.atmosProfileOption == "SubarcticWinter":
+        elif paramsObj.atmosProfileOption is "SubarcticWinter":
             paramsObj.atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.SubarcticWinter)
-        elif paramsObj.atmosProfileOption == "USStandard1962":
+        elif paramsObj.atmosProfileOption is "USStandard1962":
             paramsObj.atmosProfile = Py6S.AtmosProfile.PredefinedType(Py6S.AtmosProfile.USStandard1962)
         else:
             raise ARCSIException("The specified atmospheric profile is unknown.")
@@ -494,17 +494,17 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
         if paramsObj.atmosOZoneWaterSpecified:
             paramsObj.atmosProfile = Py6S.AtmosProfile.UserWaterAndOzone(atmosWaterVal, atmosOZoneVal)
 
-        if paramsObj.grdReflOption == None:
+        if paramsObj.grdReflOption is None:
             raise ARCSIException("A ground reflectance has not been specified.")
-        elif paramsObj.grdReflOption == "GreenVegetation":
+        elif paramsObj.grdReflOption is "GreenVegetation":
               paramsObj.grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.GreenVegetation)
-        elif paramsObj.grdReflOption == "ClearWater":
+        elif paramsObj.grdReflOption is "ClearWater":
             paramsObj.grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.ClearWater)
-        elif paramsObj.grdReflOption == "Sand":
+        elif paramsObj.grdReflOption is "Sand":
             paramsObj.grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.Sand)
-        elif paramsObj.grdReflOption == "LakeWater":
+        elif paramsObj.grdReflOption is "LakeWater":
             paramsObj.grdRefl = Py6S.GroundReflectance.HomogeneousLambertian(Py6S.GroundReflectance.LakeWater)
-        elif paramsObj.grdReflOption == "BRDFHapke":
+        elif paramsObj.grdReflOption is "BRDFHapke":
             paramsObj.grdRefl = Py6S.GroundReflectance.HomogeneousHapke(0.101, -0.263, 0.589, 0.046)
             paramsObj.useBRDF = True
         else:
@@ -558,11 +558,11 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
     paramsObj.clearskyImage=""
     paramsObj.outDEMName=""
     paramsObj.demNoDataVal = -32768.0
-    if not (demNoDataUsrVal == None):
+    if demNoDataUsrVal is not None:
         paramsObj.demNoDataVal = demNoDataUsrVal
-    elif not (paramsObj.demFile == None):
+    elif paramsObj.demFile is not None:
         paramsObj.demNoDataVal = rsgisUtils.getImageNoDataValue(paramsObj.demFile)
-        if paramsObj.demNoDataVal == None:
+        if paramsObj.demNoDataVal is None:
             raise ARCSIException("A no data value for the inputted DEM has not been defined - cannot continue without a no data value. A no data value can be define using the --demnodata option.")
     paramsObj.topoShadowImage=""
     paramsObj.footprintShpFile=""
@@ -597,7 +597,7 @@ def resampleBands(paramsObj):
     # Check if bands need resampling
     if paramsObj.sensorClass.inImgsDiffRes():
         print('Resampling image bands to match one another.')
-        if paramsObj.interpAlgorResample == 'near':
+        if paramsObj.interpAlgorResample is 'near':
             paramsObj.interpAlgorResample = 'nearestneighbour'
         paramsObj.sensorClass.resampleImgRes(paramsObj.outFilePath, paramsObj.resample2LowResImg, paramsObj.interpAlgorResample, False)
 
@@ -754,10 +754,10 @@ def convertInputImageToRadiance(paramsObj):
             outImgName = paramsObj.outBaseName + paramsObj.processStageStr + "_rad" + paramsObj.outFormatExt
             outMaskName = paramsObj.outBaseName + "_mask" + paramsObj.outFormatExt
             radianceImageTmp, paramsObj.maskImage = paramsObj.sensorClass.applyImageDataMask(paramsObj.inputHeader, paramsObj.radianceImage, paramsObj.outFilePath, outMaskName, outImgName, paramsObj.outFormat, None)
-            if not radianceImageTmp is paramsObj.radianceImage:
+            if radianceImageTmp is not paramsObj.radianceImage:
                 rsgisUtils.deleteFileWithBasename(paramsObj.radianceImage)
                 paramsObj.radianceImage = radianceImageTmp
-            if not paramsObj.maskImage == None:
+            if paramsObj.maskImage is not None:
                 print("Setting Band Names...")
                 paramsObj.sensorClass.setBandNames(paramsObj.radianceImage)
                 if paramsObj.calcStatsPy:
@@ -772,7 +772,7 @@ def convertInputImageToRadiance(paramsObj):
             rsgislib.imageutils.maskImage(paramsObj.radianceImage, paramsObj.validMaskImage, outRadPathName, paramsObj.outFormat, rsgisUtils.getRSGISLibDataTypeFromImg(paramsObj.radianceImage), 0.0, 0.0)
             rsgisUtils.deleteFileWithBasename(paramsObj.radianceImage)
             paramsObj.radianceImage = outRadPathName
-            if not paramsObj.thermalRadImage == None:
+            if paramsObj.thermalRadImage is not None:
                 outThermPathName = os.path.join(paramsObj.outFilePath, paramsObj.outBaseName + paramsObj.processStageStr + "_thermrad" + paramsObj.outFormatExt)
                 rsgislib.imageutils.maskImage(paramsObj.thermalRadImage, paramsObj.validMaskImage, outThermPathName, paramsObj.outFormat, rsgisUtils.getRSGISLibDataTypeFromImg(paramsObj.thermalRadImage), 0.0, 0.0)
                 rsgisUtils.deleteFileWithBasename(paramsObj.thermalRadImage)
@@ -833,12 +833,12 @@ def convertInputImageToRadiance(paramsObj):
         if paramsObj.calcStatsPy:
             print("Calculating Statistics...")
             rsgislib.imageutils.popImageStats(paramsObj.radianceImage, True, 0.0, True)
-            if not paramsObj.thermalRadImage == None:
+            if paramsObj.thermalRadImage is not None:
                 rsgislib.imageutils.popImageStats(paramsObj.thermalRadImage, True, 0.0, True)
         
         paramsObj.finalOutFiles["RADIANCE_WHOLE"] = paramsObj.radianceImage
         paramsObj.finalOutFiles["RADIANCE"] = paramsObj.radianceImage
-        if not paramsObj.thermalRadImage == None:
+        if paramsObj.thermalRadImage is not None:
             paramsObj.finalOutFiles["THERM_RADIANCE_WHOLE"] = paramsObj.thermalRadImage
 
         paramsObj.radianceImageWhole = paramsObj.radianceImage
@@ -870,7 +870,7 @@ def calcTOAReflectance(paramsObj):
             tmpImg = os.path.join(paramsObj.tmpPath, paramsObj.outBaseName+rsgisUtils.uidGenerator()+'_toaimg'+paramsObj.outFormatExt)
             rsgisUtils.renameGDALLayer(paramsObj.toaImage, tmpImg)
             interpAlgorOpt = paramsObj.interpAlgor
-            if paramsObj.interpAlgor == 'near':
+            if paramsObj.interpAlgor is 'near':
                 interpAlgorOpt = 'nearestneighbour'
             rsgislib.imageutils.resampleImage2Match(paramsObj.radianceImage, tmpImg, paramsObj.toaImage, 'KEA', interpAlgorOpt, rsgislib.TYPE_16UINT, multicore=False)
             rsgisUtils.deleteFileWithBasename(tmpImg)
@@ -892,7 +892,7 @@ def performCloudMasking(paramsObj):
         print("Perform Cloud Classification...")
         rsgisUtils = rsgislib.RSGISPyUtils()
         outName = paramsObj.outBaseName + "_clouds" + paramsObj.outFormatExt
-        if paramsObj.cloudMaskUsrImg == None:
+        if paramsObj.cloudMaskUsrImg is None:
             if paramsObj.classmlclouds:
                 paramsObj.cloudsImage = paramsObj.sensorClass.generateCloudMaskML(paramsObj.toaImage, paramsObj.validMaskImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.cloudtrainclouds, paramsObj.cloudtrainother, paramsObj.scaleFactor, numCores=1)
             else:
@@ -969,7 +969,7 @@ def performClearSkyMasking(paramsObj):
         print("")
 
 def prepareDEM(paramsObj):
-    if (not (paramsObj.demFile == None)) and (paramsObj.outDEMName == ""):
+    if (paramsObj.demFile is not None) and (paramsObj.outDEMName is not ""):
         rsgisUtils = rsgislib.RSGISPyUtils()
         outDEMNameTmp = os.path.join(paramsObj.outFilePath, (paramsObj.outBaseName + "_demtmp" + paramsObj.outFormatExt))
         rsgislib.imageutils.createCopyImage(paramsObj.radianceImage, outDEMNameTmp, 1, paramsObj.demNoDataVal, paramsObj.outFormat, rsgislib.TYPE_32FLOAT)
@@ -1108,7 +1108,7 @@ def calculateSREF(paramsObj):
     # Convert to Surface Reflectance using 6S Standard Models
     if paramsObj.prodsToCalc["SREF"]:
         arcsiUtils = ARCSIUtils()
-        if (paramsObj.prodsToCalc["DDVAOT"] or paramsObj.prodsToCalc["DOSAOT"]) and (not paramsObj.aotFile == ""):
+        if (paramsObj.prodsToCalc["DDVAOT"] or paramsObj.prodsToCalc["DOSAOT"]) and (paramsObj.aotFile is not ""):
             imgDS = gdal.Open(paramsObj.aotFile, gdal.GA_ReadOnly )
             imgBand = imgDS.GetRasterBand(1)
             (min,max,mean,stddev) = imgBand.ComputeStatistics(False)
@@ -1120,17 +1120,17 @@ def calculateSREF(paramsObj):
                 aotVal = 0.05
             imgDS = None
 
-        if (paramsObj.aotVal == None) and (paramsObj.visVal == None) and (paramsObj.aotFile == ""):
+        if (paramsObj.aotVal is None) and (paramsObj.visVal is None) and (paramsObj.aotFile is ""):
             raise ARCSIException("Either the AOT or the visability need to specified.")
-        elif (paramsObj.aotVal == None) and (paramsObj.aotFile == ""):
+        elif (paramsObj.aotVal is None) and (paramsObj.aotFile is ""):
             print("Convert to vis to aot...")
             paramsObj.aotVal = arcsiUtils.convertVisabilityToAOT(paramsObj.visVal)
 
-        if not (paramsObj.aotVal == None):
+        if not (paramsObj.aotVal is None):
             print("AOT Value: {}".format(paramsObj.aotVal))
             paramsObj.calcdOutVals['ARCSI_AOT_VALUE'] = paramsObj.aotVal
 
-        if (paramsObj.demFile == None):
+        if (paramsObj.demFile is None):
             paramsObj.processSREFStr = '_rad_sref'
             outName = paramsObj.outBaseName + paramsObj.processStageStr + paramsObj.processSREFStr + paramsObj.outFormatExt
             paramsObj.srefImage = paramsObj.sensorClass.convertImageToSurfaceReflSglParam(paramsObj.radianceImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.surfaceAltitude, paramsObj.aotVal, paramsObj.useBRDF, paramsObj.scaleFactor)
@@ -1155,8 +1155,8 @@ def calculateSREF(paramsObj):
             numElevSteps = math.ceil(elevRange) + 1
             print("Elevation Ranges from ", paramsObj.minElev, " to ", paramsObj.maxElev, " an LUT with ", numElevSteps, " will be created.")
 
-            if (paramsObj.aotFile == None) or (paramsObj.aotFile == ""):
-                print("Build an DEM LUT with AOT == " + str(paramsObj.aotVal) + "...")
+            if (paramsObj.aotFile is None) or (paramsObj.aotFile is ""):
+                print("Build an DEM LUT with AOT = " + str(paramsObj.aotVal) + "...")
                 paramsObj.processSREFStr = '_rad_srefdem'
                 outName = paramsObj.outBaseName + paramsObj.processStageStr + paramsObj.processSREFStr + paramsObj.outFormatExt
                 paramsObj.srefImage, paramsObj.sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflDEMElevLUT(paramsObj.radianceImage, paramsObj.outDEMName, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.aotVal, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.scaleFactor)
