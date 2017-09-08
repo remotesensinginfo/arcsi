@@ -115,6 +115,19 @@ class ARCSIUtils (object):
         except Exception as e:
             raise e
 
+    def writeList2File(self, dataList, outFile):
+        """
+        Write a list a text file, one line per item.
+        """
+        try:
+            f = open(outFile, 'w')
+            for item in dataList:
+               f.write(str(item)+'\n')
+            f.flush()
+            f.close()
+        except Exception as e:
+            raise e
+
     def findFile(self, dirPath, fileSearch):
         """
         Search for a single file with a path using glob. Therefore, the file 
