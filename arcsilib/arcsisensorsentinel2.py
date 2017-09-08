@@ -1143,33 +1143,22 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
 
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
         print("Converting to TOA")
-        outputImage = os.path.join(outputPath, outputName)
-        inImgBands = list()
-        if self.resampleTo20m:
-            inImgBands.append(self.sen2ImgB02_20m)
-            inImgBands.append(self.sen2ImgB03_20m)
-            inImgBands.append(self.sen2ImgB04_20m)
-            inImgBands.append(self.sen2ImgB05)
-            inImgBands.append(self.sen2ImgB06)
-            inImgBands.append(self.sen2ImgB07)
-            inImgBands.append(self.sen2ImgB08_20m)
-            inImgBands.append(self.sen2ImgB8A)
-            inImgBands.append(self.sen2ImgB11)
-            inImgBands.append(self.sen2ImgB12)
-        else: 
-            inImgBands.append(self.sen2ImgB02)
-            inImgBands.append(self.sen2ImgB03)
-            inImgBands.append(self.sen2ImgB04)
-            inImgBands.append(self.sen2ImgB05_10m)
-            inImgBands.append(self.sen2ImgB06_10m)
-            inImgBands.append(self.sen2ImgB07_10m)
-            inImgBands.append(self.sen2ImgB08)
-            inImgBands.append(self.sen2ImgB8A_10m)
-            inImgBands.append(self.sen2ImgB11_10m)
-            inImgBands.append(self.sen2ImgB12_10m)
-
-        rsgislib.imagecalc.calcImageRescale(inImgBands, outputImage, outFormat, rsgislib.TYPE_16UINT, self.inNoDataVal, 0, self.quantificationVal, 0, 0, scaleFactor)
         self.imgIntScaleFactor = scaleFactor
+
+        outputImage = os.path.join(outputPath, outputName)
+        solarIrrVals = list()
+        IrrVal = collections.namedtuple('SolarIrradiance', ['irradiance'])
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B1))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B2))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B3))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B4))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B5))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B6))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B7))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B8))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B11))
+        solarIrrVals.append(IrrVal(irradiance=self.esun_B12))
+        rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrrVals)
         return outputImage
 
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
