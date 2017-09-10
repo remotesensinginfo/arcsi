@@ -192,6 +192,7 @@ class ARCSIParamsObj (object):
         cloudsImage=""
         clearskyImage=""
         outDEMName=""
+        outDEMNameMsk=""
         demNoDataVal = -32768.0
         topoShadowImage=""
         footprintShpFile=""
@@ -210,8 +211,9 @@ class ARCSIParamsObj (object):
         calcdOutVals = dict()
         sixsLUTCoeffs = None
         aotLUT = False
+        fileEnding2Keep = None
 
-def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, demNoDataUsrVal, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, interpAlgorResample, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg):
+def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal, atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, demNoDataUsrVal, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, interpAlgorResample, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg, fileEnding2Keep):
 
     arcsiUtils = ARCSIUtils()
     rsgisUtils = rsgislib.RSGISPyUtils()
@@ -274,6 +276,7 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
     paramsObj.cloudtrainclouds = cloudtrainclouds
     paramsObj.cloudtrainother = cloudtrainother
     paramsObj.resample2LowResImg = resample2LowResImg
+    paramsObj.fileEnding2Keep = fileEnding2Keep
 
     # Read WKT file if provided.
     paramsObj.wktStr = None
@@ -557,6 +560,7 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
     paramsObj.cloudsImage=""
     paramsObj.clearskyImage=""
     paramsObj.outDEMName=""
+    paramsObj.outDEMNameMsk=""
     paramsObj.demNoDataVal = -32768.0
     if demNoDataUsrVal is not None:
         paramsObj.demNoDataVal = demNoDataUsrVal
@@ -969,7 +973,7 @@ def performClearSkyMasking(paramsObj):
         print("")
 
 def prepareDEM(paramsObj):
-    if (paramsObj.demFile is not None) and (paramsObj.outDEMName != ""):
+    if (paramsObj.demFile is not None) and (paramsObj.demFile != ""):
         rsgisUtils = rsgislib.RSGISPyUtils()
         outDEMNameTmp = os.path.join(paramsObj.outFilePath, (paramsObj.outBaseName + "_demtmp" + paramsObj.outFormatExt))
         rsgislib.imageutils.createCopyImage(paramsObj.radianceImage, outDEMNameTmp, 1, paramsObj.demNoDataVal, paramsObj.outFormat, rsgislib.TYPE_32FLOAT)
@@ -1250,14 +1254,14 @@ def exportMetaData(paramsObj):
         paramsObj.prodsCalculated["METADATA"] = True
         print("")
 
-def runARCSI(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, demNoDataUsrVal, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, interpAlgorResample, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg):
+def runARCSI(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, demNoDataUsrVal, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, interpAlgorResample, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg, fileEnding2Keep):
     """
     A function contains the main flow of the software
     """
     try:
         # Initialise and parameters object.
         paramsObj = None
-        paramsObj = prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, demNoDataUsrVal, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, interpAlgorResample, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg)
+        paramsObj = prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, demNoDataUsrVal, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, interpAlgorResample, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg, fileEnding2Keep)
 
         # Check Input image(s) is valid before proceeding.
         checkForValidInput(paramsObj)
@@ -1338,7 +1342,7 @@ def runARCSI(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKTFile, out
         exportMetaData(paramsObj)
 
         print('Clean up anything left over...')
-        paramsObj.sensorClass.cleanFollowProcessing()
+        paramsObj.sensorClass.cleanFollowProcessing(paramsObj.outFilePath, paramsObj.fileEnding2Keep)
         
     except ARCSIException as e:
         print('Input Header: \'' + inputHeader + '\'', file=sys.stderr)
@@ -1473,7 +1477,17 @@ def _runARCSIPart3(paramsObj):
         print("Error: {}".format(e), file=sys.stderr)
     return paramsObj
 
-def runARCSIMulti(inputHeaders, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, demNoDataUsrVal, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, interpAlgorResample, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg, ncores):
+def _runARCSIPart4(paramsObj):
+    try:
+        print('Clean up anything left over...')
+        paramsObj.sensorClass.cleanFollowProcessing(paramsObj.outFilePath, paramsObj.fileEnding2Keep)
+    except ARCSIException as e:
+        print("Error: {}".format(e), file=sys.stderr)
+    except Exception as e:
+        print("Error: {}".format(e), file=sys.stderr)
+    return paramsObj
+
+def runARCSIMulti(inputHeaders, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, demNoDataUsrVal, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, interpAlgorResample, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg, ncores, fileEnding2Keep):
     """
     A function contains the main flow of the software
     """
@@ -1490,7 +1504,7 @@ def runARCSIMulti(inputHeaders, sensorStr, inWKTFile, outFormat, outFilePath, ou
             print(inputHeader)
             # Initialise and parameters object.
             paramsObj = None
-            paramsObj = prepParametersObj(inputHeader, None, None, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, demNoDataUsrVal, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, interpAlgorResample, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg)
+            paramsObj = prepParametersObj(inputHeader, None, None, sensorStr, inWKTFile, outFormat, outFilePath, outBaseName, outWKTFile, outProj4File, projAbbv, xPxlResUsr, yPxlResUsr, productsStr, calcStatsPy, aeroProfileOption, atmosProfileOption, aeroProfileOptionImg, atmosProfileOptionImg,  grdReflOption, surfaceAltitude, atmosOZoneVal,atmosWaterVal, atmosOZoneWaterSpecified, aeroWaterVal, aeroDustVal, aeroOceanicVal, aeroSootVal, aeroComponentsSpecified, aotVal, visVal, tmpPath, minAOT, maxAOT, lowAOT, upAOT, demFile, demNoDataUsrVal, aotFile, globalDOS, dosOutRefl, simpleDOS, debugMode, scaleFactor, interpAlgor, interpAlgorResample, initClearSkyRegionDist, initClearSkyRegionMinSize, finalClearSkyRegionDist, clearSkyMorphSize, fullImgOuts, checkOutputs, classmlclouds, cloudtrainclouds, cloudtrainother, resample2LowResImg, fileEnding2Keep)
             paramsLst.append(paramsObj)
             if first:
                 if paramsObj.prodsToCalc["DDVAOT"] or paramsObj.prodsToCalc["DOSAOT"] or paramsObj.prodsToCalc["DOSAOTSGL"]:
@@ -1525,6 +1539,8 @@ def runARCSIMulti(inputHeaders, sensorStr, inWKTFile, outFormat, outFilePath, ou
 
         if exportMetaData:
             paramsLst = plObj.map(_runARCSIPart3, paramsLst)
+
+        paramsLst = plObj.map(_runARCSIPart4, paramsLst)
 
     except ARCSIException as e:
         print("Error: {}".format(e), file=sys.stderr)
