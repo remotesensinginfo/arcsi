@@ -83,7 +83,7 @@ class ARCSIBuildCommands (object):
                 subdirList[:] = []
         return outFiles
 
-    def buildCmds(self, inputPath, inputIsDIR, outputFile, headerSearchStr, searchDepth, sensor, inwkt, format, outpath, prods, stats, aeropro, atmospro, aeroimg, atmosimg, grdrefl, surfacealtitude, atmosozone, atmoswater, aerowater, aerodust, aerooceanic, aerosoot, aot, vis, tmpath, minaot, maxaot, dem, localdos, dosout, simpledos, scalefac, outwkt, outproj4, projabbv, interp, checkouts, fullimgouts, classmlclouds, cloudtrainclouds, cloudtrainother, resample2lowres):
+    def buildCmds(self, inputPath, inputIsDIR, outputFile, headerSearchStr, searchDepth, sensor, inwkt, format, outpath, prods, stats, aeropro, atmospro, aeroimg, atmosimg, grdrefl, surfacealtitude, atmosozone, atmoswater, aerowater, aerodust, aerooceanic, aerosoot, aot, vis, tmpath, minaot, maxaot, dem, localdos, dosout, simpledos, scalefac, outwkt, outproj4, projabbv, interp, interpresamp, checkouts, fullimgouts, classmlclouds, cloudtrainclouds, cloudtrainother, resample2lowres, keepfileends, multi, ncores):
 
         inputPath = os.path.abspath(inputPath)
         outputFile = os.path.abspath(outputFile)
@@ -110,7 +110,7 @@ class ARCSIBuildCommands (object):
         for hFile in headersFilesList:
             print("Processing :", hFile)
             cmd = "arcsi.py -s " + sensor + " -p " + prodsStr + " -i \"" + hFile + "\""
-            if not outpath == None:
+            if outpath is not None:
                 cmd = cmd + " --outpath \"" + os.path.abspath(outpath) + "\""
             if stats:
                cmd = cmd + " --stats"
@@ -118,54 +118,56 @@ class ARCSIBuildCommands (object):
                cmd = cmd + " --format " + format
             else:
                 cmd = cmd + " --format KEA"
-            if not tmpath == None:
+            if tmpath is not None:
                cmd = cmd + " --tmpath \"" + os.path.abspath(tmpath) + "\""
-            if not dem == None:
+            if dem is not None:
                cmd = cmd + " --dem \"" + os.path.abspath(dem) + "\""
-            if not aeroimg == None:
+            if aeroimg is not None:
                cmd = cmd + " --aeroimg \"" + os.path.abspath(aeroimg) + "\""
-            elif not aeropro == None:
+            elif aeropro is not None:
                cmd = cmd + " --aeropro " + aeropro
-            if not atmosimg == None:
+            if atmosimg is not None:
                cmd = cmd + " --atmosimg \"" + os.path.abspath(atmosimg) + "\""
-            elif not atmospro == None:
+            elif atmospro is not None:
                cmd = cmd + " --atmospro " + atmospro
-            if not surfacealtitude == None:
+            if surfacealtitude is not None:
                cmd = cmd + " --surfacealtitude " + str(surfacealtitude)
-            if (not minaot == None) and (not maxaot == None):
+            if (minaot is not None) and (maxaot is not None):
                 cmd = cmd + " --minaot " + str(minaot) + " --maxaot " + str(maxaot)
-            elif not aot == None:
+            elif aot is not None:
                cmd = cmd + " --aot " + str(aot)
-            elif not vis == None:
+            elif vis is not None:
                cmd = cmd + " --vis " + str(vis)
-            if not inwkt == None:
+            if inwkt is not None:
                cmd = cmd + " --inwkt \"" + os.path.abspath(inwkt) + "\""
-            if not grdrefl == None:
+            if grdrefl is not None:
                 cmd = cmd + " --grdrefl " + grdrefl
-            if not atmosozone == None:
+            if atmosozone is not None:
                 cmd = cmd + " --atmosozone " + str(atmosozone)
-            if not atmoswater == None:
+            if atmoswater is not None:
                 cmd = cmd + " --atmoswater " + str(atmoswater)
-            if not aerowater == None:
+            if aerowater is not None:
                 cmd = cmd + " --aerowater " + str(aerowater)
-            if not aerodust == None:
+            if aerodust is not None:
                 cmd = cmd + " --aerodust " + str(aerodust)
-            if not aerooceanic == None:
+            if aerooceanic is not None:
                 cmd = cmd + " --aerooceanic " + str(aerooceanic)
-            if not aerosoot == None:
+            if aerosoot is not None:
                 cmd = cmd + " --aerosoot " + str(aerosoot)
-            if not dosout == None:
+            if dosout is not None:
                 cmd = cmd + " --dosout " + str(dosout)
-            if not scalefac == None:
+            if scalefac is not None:
                 cmd = cmd + " --scalefac " + str(scalefac)
-            if not outwkt == None:
+            if outwkt is not None:
                 cmd = cmd + " --outwkt \"" + os.path.abspath(outwkt) + "\""
-            if not outproj4 == None:
+            if outproj4 is not None:
                 cmd = cmd + " --outproj4 \"" + os.path.abspath(outproj4) + "\""
-            if not projabbv == None:
+            if projabbv is not None:
                 cmd = cmd + " --projabbv " + str(projabbv)
-            if not interp == None:
+            if interp is not None:
                 cmd = cmd + " --interp " + str(interp)
+            if interpresamp is not None:
+                cmd = cmd + " --interpresamp " + str(interpresamp)
             if localdos:
                 cmd = cmd + " --localdos "
             if simpledos:
@@ -182,6 +184,13 @@ class ARCSIBuildCommands (object):
                     cmd = cmd + " --cloudtrainother \"" + str(cloudtrainother) + "\""
             if resample2lowres:
                 cmd = cmd + " --resample2lowres "
+            if keepfileends is not None:
+                cmd = cmd + " --keepfileends "
+                for fileEnd in keepfileends:
+                    cmd = " " + fileEnd
+            if multi:
+                cmd = " --multi --ncores " + str(ncores)
+                
 
             print(cmd)
             outFile.write(cmd + "\n")
@@ -223,7 +232,7 @@ if __name__ == '__main__':
                         help='''Specify the WKT projection of the input image''')
 
     # Define the argument for specifying the image file format.
-    parser.add_argument("-f", "--format", type=str, choices=ARCSI_GDALFORMATS_LIST,
+    parser.add_argument("-f", "--format", type=str, choices=ARCSI_GDALFORMATS_LIST, default='KEA',
                         help='''Specify the image output format (Note. Current just the KEA file format is supported, 
                         use gdal_translate to convert to other formats (e.g., GeoTIFF) following completion.).''')
     
@@ -363,9 +372,14 @@ if __name__ == '__main__':
     parser.add_argument("--outproj4", type=str,
                         help='''Transform the outputs to the projection defined using a proj4 string and provided within a text file.''')
 
-    parser.add_argument("--interp", type=str,
+    parser.add_argument("--interp", type=str, default="cubic",
                         choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average', 'mode', 'max', 'min', 'med'],
-                        help='''Specifies interpolation algorithm when reprojecting/resampling the imagery
+                        help='''Specifies interpolation algorithm when reprojecting the imagery
+                                (Note. the options are those in gdalwarp).''')
+    
+    parser.add_argument("--interpresamp", type=str, default="near",
+                        choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average'],
+                        help='''Specifies interpolation algorithm when resampling image bands to a new resolution (e.g., Sentinel-2)
                                 (Note. the options are those in gdalwarp).''')
 
     parser.add_argument("--checkouts", action='store_true', default=False,
@@ -391,6 +405,18 @@ if __name__ == '__main__':
                                 resampled to the higher resolution). Example, using this switch will mean Sentinel-2
                                 imagery outputted at 20m rather than 10m resolution.''')
 
+    parser.add_argument("-k", "--keepfileends", type=str, nargs='+', default=None,
+                        help='''Provide a list of file endings which are to be kept following the completion of the processing.''')
+
+    parser.add_argument("--ncores", type=int, default=1,
+                        help='''Number of cores available for processing when using the --multi option.
+                                If a value of -1 is provided then all available cores will be used.''')
+
+    parser.add_argument("--multi", action='store_true', default=False,
+                        help='''If defined the multiple mode will be activated,
+                        therefore --inputheader needs to be a text file listing
+                        a series of input image header files.''')
+
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -411,6 +437,7 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, args.aerowater,
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath,
                      args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos,
-                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.checkouts, args.fullimgouts,
-                     args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres)
+                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args,interpresamp, 
+                     args.checkouts, args.fullimgouts, args.classmlclouds, args.cloudtrainclouds, 
+                     args.cloudtrainother, args.resample2lowres, args.keepfileends, args.multi, args.ncores)
 
