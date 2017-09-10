@@ -974,7 +974,6 @@ class ARCSIAbstractSensor (object):
         except Exception as e:
             raise e
 
-
     @abstractmethod
     def convertImageToSurfaceReflSglParam(self, inputRadImage, outputPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, surfaceAltitude, aotVal, useBRDF, scaleFactor): pass
 
@@ -1624,7 +1623,21 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def cleanLocalFollowProcessing(self): pass
 
-    def cleanFollowProcessing(self):
+    def cleanFollowProcessing(self, outputDIR=None, fileEnding2Keep=None):
         self.cleanLocalFollowProcessing()
+        if (outputDIR is not None) and (fileEnding2Keep is not None):
+            baseName = self.generateOutputBaseName()
+            import glob
+            allFiles = glob.glob(os.path.join(outputDIR, baseName+"*"))
+            for file in allFiles:
+                foundEnd = False
+                for fileEnd in fileEnding2Keep:
+                    if fileEnd in file:
+                        foundEnd = True
+                        break
+                if not foundEnd:
+                    print("REMOVE: " + file)
+                    os.remove(file)
+
 
 
