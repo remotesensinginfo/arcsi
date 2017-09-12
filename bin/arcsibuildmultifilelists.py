@@ -119,7 +119,7 @@ if __name__ == '__main__':
     """
     The command line user interface to ARCSI Data Extraction Tool.
     """
-    parser = argparse.ArgumentParser(prog='arcsibuildcmdslist.py',
+    parser = argparse.ArgumentParser(prog='arcsibuildmultifilelists.py',
                                     description='''ARCSI command to build arcsi.py commands
                                                 for a set of input images using the same options.''',
                                     epilog='''A tools to build arcsi.py commands

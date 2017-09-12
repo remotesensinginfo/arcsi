@@ -286,7 +286,7 @@ class ARCSIUtils (object):
             if not errVal is None:
                 outFloat = float(errVal)
             else:
-                raise ARCSIException("could not convert string to float: \'" + strVal + '\'.')
+                raise ARCSIException("Could not convert string to float: \'" + strVal + '\'.')
         return outFloat
 
     def str2Int(self, strVal, errVal=None):
@@ -302,7 +302,7 @@ class ARCSIUtils (object):
                 if not errVal is None:
                     outInt = int(errVal)
                 else:
-                    raise ARCSIException("could not convert string to int: \'" + strVal + '\'.')
+                    raise ARCSIException("Could not convert string to int: \'" + strVal + '\'.')
         return outInt
 
     def getMaxVal(self, vals):

@@ -260,6 +260,10 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             self.processingLevel = productInfoTag.find('PROCESSING_LEVEL').text.strip()
             self.processingBaseline = productInfoTag.find('PROCESSING_BASELINE').text.strip()
 
+            genTimeStr = productInfoTag.find('GENERATION_TIME').text.strip()
+            genTimeStr = genTimeStr.replace('Z', '')
+            self.generationTime = datetime.datetime.strptime(genTimeStr, "%Y-%m-%dT%H:%M:%S.%f")
+
             datatakeTag = productInfoTag.find('Datatake')
             if datatakeTag == None:
                 raise ARCSIException("Cannot open \'Product_Info\' section \'Datatake\'")
