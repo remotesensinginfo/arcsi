@@ -597,9 +597,6 @@ don't currently support the sensor you require.''')
         if not envVar == None:
             args.scalefac = int(envVar)
 
-
-        print(args.keepfileends)
-
         runTimer = rsgislib.RSGISTime()
         runTimer.start(True)
         if args.multi:

@@ -230,7 +230,6 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             self.headerFileName = os.path.split(inputHeader)[1]
             self.sen2FileBaseDIR = os.path.split(inputHeader)[0]
             
-            print("Reading header file")
             tree = ET.parse(inputHeader)
             root = tree.getroot()
 
@@ -279,7 +278,10 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             if hdrFileVersion == 'psd14':
                 prodURI = productInfoTag.find('PRODUCT_URI').text.strip()
                 prodURIList = prodURI.split('_')
-                if len(prodURIList) >= 6:
+                if ("OPER" in prodURIList) and ("REQ" in prodURIList) and ("PRDDWN" in prodURIList):
+                    haveUniqueTileID = False
+                    mixedPSD14PSD13 = True
+                elif len(prodURIList) >= 6:
                     self.uniqueTileID = prodURIList[5]
                     haveUniqueTileID = True
                 else:
