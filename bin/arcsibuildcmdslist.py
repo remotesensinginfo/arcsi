@@ -214,9 +214,9 @@ class ARCSIBuildCommands (object):
             if keepfileends is not None:
                 cmd = cmd + " --keepfileends "
                 for fileEnd in keepfileends:
-                    cmd = " \"" + fileEnd + "\""
+                    cmd = cmd + " \"" + fileEnd + "\""
             if multi:
-                cmd = " --multi --ncores " + str(ncores)
+                cmd = cmd + " --multi --ncores " + str(ncores)
                 
 
             print(cmd)
