@@ -91,7 +91,7 @@ class ARCSIBuildCommands (object):
         headersFilesList = []
         if inputIsDIR:
             if headerSearchStr.count('*') == 0:
-                raise Exception("The search string you have provided does not have any '*' - which is needed for searching.")
+                raise ARCSIException("The search string you have provided does not have any '*' - which is needed for searching.")
             headersFilesList = self.getListOfFiles(inputPath, headerSearchStr, searchDepth)
         else:
             arcsiUtils = ARCSIUtils()
@@ -109,6 +109,33 @@ class ARCSIBuildCommands (object):
         outFile = open(outputFile, 'w+')
         for hFile in headersFilesList:
             print("Processing :", hFile)
+
+            if sensor == 'LANDSAT':
+                basefilename = os.path.basename(hFile)
+                filePrefix3 = basefilename[:3]
+                filePrefix4 = basefilename[:4]
+
+                if filePrefix3 == 'LM1' or filePrefix4 == 'LM01':
+                    sensor = 'ls1'
+                elif filePrefix3 == 'LM2' or filePrefix4 == 'LM02':
+                    sensor = 'ls2'
+                elif filePrefix3 == 'LM3' or filePrefix4 == 'LM03':
+                    sensor = 'ls3'
+                elif filePrefix3 == 'LM4' or filePrefix4 == 'LM04':
+                    sensor = 'ls4mss'
+                elif filePrefix3 == 'LM5' or filePrefix4 == 'LM05':
+                    sensor = 'ls5mss'
+                elif filePrefix3 == 'LT4' or filePrefix4 == 'LS04' or filePrefix4 == 'LE04' or filePrefix4 == 'LT04':
+                    sensor = 'ls4tm'
+                elif filePrefix3 == 'LT5' or filePrefix4 == 'LS05' or filePrefix4 == 'LE05' or filePrefix4 == 'LT05':
+                    sensor = 'ls5tm'
+                elif filePrefix3 == 'LE7' or filePrefix4 == 'LS07' or filePrefix4 == 'LE07' or filePrefix4 == 'LT07':
+                    sensor = 'ls7'
+                elif filePrefix3 == 'LC8' or filePrefix4 == 'LS08' or filePrefix4 == 'LC08':
+                    sensor = 'ls8'
+                else:
+                    raise ARCSIException("Sensor was not recognised for file: \"" + hFile + "\"")
+
             cmd = "arcsi.py -s " + sensor + " -p " + prodsStr + " -i \"" + hFile + "\""
             if outpath is not None:
                 cmd = cmd + " --outpath \"" + os.path.abspath(outpath) + "\""
@@ -187,7 +214,7 @@ class ARCSIBuildCommands (object):
             if keepfileends is not None:
                 cmd = cmd + " --keepfileends "
                 for fileEnd in keepfileends:
-                    cmd = " " + fileEnd
+                    cmd = " \"" + fileEnd + "\""
             if multi:
                 cmd = " --multi --ncores " + str(ncores)
                 
@@ -223,8 +250,12 @@ if __name__ == '__main__':
                         help='''The depth within the directory tree from the input path which should be searched for image header files.''')
 
     # Define the argument for specifying the sensor.
+    sensorList = ARCSI_SENSORS_LIST
+    sensorList.append("LANDSAT")
     parser.add_argument("-s", "--sensor", required=True, choices=ARCSI_SENSORS_LIST,
-                        help='''Specify the sensor being processed.''')
+                        help='''Specify the sensor being processed. Note, if the 
+                        option 'LANDSAT' is selected then the sensor will 
+                        automatically be identified from the file name.''')
 
     # Define the argument for specifying the WKT projection file
     # for the intput file.
@@ -437,7 +468,7 @@ if __name__ == '__main__':
                      args.atmosozone, args.atmoswater, args.aerowater,
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath,
                      args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos,
-                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args,interpresamp, 
+                     args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.interpresamp, 
                      args.checkouts, args.fullimgouts, args.classmlclouds, args.cloudtrainclouds, 
                      args.cloudtrainother, args.resample2lowres, args.keepfileends, args.multi, args.ncores)
 
