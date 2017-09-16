@@ -59,13 +59,13 @@ from arcsilib.arcsiexception import ARCSIException
 
 class Sen2InfoObj(object):
 
-    def __init__(self, hdrFile=None, tileGranuleID=None, processVer=None, generationTime=None, orbitNumber=None, orbitDirection=None):
+    def __init__(self, hdrFile=None, tileGranuleID=None, processVer=None, generationTime=None, orbitNumber=None, projName=None):
         self.hdrFile = hdrFile
         self.tileGranuleID = tileGranuleID
         self.processVer = processVer
         self.generationTime = generationTime
         self.orbitNumber = orbitNumber
-        self.orbitDirection = orbitDirection
+        self.projName = projName
 
 
 class ARCSICheckSen2FileVersions (object):
@@ -86,12 +86,12 @@ class ARCSICheckSen2FileVersions (object):
             processVer = sensorClass.processingBaseline
             genTime = sensorClass.generationTime
             orbNum = sensorClass.orbitNumber
-            orbDirect = sensorClass.orbitDirection
-            scnTileID = tileGranuleID+'_'+orbNum+'_'+orbDirect
+            projName = sensorClass.projNameStr
+            scnTileID = tileGranuleID+'_'+orbNum+'_'+projName
             print(scnTileID)
             if scnTileID not in granuleLUT:
                 granuleLUT[scnTileID] = list()
-            granuleLUT[scnTileID].append(Sen2InfoObj(hdrFile, tileGranuleID, processVer, genTime, orbNum, orbDirect))
+            granuleLUT[scnTileID].append(Sen2InfoObj(hdrFile, tileGranuleID, processVer, genTime, orbNum, projName))
             sensorClass = None
 
         outHdrs = list()

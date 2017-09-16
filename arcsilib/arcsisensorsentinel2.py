@@ -721,6 +721,19 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             if self.inWKT is "":
                 self.inWKT = inProj.ExportToWkt()
 
+            self.projNameStr = ""
+            utmZone = inProj.GetUTMZone()
+            utmHem = ''
+            if utmZone < 0:
+                utmHem = 's'
+            else:
+                utmHem = 'n'
+            if utmZone == 0:
+                raise ARCSIException("Sen2 Image is not projected with UTM - contact support as header not currently supported.")
+            else:
+                utmZoneStr = str(utmZone).replace('-', '')
+                self.projNameStr = 'utm'+utmZoneStr+utmHem
+
             tlXRes10 = 0.0
             tlYRes10 = 0.0
             xSizeRes10 = 0
@@ -883,7 +896,12 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         Customises the generic name for the WorldView2 sensor
         """
         outname = self.defaultGenBaseOutFileName()
-        outname = outname + '_' + self.uniqueTileID
+        orbNumStr = str(self.orbitNumber)
+        if len(orbNumStr) == 1:
+            orbNumStr = '00'+orbNumStr
+        if len(orbNumStr) == 2:
+            orbNumStr = '0'+orbNumStr
+        outname = outname + '_' + self.uniqueTileID + '_ORB' + orbNumStr + '_' + self.projNameStr
         return outname
 
     def expectedImageDataPresent(self):
