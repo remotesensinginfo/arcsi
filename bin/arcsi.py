@@ -104,7 +104,7 @@ if len(sys.argv) == 1:
     print('                  --outproj4 ./osgb_proj4.prj --projabbv osgb\n')
 
 else:
-    parser = argparse.ArgumentParser(prog='arcsi',
+    parser = argparse.ArgumentParser(prog='arcsi.py',
                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter,
                                     description='''Software for the Atmospheric
                                                 and Radiometric Correction of

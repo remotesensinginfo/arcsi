@@ -55,6 +55,13 @@ import scipy.interpolate
 # Import the maths module
 import math
 
+def ARCSIEnum(*sequential, **named):
+    """Handy way to fake an enumerated type in Python
+    http://stackoverflow.com/questions/36932/how-can-i-represent-an-enum-in-python
+    """
+    enums = dict(zip(sequential, range(len(sequential))), **named)
+    return type('ARCSIEnum', (), enums)
+
 class ARCSIUtils (object):
     """
     A class with useful utilties for the ARCSI System.
