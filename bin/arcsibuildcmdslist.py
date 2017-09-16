@@ -110,33 +110,34 @@ class ARCSIBuildCommands (object):
         for hFile in headersFilesList:
             print("Processing :", hFile)
 
+            sensorOUT = sensor
             if sensor == 'LANDSAT':
                 basefilename = os.path.basename(hFile)
                 filePrefix3 = basefilename[:3]
                 filePrefix4 = basefilename[:4]
 
                 if filePrefix3 == 'LM1' or filePrefix4 == 'LM01':
-                    sensor = 'ls1'
+                    sensorOUT = 'ls1'
                 elif filePrefix3 == 'LM2' or filePrefix4 == 'LM02':
-                    sensor = 'ls2'
+                    sensorOUT = 'ls2'
                 elif filePrefix3 == 'LM3' or filePrefix4 == 'LM03':
-                    sensor = 'ls3'
+                    sensorOUT = 'ls3'
                 elif filePrefix3 == 'LM4' or filePrefix4 == 'LM04':
-                    sensor = 'ls4mss'
+                    sensorOUT = 'ls4mss'
                 elif filePrefix3 == 'LM5' or filePrefix4 == 'LM05':
-                    sensor = 'ls5mss'
+                    sensorOUT = 'ls5mss'
                 elif filePrefix3 == 'LT4' or filePrefix4 == 'LS04' or filePrefix4 == 'LE04' or filePrefix4 == 'LT04':
-                    sensor = 'ls4tm'
+                    sensorOUT = 'ls4tm'
                 elif filePrefix3 == 'LT5' or filePrefix4 == 'LS05' or filePrefix4 == 'LE05' or filePrefix4 == 'LT05':
-                    sensor = 'ls5tm'
+                    sensorOUT = 'ls5tm'
                 elif filePrefix3 == 'LE7' or filePrefix4 == 'LS07' or filePrefix4 == 'LE07' or filePrefix4 == 'LT07':
-                    sensor = 'ls7'
+                    sensorOUT = 'ls7'
                 elif filePrefix3 == 'LC8' or filePrefix4 == 'LS08' or filePrefix4 == 'LC08':
-                    sensor = 'ls8'
+                    sensorOUT = 'ls8'
                 else:
                     raise ARCSIException("Sensor was not recognised for file: \"" + hFile + "\"")
 
-            cmd = "arcsi.py -s " + sensor + " -p " + prodsStr + " -i \"" + hFile + "\""
+            cmd = "arcsi.py -s " + sensorOUT + " -p " + prodsStr + " -i \"" + hFile + "\""
             if outpath is not None:
                 cmd = cmd + " --outpath \"" + os.path.abspath(outpath) + "\""
             if stats:
