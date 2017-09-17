@@ -86,8 +86,8 @@ arcsiStages = ARCSIEnum('ARCSIPART1', 'ARCSIPART2', 'ARCSIPART3', 'ARCSIPART4')
 
 # Initializations and preliminaries
 mpiComm = MPI.COMM_WORLD      # get MPI communicator object
-mpiSize = comm.size           # total number of processes
-mpiRank = comm.rank           # rank of this process
+mpiSize = mpiComm.size           # total number of processes
+mpiRank = mpiComm.rank           # rank of this process
 mpiStatus = MPI.Status()      # get MPI status object
 
 
@@ -598,30 +598,25 @@ if __name__ == '__main__':
                 nTasks = len(paramsLst)
                 taskIdx = 0
                 nWorkers = mpiSize - 1
-                closedWorkers = 0
-                while closedWorkers < nWorkers:
-                    rtnParamsObj = comm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=mpiStatus)
+                completedTasks = 0
+                while completedTasks < nTasks:
+                    rtnParamsObj = mpiComm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=mpiStatus)
                     source = mpiStatus.Get_source()
                     tag = mpiStatus.Get_tag()
                     if tag == mpiTags.READY:
                         # Worker is ready, so send it a task
                         if taskIdx < nTasks:
-                            comm.send([arcsiStages.ARCSIPART1, paramsLst[taskIdx]], dest=source, tag=mpiTags.START)
+                            mpiComm.send([arcsiStages.ARCSIPART1, paramsLst[taskIdx]], dest=source, tag=mpiTags.START)
                             print("Sending task %d to worker %d" % (taskIdx, source))
                             taskIdx += 1
-                        else:
-                            comm.send(None, dest=source, tag=mpiTags.EXIT)
+                        #else: Do nothing
                     elif tag == mpiTags.DONE:
                         print("Got data from worker %d" % source)
                         paramsLstTmp.append(rtnParamsObj)
+                        ++completedTasks
                     elif tag == tags.EXIT:
-                        print("Worker %d exited." % source)
-                        closedWorkers += 1
+                        raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
                 paramsLst = paramsLstTmp
-
-                """
-                plObj = Pool(ncores)
-                paramsLst = plObj.map(_runARCSIPart1, paramsLst)
                 
                 if calcAOT:
                     if useAOTImage:
@@ -637,6 +632,7 @@ if __name__ == '__main__':
                         for params in paramsLst:
                             paramsObj.aotVal = avgAOT
                 
+                """
                 if calc6SSREF:
                     paramsLst = plObj.map(_runARCSIPart2, paramsLst)
 
@@ -645,6 +641,30 @@ if __name__ == '__main__':
 
                 paramsLst = plObj.map(_runARCSIPart4, paramsLst)
                 """
+
+                paramsLstTmp = list()
+                nTasks = len(paramsLst)
+                taskIdx = 0
+                nWorkers = mpiSize - 1
+                closedWorkers = 0
+                while closedWorkers < nWorkers:
+                    rtnParamsObj = mpiComm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=mpiStatus)
+                    source = mpiStatus.Get_source()
+                    tag = mpiStatus.Get_tag()
+                    if tag == mpiTags.READY:
+                        # Worker is ready, so send it a task
+                        if taskIdx < nTasks:
+                            mpiComm.send([arcsiStages.ARCSIPART4, paramsLst[taskIdx]], dest=source, tag=mpiTags.START)
+                            print("Sending task %d to worker %d" % (taskIdx, source))
+                            taskIdx += 1
+                        else:
+                            mpiComm.send(None, dest=source, tag=mpiTags.EXIT)
+                    elif tag == mpiTags.DONE:
+                        print("Got data from worker %d" % source)
+                        paramsLstTmp.append(rtnParamsObj)
+                    elif tag == tags.EXIT:
+                        print("Worker %d exited." % source)
+                        closedWorkers += 1
 
             except ARCSIException as e:
                 print("Error: {}".format(e), file=sys.stderr)
@@ -660,8 +680,8 @@ if __name__ == '__main__':
 else:
     # Worker processes execute code below
     while True:
-        comm.send(None, dest=0, tag=mpiTags.READY)
-        tskData = comm.recv(source=0, tag=MPI.ANY_TAG, status=mpiStatus)
+        mpiComm.send(None, dest=0, tag=mpiTags.READY)
+        tskData = mpiComm.recv(source=0, tag=MPI.ANY_TAG, status=mpiStatus)
         tag = mpiStatus.Get_tag()
         paramsObj = None
 
@@ -678,8 +698,8 @@ else:
             else:
                 raise ARCSIException("Don't recognise processing stage")
 
-            comm.send(paramsObj, dest=0, tag=mpiTags.DONE)
+            mpiComm.send(paramsObj, dest=0, tag=mpiTags.DONE)
         elif tag == mpiTags.EXIT:
             break
 
-    comm.send(None, dest=0, tag=tags.EXIT)
+    mpiComm.send(None, dest=0, tag=tags.EXIT)
