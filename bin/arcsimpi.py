@@ -51,7 +51,7 @@ import argparse
 # Import ARCSI library
 import arcsilib
 # Import ARCSI execution class
-from arcsilib.arcsirun import *
+import arcsilib.arcsirun
 # Import the ARCSI utilities class
 from arcsilib.arcsiutils import ARCSIUtils
 # Import the ARCSI enum
@@ -691,13 +691,13 @@ else:
         if tag == mpiTags.START:
             # Do work!
             if tskData[0] == arcsiStages.ARCSIPART1:
-                paramsObj = _runARCSIPart1(tskData[1])
+                paramsObj = arcsilib.arcsirun._runARCSIPart1(tskData[1])
             elif tskData[0] == arcsiStages.ARCSIPART2:
-                paramsObj = _runARCSIPart2(tskData[1])
+                paramsObj = arcsilib.arcsirun._runARCSIPart2(tskData[1])
             elif tskData[0] == arcsiStages.ARCSIPART2:
-                paramsObj = _runARCSIPart3(tskData[1])
+                paramsObj = arcsilib.arcsirun._runARCSIPart3(tskData[1])
             elif tskData[0] == arcsiStages.ARCSIPART4:
-                paramsObj = _runARCSIPart4(tskData[1])
+                paramsObj = arcsilib.arcsirun._runARCSIPart4(tskData[1])
             else:
                 raise ARCSIException("Don't recognise processing stage")
 
