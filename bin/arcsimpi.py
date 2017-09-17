@@ -616,7 +616,7 @@ if (__name__ == '__main__') and (mpiRank == 0):
                     elif tag == mpiTags.DONE:
                         print("Got data from worker %d" % source)
                         paramsLstTmp.append(rtnParamsObj)
-                        ++completedTasks
+                        completedTasks += 1
                     elif tag == tags.EXIT:
                         raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
                 paramsLst = paramsLstTmp
@@ -655,7 +655,7 @@ if (__name__ == '__main__') and (mpiRank == 0):
                         elif tag == mpiTags.DONE:
                             print("Got data from worker %d" % source)
                             paramsLstTmp.append(rtnParamsObj)
-                            ++completedTasks
+                            completedTasks += 1
                         elif tag == tags.EXIT:
                             raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
                     paramsLst = paramsLstTmp
@@ -680,7 +680,7 @@ if (__name__ == '__main__') and (mpiRank == 0):
                         elif tag == mpiTags.DONE:
                             print("Got data from worker %d" % source)
                             paramsLstTmp.append(rtnParamsObj)
-                            ++completedTasks
+                            completedTasks += 1
                         elif tag == tags.EXIT:
                             raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
                     paramsLst = paramsLstTmp
@@ -690,6 +690,7 @@ if (__name__ == '__main__') and (mpiRank == 0):
                 taskIdx = 0
                 nWorkers = mpiSize - 1
                 closedWorkers = 0
+                completedTasks = 0
                 while closedWorkers < nWorkers:
                     rtnParamsObj = mpiComm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=mpiStatus)
                     source = mpiStatus.Get_source()
@@ -705,6 +706,7 @@ if (__name__ == '__main__') and (mpiRank == 0):
                     elif tag == mpiTags.DONE:
                         print("Got data from worker %d" % source)
                         paramsLstTmp.append(rtnParamsObj)
+                        completedTasks += 1
                     elif tag == tags.EXIT:
                         print("Worker %d exited." % source)
                         closedWorkers += 1
@@ -734,7 +736,7 @@ else:
                 paramsObj = arcsilib.arcsirun._runARCSIPart1(tskData[1])
             elif tskData[0] == arcsiStages.ARCSIPART2:
                 paramsObj = arcsilib.arcsirun._runARCSIPart2(tskData[1])
-            elif tskData[0] == arcsiStages.ARCSIPART2:
+            elif tskData[0] == arcsiStages.ARCSIPART3:
                 paramsObj = arcsilib.arcsirun._runARCSIPart3(tskData[1])
             elif tskData[0] == arcsiStages.ARCSIPART4:
                 paramsObj = arcsilib.arcsirun._runARCSIPart4(tskData[1])
