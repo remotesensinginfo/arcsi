@@ -85,13 +85,14 @@ mpiTags = ARCSIEnum('READY', 'DONE', 'EXIT', 'START')
 arcsiStages = ARCSIEnum('ARCSIPART1', 'ARCSIPART2', 'ARCSIPART3', 'ARCSIPART4')
 
 # Initializations and preliminaries
-mpiComm = MPI.COMM_WORLD      # get MPI communicator object
-mpiSize = mpiComm.size           # total number of processes
-mpiRank = mpiComm.rank           # rank of this process
-mpiStatus = MPI.Status()      # get MPI status object
+mpiComm = MPI.COMM_WORLD    # get MPI communicator object
+mpiSize = mpiComm.size      # total number of processes
+mpiRank = mpiComm.rank      # rank of this process
+mpiStatus = MPI.Status()    # get MPI status object
 
-
-if __name__ == '__main__':
+print("HELLO WORLD")
+print("Rank: " + str(mpiRank))
+if (__name__ == '__main__') and (mpiRank == 0):
     """
     The command line user interface to ARCSI
     """
@@ -106,6 +107,8 @@ if __name__ == '__main__':
         print('help : arcsimpi.py --help')
         print('  or : arcsimpi.py -h')
         print('')
+        print('Example: mpirun -np 2 arcsimpi.py -s sen2 -p TOA SHARP METADATA -f KEA --stats \\')
+        print(' -k meta.json valid.kea toa.kea  -i ./RockallSentinel2B_20170816.txt -o ./Outputs')
     else:
         parser = argparse.ArgumentParser(prog='arcsimpi.py',
                                         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
