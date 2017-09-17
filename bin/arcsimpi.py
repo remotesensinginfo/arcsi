@@ -348,8 +348,8 @@ if __name__ == '__main__':
             arcsilib.arcsirun.print2ConsoleListEnvVars()
         else:
             # Check that the input header parameter has been specified.
-            if args.inputheader == None:
-                print("Error: No input header image file has been provided.\n")
+            if args.inputheaders == None:
+                print("Error: No list of input header files has been provided.\n")
                 sys.exit()
 
             # Check that the senor parameter has been specified.
