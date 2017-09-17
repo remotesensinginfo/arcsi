@@ -581,7 +581,7 @@ if __name__ == '__main__':
                     print(inputHeader)
                     # Initialise and parameters object.
                     paramsObj = None
-                    paramsObj = prepParametersObj(inputHeader, None, None, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, args.dem, args.demnodata, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, args.scalefac, args.interp, args.interpresamp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres, args.keepfileends)
+                    paramsObj = prepParametersObj(inputHeader, None, None, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, args.dem, args.demnodata, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, args.scalefac, args.interp, args.interpresamp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres, args.keepfileends)
                     paramsLst.append(paramsObj)
                     if first:
                         if paramsObj.prodsToCalc["DDVAOT"] or paramsObj.prodsToCalc["DOSAOT"] or paramsObj.prodsToCalc["DOSAOTSGL"]:
@@ -668,11 +668,11 @@ if __name__ == '__main__':
 
             except ARCSIException as e:
                 print("Error: {}".format(e), file=sys.stderr)
-                if debugMode:
+                if args.debug:
                     raise
             except Exception as e:
                 print("Error: {}".format(e), file=sys.stderr)
-                if debugMode:
+                if args.debug:
                     raise
 
             runTimer.end(True, "ARCSI took ", " to process. Thank you for using ARCSI.")
