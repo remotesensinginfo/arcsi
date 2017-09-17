@@ -685,13 +685,16 @@ if (__name__ == '__main__') and (mpiRank == 0):
                             raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
                     paramsLst = paramsLstTmp
 
-                paramsLstTmp = list()
+
+
+
+
+                paramsLstTmp = []
                 nTasks = len(paramsLst)
                 taskIdx = 0
                 nWorkers = mpiSize - 1
-                closedWorkers = 0
                 completedTasks = 0
-                while closedWorkers < nWorkers:
+                while completedTasks < nTasks:
                     rtnParamsObj = mpiComm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=mpiStatus)
                     source = mpiStatus.Get_source()
                     tag = mpiStatus.Get_tag()
@@ -701,22 +704,31 @@ if (__name__ == '__main__') and (mpiRank == 0):
                             mpiComm.send([arcsiStages.ARCSIPART4, paramsLst[taskIdx]], dest=source, tag=mpiTags.START)
                             print("Sending task %d to worker %d" % (taskIdx, source))
                             taskIdx += 1
-                        else:
-                            mpiComm.send(None, dest=source, tag=mpiTags.EXIT)
+                        #else: Do nothing
                     elif tag == mpiTags.DONE:
                         print("Got data from worker %d" % source)
                         paramsLstTmp.append(rtnParamsObj)
                         completedTasks += 1
                     elif tag == tags.EXIT:
-                        print("Worker %d exited." % source)
-                        closedWorkers += 1
+                        raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
+                paramsLst = paramsLstTmp
+
+                for workerID in range(mpiSize):
+                    if workerID > 0:
+                        mpiComm.send(None, dest=workerID, tag=mpiTags.EXIT)
 
             except ARCSIException as e:
                 print("Error: {}".format(e), file=sys.stderr)
+                for workerID in range(mpiSize):
+                    if workerID > 0:
+                        mpiComm.send(None, dest=workerID, tag=mpiTags.EXIT)
                 if args.debug:
                     raise
             except Exception as e:
                 print("Error: {}".format(e), file=sys.stderr)
+                for workerID in range(mpiSize):
+                    if workerID > 0:
+                        mpiComm.send(None, dest=workerID, tag=mpiTags.EXIT)
                 if args.debug:
                     raise
 
