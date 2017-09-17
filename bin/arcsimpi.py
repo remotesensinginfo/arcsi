@@ -635,15 +635,55 @@ if (__name__ == '__main__') and (mpiRank == 0):
                         for params in paramsLst:
                             paramsObj.aotVal = avgAOT
                 
-                """
                 if calc6SSREF:
-                    paramsLst = plObj.map(_runARCSIPart2, paramsLst)
+                    paramsLstTmp = []
+                    nTasks = len(paramsLst)
+                    taskIdx = 0
+                    nWorkers = mpiSize - 1
+                    completedTasks = 0
+                    while completedTasks < nTasks:
+                        rtnParamsObj = mpiComm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=mpiStatus)
+                        source = mpiStatus.Get_source()
+                        tag = mpiStatus.Get_tag()
+                        if tag == mpiTags.READY:
+                            # Worker is ready, so send it a task
+                            if taskIdx < nTasks:
+                                mpiComm.send([arcsiStages.ARCSIPART2, paramsLst[taskIdx]], dest=source, tag=mpiTags.START)
+                                print("Sending task %d to worker %d" % (taskIdx, source))
+                                taskIdx += 1
+                            #else: Do nothing
+                        elif tag == mpiTags.DONE:
+                            print("Got data from worker %d" % source)
+                            paramsLstTmp.append(rtnParamsObj)
+                            ++completedTasks
+                        elif tag == tags.EXIT:
+                            raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
+                    paramsLst = paramsLstTmp
 
                 if exportMetaData:
-                    paramsLst = plObj.map(_runARCSIPart3, paramsLst)
-
-                paramsLst = plObj.map(_runARCSIPart4, paramsLst)
-                """
+                    paramsLstTmp = []
+                    nTasks = len(paramsLst)
+                    taskIdx = 0
+                    nWorkers = mpiSize - 1
+                    completedTasks = 0
+                    while completedTasks < nTasks:
+                        rtnParamsObj = mpiComm.recv(source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG, status=mpiStatus)
+                        source = mpiStatus.Get_source()
+                        tag = mpiStatus.Get_tag()
+                        if tag == mpiTags.READY:
+                            # Worker is ready, so send it a task
+                            if taskIdx < nTasks:
+                                mpiComm.send([arcsiStages.ARCSIPART3, paramsLst[taskIdx]], dest=source, tag=mpiTags.START)
+                                print("Sending task %d to worker %d" % (taskIdx, source))
+                                taskIdx += 1
+                            #else: Do nothing
+                        elif tag == mpiTags.DONE:
+                            print("Got data from worker %d" % source)
+                            paramsLstTmp.append(rtnParamsObj)
+                            ++completedTasks
+                        elif tag == tags.EXIT:
+                            raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
+                    paramsLst = paramsLstTmp
 
                 paramsLstTmp = list()
                 nTasks = len(paramsLst)
