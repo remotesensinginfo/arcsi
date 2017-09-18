@@ -90,8 +90,6 @@ mpiSize = mpiComm.size      # total number of processes
 mpiRank = mpiComm.rank      # rank of this process
 mpiStatus = MPI.Status()    # get MPI status object
 
-print("HELLO WORLD")
-print("Rank: " + str(mpiRank))
 if (__name__ == '__main__') and (mpiRank == 0):
     """
     The command line user interface to ARCSI
@@ -572,6 +570,7 @@ if (__name__ == '__main__') and (mpiRank == 0):
             runTimer.start(True)
             
             try:
+                ######### Initialise and parameters object. #########
                 rsgisUtils = rsgislib.RSGISPyUtils()
                 inputHeadersLst = rsgisUtils.readTextFile2List(args.inputheaders)
                 paramsLst = []
@@ -581,8 +580,6 @@ if (__name__ == '__main__') and (mpiRank == 0):
                 useAOTImage = False
                 first = True
                 for inputHeader in inputHeadersLst:
-                    print(inputHeader)
-                    # Initialise and parameters object.
                     paramsObj = None
                     paramsObj = arcsilib.arcsirun.prepParametersObj(inputHeader, None, None, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, args.dem, args.demnodata, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, args.scalefac, args.interp, args.interpresamp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres, args.keepfileends)
                     paramsLst.append(paramsObj)
@@ -596,7 +593,10 @@ if (__name__ == '__main__') and (mpiRank == 0):
                         if paramsObj.prodsToCalc["METADATA"]:
                             exportMetaData = True
                         first = False
+                ##############################
 
+
+                ######### RUN PART 1 #########
                 paramsLstTmp = []
                 nTasks = len(paramsLst)
                 taskIdx = 0
@@ -610,17 +610,18 @@ if (__name__ == '__main__') and (mpiRank == 0):
                         # Worker is ready, so send it a task
                         if taskIdx < nTasks:
                             mpiComm.send([arcsiStages.ARCSIPART1, paramsLst[taskIdx]], dest=source, tag=mpiTags.START)
-                            print("Sending task %d to worker %d" % (taskIdx, source))
                             taskIdx += 1
                         #else: Do nothing
                     elif tag == mpiTags.DONE:
-                        print("Got data from worker %d" % source)
                         paramsLstTmp.append(rtnParamsObj)
                         completedTasks += 1
                     elif tag == tags.EXIT:
                         raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
                 paramsLst = paramsLstTmp
+                ##############################
+
                 
+                ######### RUN PART 2 #########
                 if calcAOT:
                     if useAOTImage:
                         raise ARCSIException("Currently the --multi option does not support the merging of AOT images (i.e., from DDVAOT and DOSAOT) across multiple scenes.")
@@ -649,17 +650,18 @@ if (__name__ == '__main__') and (mpiRank == 0):
                             # Worker is ready, so send it a task
                             if taskIdx < nTasks:
                                 mpiComm.send([arcsiStages.ARCSIPART2, paramsLst[taskIdx]], dest=source, tag=mpiTags.START)
-                                print("Sending task %d to worker %d" % (taskIdx, source))
                                 taskIdx += 1
                             #else: Do nothing
                         elif tag == mpiTags.DONE:
-                            print("Got data from worker %d" % source)
                             paramsLstTmp.append(rtnParamsObj)
                             completedTasks += 1
                         elif tag == tags.EXIT:
                             raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
                     paramsLst = paramsLstTmp
+                ##############################
 
+
+                ######### RUN PART 3 #########
                 if exportMetaData:
                     paramsLstTmp = []
                     nTasks = len(paramsLst)
@@ -674,21 +676,18 @@ if (__name__ == '__main__') and (mpiRank == 0):
                             # Worker is ready, so send it a task
                             if taskIdx < nTasks:
                                 mpiComm.send([arcsiStages.ARCSIPART3, paramsLst[taskIdx]], dest=source, tag=mpiTags.START)
-                                print("Sending task %d to worker %d" % (taskIdx, source))
                                 taskIdx += 1
                             #else: Do nothing
                         elif tag == mpiTags.DONE:
-                            print("Got data from worker %d" % source)
                             paramsLstTmp.append(rtnParamsObj)
                             completedTasks += 1
                         elif tag == tags.EXIT:
                             raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
                     paramsLst = paramsLstTmp
+                ##############################
 
 
-
-
-
+                ######### RUN PART 4 #########
                 paramsLstTmp = []
                 nTasks = len(paramsLst)
                 taskIdx = 0
@@ -702,20 +701,22 @@ if (__name__ == '__main__') and (mpiRank == 0):
                         # Worker is ready, so send it a task
                         if taskIdx < nTasks:
                             mpiComm.send([arcsiStages.ARCSIPART4, paramsLst[taskIdx]], dest=source, tag=mpiTags.START)
-                            print("Sending task %d to worker %d" % (taskIdx, source))
                             taskIdx += 1
                         #else: Do nothing
                     elif tag == mpiTags.DONE:
-                        print("Got data from worker %d" % source)
                         paramsLstTmp.append(rtnParamsObj)
                         completedTasks += 1
                     elif tag == tags.EXIT:
                         raise ARCSIException("MPI worker was closed - worker was still needed so there is a bug here somewhere... Please report to mailing list.")
                 paramsLst = paramsLstTmp
+                ##############################
+                
 
+                ######### KILL all workers #########
                 for workerID in range(mpiSize):
                     if workerID > 0:
                         mpiComm.send(None, dest=workerID, tag=mpiTags.EXIT)
+                ##############################
 
             except ARCSIException as e:
                 print("Error: {}".format(e), file=sys.stderr)
@@ -754,9 +755,7 @@ else:
                 paramsObj = arcsilib.arcsirun._runARCSIPart4(tskData[1])
             else:
                 raise ARCSIException("Don't recognise processing stage")
-
             mpiComm.send(paramsObj, dest=0, tag=mpiTags.DONE)
         elif tag == mpiTags.EXIT:
             break
-
     mpiComm.send(None, dest=0, tag=tags.EXIT)
