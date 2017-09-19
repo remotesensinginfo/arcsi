@@ -51,6 +51,8 @@ import datetime
 # Import the GDAL/OGR spatial reference library
 from osgeo import osr
 from osgeo import ogr
+# Import the sys module
+import sys
 # Import OS path module for manipulating the file system
 import os.path
 # Import the RSGISLib Image Calibration Module.
