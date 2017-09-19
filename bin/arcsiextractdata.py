@@ -315,13 +315,13 @@ if __name__ == '__main__':
 
     arcsiObj = ARCSIExtractData()
 
-    if not args.input == None:
+    if args.input is not None:
         arcsiObj.run4DIR(args.input, args.output, args.nofolders)
 
-    if not args.file == None:
+    if args.file is not None:
         arcsiObj.run4File(args.file, args.output, args.nofolders)
 
-    if not args.list == None:
+    if args.list is not None:
         arcsiObj.run4List(args.list, args.output, args.nofolders)
 
 
