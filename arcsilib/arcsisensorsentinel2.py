@@ -77,6 +77,9 @@ import glob
 import subprocess
 # Import the shutil module
 import shutil
+# Using python-fmask (http://pythonfmask.org)
+import fmask.config
+import fmask.fmask
 
 class ARCSISen2SpectralBandObj(object):
     """
@@ -1077,8 +1080,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         if not dataset is None:
             dataset.GetRasterBand(1).SetDescription("SatelliteAzimuth")
             dataset.GetRasterBand(2).SetDescription("SatelliteZenith")
-            dataset.GetRasterBand(3).SetDescription("SunAzimuth")
-            dataset.GetRasterBand(4).SetDescription("SunZenith")
+            dataset.GetRasterBand(3).SetDescription("SolorAzimuth")
+            dataset.GetRasterBand(4).SetDescription("SolorZenith")
         dataset = None
         drvr.Delete(tmpViewAngleImg)
 
@@ -1190,14 +1193,6 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         tmpBaseName = os.path.splitext(outputName)[0]
         tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
 
-        try:
-            # Using python-fmask (http://pythonfmask.org)
-            from fmask import config
-            from fmask import fmask
-            from rios import fileinfo
-        except ImportError as pyFMaskErr:
-            raise ARCSIException("Could not import python-fmask (http://pythonfmask.org) library - please install.")
-
         tmpDIRExisted = True
         if not os.path.exists(tmpBaseDIR):
             os.makedirs(tmpBaseDIR)
@@ -1227,15 +1222,15 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         fmaskReflImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskRefl.kea')
         rsgislib.imageutils.selectImageBands(tmpTOAImg, fmaskReflImg, 'KEA', rsgislib.TYPE_16UINT, [11,1,2,3,4,5,6,7,8,12,13,9,10])
 
-        anglesInfo = config.AnglesFileInfo(inputViewAngleImg, 3, inputViewAngleImg, 2, inputViewAngleImg, 1, inputViewAngleImg, 0)        
+        anglesInfo = fmask.config.AnglesFileInfo(inputViewAngleImg, 3, inputViewAngleImg, 2, inputViewAngleImg, 1, inputViewAngleImg, 0)        
 
         fmaskCloudsImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskCloudsResult.kea')
-        fmaskFilenames = config.FmaskFilenames()
+        fmaskFilenames = fmask.config.FmaskFilenames()
         fmaskFilenames.setTOAReflectanceFile(fmaskReflImg)
         fmaskFilenames.setSaturationMask(inputSatImage)
         fmaskFilenames.setOutputCloudMaskFile(fmaskCloudsImg)
         
-        fmaskConfig = config.FmaskConfig(config.FMASK_SENTINEL2)
+        fmaskConfig = fmask.config.FmaskConfig(fmask.config.FMASK_SENTINEL2)
         fmaskConfig.setAnglesInfo(anglesInfo)
         fmaskConfig.setKeepIntermediates(True)
         fmaskConfig.setVerbose(True)
@@ -1243,14 +1238,12 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         fmaskConfig.setTOARefScaling(float(self.imgIntScaleFactor))
         fmaskConfig.setMinCloudSize(8)
         
-        # Work out a suitable buffer size, in pixels, dependent on the resolution of the input TOA image
-        #toaImgInfo = fileinfo.ImageInfo(fmaskReflImg)
         fmaskConfig.setCloudBufferSize(10)
         fmaskConfig.setShadowBufferSize(10)
         
-        fmask.doFmask(fmaskFilenames, fmaskConfig)
+        fmask.fmask.doFmask(fmaskFilenames, fmaskConfig)
 
-        rsgislib.imagecalc.imageMath(fmaskCloudsImg, outputImage, '(b1==2)?1:(b1==3)?2:0', outFormat, rsgislib.TYPE_16UINT)
+        rsgislib.imagecalc.imageMath(fmaskCloudsImg, outputImage, '(b1==2)?1:(b1==3)?2:0', outFormat, rsgislib.TYPE_8UINT)
         if outFormat == 'KEA':
             rsgislib.rastergis.populateStats(outputImage, True, True)
             ratDataset = gdal.Open(outputImage, gdal.GA_Update)
