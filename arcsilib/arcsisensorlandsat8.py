@@ -87,6 +87,12 @@ import json
 import shutil
 # Import the solar angle tools from RSGISLib
 import rsgislib.imagecalibration.solarangles
+# Using python-fmask (http://pythonfmask.org)
+import fmask.landsatangles
+import fmask.config
+import fmask.fmask
+import rios.fileinfo
+
 
 class ARCSILandsat8Sensor (ARCSIAbstractSensor):
     """
@@ -332,6 +338,26 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             self.k2ConstB10 = arcsiUtils.str2Float(headerParams["K2_CONSTANT_BAND_10"])
             self.k2ConstB11 = arcsiUtils.str2Float(headerParams["K2_CONSTANT_BAND_11"])
 
+            self.b1ReflMulti = arcsiUtils.str2Float(headerParams["REFLECTANCE_MULT_BAND_1"])
+            self.b2ReflMulti = arcsiUtils.str2Float(headerParams["REFLECTANCE_MULT_BAND_2"])
+            self.b3ReflMulti = arcsiUtils.str2Float(headerParams["REFLECTANCE_MULT_BAND_3"])
+            self.b4ReflMulti = arcsiUtils.str2Float(headerParams["REFLECTANCE_MULT_BAND_4"])
+            self.b5ReflMulti = arcsiUtils.str2Float(headerParams["REFLECTANCE_MULT_BAND_5"])
+            self.b6ReflMulti = arcsiUtils.str2Float(headerParams["REFLECTANCE_MULT_BAND_6"])
+            self.b7ReflMulti = arcsiUtils.str2Float(headerParams["REFLECTANCE_MULT_BAND_7"])
+            self.b8ReflMulti = arcsiUtils.str2Float(headerParams["REFLECTANCE_MULT_BAND_8"])
+            self.b9ReflMulti = arcsiUtils.str2Float(headerParams["REFLECTANCE_MULT_BAND_9"])
+
+            self.b1ReflAdd = arcsiUtils.str2Float(headerParams["REFLECTANCE_ADD_BAND_1"])
+            self.b2ReflAdd = arcsiUtils.str2Float(headerParams["REFLECTANCE_ADD_BAND_2"])
+            self.b3ReflAdd = arcsiUtils.str2Float(headerParams["REFLECTANCE_ADD_BAND_3"])
+            self.b4ReflAdd = arcsiUtils.str2Float(headerParams["REFLECTANCE_ADD_BAND_4"])
+            self.b5ReflAdd = arcsiUtils.str2Float(headerParams["REFLECTANCE_ADD_BAND_5"])
+            self.b6ReflAdd = arcsiUtils.str2Float(headerParams["REFLECTANCE_ADD_BAND_6"])
+            self.b7ReflAdd = arcsiUtils.str2Float(headerParams["REFLECTANCE_ADD_BAND_7"])
+            self.b8ReflAdd = arcsiUtils.str2Float(headerParams["REFLECTANCE_ADD_BAND_8"])
+            self.b9ReflAdd = arcsiUtils.str2Float(headerParams["REFLECTANCE_ADD_BAND_9"])
+
             self.b1CalMin = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MIN_BAND_1"])
             self.b1CalMax = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MAX_BAND_1"])
             self.b2CalMin = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MIN_BAND_2"])
@@ -367,6 +393,9 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
                 self.gridCellSizeTherm = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_THERMAL"], 30.0)
             if "GRID_CELL_SIZE_PANCHROMATIC" in headerParams:
                 self.gridCellSizePan = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_PANCHROMATIC"], 15.0)
+
+            # Read MTL header into python dict for python-fmask
+            self.fmaskMTLInfo = fmask.config.readMTLFile(inputHeader)
 
         except Exception as e:
             raise e
@@ -479,9 +508,21 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
         if Histogram.shape[0] < 2:
             raise ARCSIException("There is no valid data in this image.")
         if not os.path.exists(viewAngleImg):
-            rsgislib.rastergis.spatialExtent(clumps=tmpValidPxlMsk, minXX='MinXX', minXY='MinXY', maxXX='MaxXX', maxXY='MaxXY', minYX='MinYX', minYY='MinYY', maxYX='MaxYX', maxYY='MaxYY', ratband=1)
-            rsgislib.imagecalibration.calcNadirImgViewAngle(tmpValidPxlMsk, viewAngleImg, 'KEA', 705000.0, 'MinXX', 'MinXY', 'MaxXX', 'MaxXY', 'MinYX', 'MinYY', 'MaxYX', 'MaxYY')
-        rsgislib.imagecalc.imageMath(viewAngleImg, outputImage, 'b1<7.65?1:0', outFormat, rsgislib.TYPE_8UINT)
+            print("Calculate Image Angles.")
+            imgInfo = rios.fileinfo.ImageInfo(tmpValidPxlMsk)
+            corners = fmask.landsatangles.findImgCorners(tmpValidPxlMsk, imgInfo)
+            nadirLine = fmask.landsatangles.findNadirLine(corners)
+            extentSunAngles = fmask.landsatangles.sunAnglesForExtent(imgInfo, self.fmaskMTLInfo)
+            satAzimuth = fmask.landsatangles.satAzLeftRight(nadirLine)
+            fmask.landsatangles.makeAnglesImage(tmpValidPxlMsk, viewAngleImg, nadirLine, extentSunAngles, satAzimuth, imgInfo)
+            dataset = gdal.Open(viewAngleImg, gdal.GA_Update)
+            if not dataset is None:
+                dataset.GetRasterBand(1).SetDescription("SatelliteAzimuth")
+                dataset.GetRasterBand(2).SetDescription("SatelliteZenith")
+                dataset.GetRasterBand(3).SetDescription("SolorAzimuth")
+                dataset.GetRasterBand(4).SetDescription("SolorZenith")
+            dataset = None
+        rsgislib.imagecalc.bandMath(outputImage, '(VA<14)&&(VM==1)?1:0', outFormat, rsgislib.TYPE_8UINT, [rsgislib.imagecalc.BandDefn('VA', viewAngleImg, 2), rsgislib.imagecalc.BandDefn('VM', tmpValidPxlMsk, 1)])
         rsgisUtils = rsgislib.RSGISPyUtils()
         rsgisUtils.deleteFileWithBasename(tmpValidPxlMsk)
         return outputImage
@@ -561,6 +602,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
     def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
         try:
             arcsiUtils = ARCSIUtils()
+            rsgisUtils = rsgislib.RSGISPyUtils()
             outputImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
             imgExtension = arcsiUtils.getFileExtension(outFormat)
@@ -570,9 +612,93 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             if not os.path.exists(tmpBaseDIR):
                 os.makedirs(tmpBaseDIR)
                 tmpDIRExisted = False
-            tmpImgsBase = os.path.join(tmpBaseDIR, tmpBaseName)
+            tmpFMaskOut = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskout.kea')
 
-            rsgislib.imagecalibration.applyLandsatTMCloudFMask(inputReflImage, inputThermalImage, inputSatImage, inputValidImg, outputImage, outFormat, math.radians(self.solarAzimuth), math.radians(self.solarZenith), 0.0, 0.0, scaleFactor, tmpImgsBase, imgExtension, 0.7, self.debugMode)
+            # Create tmp TOA stack with Band 9 (Cirrus)
+            tmpTOAB9Out = os.path.join(tmpBaseDIR, tmpBaseName+'_TOAB9.kea')
+            toaExp = '((b1*'+str(self.b9ReflMulti)+')+'+str(self.b9ReflAdd)+')*'+str(scaleFactor)
+            rsgislib.imagecalc.imageMath(self.band9File, tmpTOAB9Out, toaExp, 'KEA', rsgislib.TYPE_16UINT, False)
+            if not rsgisUtils.doGDALLayersHaveSameProj(inputReflImage, tmpTOAB9Out):
+                tmpTOAB9OutNotProj = tmpTOAB9Out
+                tmpTOAB9Out = os.path.join(tmpBaseDIR, tmpBaseName+'_TOAB9_reproj.kea')
+                rsgislib.imageutils.resampleImage2Match(inputReflImage, tmpTOAB9OutNotProj, tmpTOAB9Out, 'KEA', 'cubic', rsgislib.TYPE_16UINT)
+
+            tmpReflStackOut = os.path.join(tmpBaseDIR, tmpBaseName+'_TOAreflStack.kea')
+            rsgislib.imageutils.stackImageBands([inputReflImage, tmpTOAB9Out], None, tmpReflStackOut, None, 0, 'KEA', rsgislib.TYPE_16UINT)
+
+            tmpThermalLayer = self.band10File
+            if not rsgisUtils.doGDALLayersHaveSameProj(inputThermalImage, self.band10File):
+                tmpThermalLayer = os.path.join(tmpBaseDIR, tmpBaseName+'_thermalresample.kea')
+                rsgislib.imageutils.resampleImage2Match(inputThermalImage, self.band10File, tmpThermalLayer, 'KEA', 'cubic', rsgislib.TYPE_32FLOAT)
+
+            minCloudSize = 0
+            cloudBufferDistance = 150
+            shadowBufferDistance = 300
+
+            fmaskFilenames = fmask.config.FmaskFilenames()
+            fmaskFilenames.setTOAReflectanceFile(tmpReflStackOut)
+            fmaskFilenames.setThermalFile(tmpThermalLayer)
+            fmaskFilenames.setSaturationMask(inputSatImage)
+            fmaskFilenames.setOutputCloudMaskFile(tmpFMaskOut)
+
+            thermalGain1040um = self.b10RadMulti
+            thermalOffset1040um = self.b10RadAdd
+            thermalBand1040um = 0
+            thermalInfo = fmask.config.ThermalFileInfo(thermalBand1040um, thermalGain1040um, thermalOffset1040um, self.k1ConstB10, self.k2ConstB10)
+
+            anglesInfo = fmask.config.AnglesFileInfo(inputViewAngleImg, 3, inputViewAngleImg, 2, inputViewAngleImg, 1, inputViewAngleImg, 0)
+
+            fmaskConfig = fmask.config.FmaskConfig(fmask.config.FMASK_LANDSAT8)
+            fmaskConfig.setTOARefScaling(float(scaleFactor))
+            fmaskConfig.setThermalInfo(thermalInfo)
+            fmaskConfig.setAnglesInfo(anglesInfo)
+            fmaskConfig.setKeepIntermediates(False)
+            fmaskConfig.setVerbose(True)
+            fmaskConfig.setTempDir(tmpBaseDIR)
+            fmaskConfig.setMinCloudSize(minCloudSize)
+            fmaskConfig.setEqn17CloudProbThresh(fmask.config.FmaskConfig.Eqn17CloudProbThresh)
+            fmaskConfig.setEqn20NirSnowThresh(fmask.config.FmaskConfig.Eqn20NirSnowThresh)
+            fmaskConfig.setEqn20GreenSnowThresh(fmask.config.FmaskConfig.Eqn20GreenSnowThresh)
+
+            # Work out a suitable buffer size, in pixels, dependent on the resolution of the input TOA image
+            toaImgInfo = rios.fileinfo.ImageInfo(inputReflImage)
+            fmaskConfig.setCloudBufferSize(int(cloudBufferDistance / toaImgInfo.xRes))
+            fmaskConfig.setShadowBufferSize(int(shadowBufferDistance / toaImgInfo.xRes))
+            
+            fmask.fmask.doFmask(fmaskFilenames, fmaskConfig)
+
+            rsgislib.imagecalc.imageMath(tmpFMaskOut, outputImage, '(b1==2)?1:(b1==3)?2:0', outFormat, rsgislib.TYPE_8UINT)
+            if outFormat == 'KEA':
+                rsgislib.rastergis.populateStats(outputImage, True, True)
+                ratDataset = gdal.Open(outputImage, gdal.GA_Update)
+                red = rat.readColumn(ratDataset, 'Red')
+                green = rat.readColumn(ratDataset, 'Green')
+                blue = rat.readColumn(ratDataset, 'Blue')
+                ClassName = numpy.empty_like(red, dtype=numpy.dtype('a255'))
+
+                red[0] = 0
+                green[0] = 0
+                blue[0] = 0
+
+                if (red.shape[0] == 2) or (red.shape[0] == 3):
+                    red[1] = 0
+                    green[1] = 0
+                    blue[1] = 255
+                    ClassName[1] = 'Clouds'
+
+                    if(red.shape[0] == 3):
+                        red[2] = 0
+                        green[2] = 255
+                        blue[2] = 255
+                        ClassName[2] = 'Shadows'
+
+                rat.writeColumn(ratDataset, "Red", red)
+                rat.writeColumn(ratDataset, "Green", green)
+                rat.writeColumn(ratDataset, "Blue", blue)
+                rat.writeColumn(ratDataset, "ClassName", ClassName)
+                ratDataset = None
+            rsgislib.imageutils.copyProjFromImage(outputImage, inputReflImage)
+
             if not self.debugMode:
                 if not tmpDIRExisted:
                     shutil.rmtree(tmpBaseDIR, ignore_errors=True)

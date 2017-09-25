@@ -8,8 +8,8 @@ from distutils.version import LooseVersion
 import os
 
 ARCSI_VERSION_MAJOR = 3
-ARCSI_VERSION_MINOR = 0
-ARCSI_VERSION_PATCH = 10
+ARCSI_VERSION_MINOR = 1
+ARCSI_VERSION_PATCH = 0
 
 ARCSI_VERSION = str(ARCSI_VERSION_MAJOR) + "."  + str(ARCSI_VERSION_MINOR) + "." + str(ARCSI_VERSION_PATCH)
 ARCSI_VERSION_OBJ = LooseVersion(ARCSI_VERSION)
@@ -37,3 +37,7 @@ if not os.path.isfile(DEFAULT_ARCSI_ATMOSIMG_PATH):
    DEFAULT_ARCSI_ATMOSIMG_PATH = None
 if not os.path.isfile(DEFAULT_ARCSI_AEROIMG_PATH):
    DEFAULT_ARCSI_AEROIMG_PATH = None
+
+if os.environ.get('RIOS_DFLT_DRIVER', None) == None:
+	os.environ['RIOS_DFLT_DRIVER'] = 'KEA'
+

@@ -46,6 +46,8 @@ from __future__ import division
 import sys
 # Import the os.path python module
 import os.path
+# Import the os python module
+import os
 # Import the python Argument parser
 import argparse
 # Import ARCSI library
