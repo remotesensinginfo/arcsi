@@ -348,6 +348,10 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             if "GRID_CELL_SIZE_THERMAL" in headerParams:
                 self.gridCellSizeTherm = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_THERMAL"], 30.0)
 
+            fileDateStr = headerParams["FILE_DATE"].strip()
+            fileDateStr = fileDateStr.replace('Z', '')
+            self.fileDateObj = datetime.datetime.strptime(fileDateStr, "%Y-%m-%dT%H:%M:%S")
+
             # Read MTL header into python dict for python-fmask
             self.fmaskMTLInfo = fmask.config.readMTLFile(inputHeader)
 
