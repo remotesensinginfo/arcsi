@@ -95,8 +95,36 @@ class ARCSIBuildFileNameLUT (object):
         sensorFact = ARCSISensorFactory()
         duplicate = False
         for fileHdr in hdrList:
+            print("Processing :", fileHdr)
+            sensorOUT = sensorStr
+            if sensorOUT == 'LANDSAT':
+                basefilename = os.path.basename(fileHdr)
+                filePrefix3 = basefilename[:3]
+                filePrefix4 = basefilename[:4]
+
+                if filePrefix3 == 'LM1' or filePrefix4 == 'LM01':
+                    sensorOUT = 'ls1'
+                elif filePrefix3 == 'LM2' or filePrefix4 == 'LM02':
+                    sensorOUT = 'ls2'
+                elif filePrefix3 == 'LM3' or filePrefix4 == 'LM03':
+                    sensorOUT = 'ls3'
+                elif filePrefix3 == 'LM4' or filePrefix4 == 'LM04':
+                    sensorOUT = 'ls4mss'
+                elif filePrefix3 == 'LM5' or filePrefix4 == 'LM05':
+                    sensorOUT = 'ls5mss'
+                elif filePrefix3 == 'LT4' or filePrefix4 == 'LS04' or filePrefix4 == 'LE04' or filePrefix4 == 'LT04':
+                    sensorOUT = 'ls4tm'
+                elif filePrefix3 == 'LT5' or filePrefix4 == 'LS05' or filePrefix4 == 'LE05' or filePrefix4 == 'LT05':
+                    sensorOUT = 'ls5tm'
+                elif filePrefix3 == 'LE7' or filePrefix4 == 'LS07' or filePrefix4 == 'LE07' or filePrefix4 == 'LT07':
+                    sensorOUT = 'ls7'
+                elif filePrefix3 == 'LC8' or filePrefix4 == 'LS08' or filePrefix4 == 'LC08':
+                    sensorOUT = 'ls8'
+                else:
+                    raise ARCSIException("Sensor was not recognised for file: \"" + fileHdr + "\"")
+
             duplicate = False
-            sensorClass = sensorFact.getSensorClassFromName(sensorStr, False, None)
+            sensorClass = sensorFact.getSensorClassFromName(sensorOUT, False, None)
             sensorClass.extractHeaderParameters(fileHdr, "")
             outBaseName = sensorClass.generateOutputBaseName()
 
@@ -144,7 +172,9 @@ if __name__ == '__main__':
     parser.add_argument("-e", "--header", type=str, required=True,
                         help='''The extension / unquie file ending for the input header files.''')
 
-    parser.add_argument("-s", "--sensor", required=True, choices=ARCSI_SENSORS_LIST,
+    sensorList = ARCSI_SENSORS_LIST
+    sensorList.append("LANDSAT")
+    parser.add_argument("-s", "--sensor", required=True, choices=sensorList,
                         help='''Specify the sensor being processed.''')
 
     parser.add_argument("-a", "--archives", type=str,

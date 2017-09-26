@@ -397,6 +397,10 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             # Read MTL header into python dict for python-fmask
             self.fmaskMTLInfo = fmask.config.readMTLFile(inputHeader)
 
+            fileDateStr = headerParams["FILE_DATE"].strip()
+            fileDateStr = fileDateStr.replace('Z', '')
+            self.fileDateObj = datetime.datetime.strptime(fileDateStr, "%Y-%m-%dT%H:%M:%S")
+
         except Exception as e:
             raise e
 

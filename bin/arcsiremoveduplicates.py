@@ -50,59 +50,122 @@ import sys
 import argparse
 # Import the arcsi version number
 from arcsilib import ARCSI_VERSION
+# Import the list of sensors arcsi supports
+from arcsilib import ARCSI_SENSORS_LIST
+# Import the ARCSI sensor factory class
+from arcsilib.arcsiutils import ARCSISensorFactory
 # Import os.walk to navigate directory structure.
 import os
 # Import JSON module
 import json
 # Import shutil module
 import shutil
+# Import python random
+import random
 
 class ARCSIRemoveDuplicates (object):
 
-    def findBaseDIR(self, filePath):
-        baseName = os.path.dirname(filePath)
-        found = False
-        while not found:
-            baseNameTmp = os.path.dirname(baseName)
-            if baseNameTmp == baseName:
-                found = True
-                break
-            elif (baseNameTmp == "") or (baseNameTmp == "/"):
-                found = True
-                break
-            else:
-                baseName = baseNameTmp
-        return baseName
+    def selectFiles2Keep(self, dupHdrs, headersDIR, dupArchs, useArchs, selectVersion, archivesDIR, cpArchives2DIR):
+        """
+        """
+        if useArchs and (len(dupHdrs) != len(dupArchs)):
+            raise Exception("If using archives there should be the same number of headers and archives.")
 
+        selKey = ""
+        if selectVersion == 'RANDOM':
+            selKey = random.choice(list(dupHdrs.keys()))
+        elif selectVersion == 'LANDSAT':
+            sensorFact = ARCSISensorFactory()
+            first = True
+            selKey = ""
+            selKeyGenTime = None
+            for baseName in dupHdrs:
+                print(baseName)
+                filePrefix3 = baseName[:3]
+                filePrefix4 = baseName[:4]
+                sensor = ""
+                if filePrefix3 == 'LM1' or filePrefix4 == 'LM01':
+                    sensor = 'ls1'
+                elif filePrefix3 == 'LM2' or filePrefix4 == 'LM02':
+                    sensor = 'ls2'
+                elif filePrefix3 == 'LM3' or filePrefix4 == 'LM03':
+                    sensor = 'ls3'
+                elif filePrefix3 == 'LM4' or filePrefix4 == 'LM04':
+                    sensor = 'ls4mss'
+                elif filePrefix3 == 'LM5' or filePrefix4 == 'LM05':
+                    sensor = 'ls5mss'
+                elif filePrefix3 == 'LT4' or filePrefix4 == 'LS04' or filePrefix4 == 'LE04' or filePrefix4 == 'LT04':
+                    sensor = 'ls4tm'
+                elif filePrefix3 == 'LT5' or filePrefix4 == 'LS05' or filePrefix4 == 'LE05' or filePrefix4 == 'LT05':
+                    sensor = 'ls5tm'
+                elif filePrefix3 == 'LE7' or filePrefix4 == 'LS07' or filePrefix4 == 'LE07' or filePrefix4 == 'LT07':
+                    sensor = 'ls7'
+                elif filePrefix3 == 'LC8' or filePrefix4 == 'LS08' or filePrefix4 == 'LC08':
+                    sensor = 'ls8'
+                else:
+                    raise ARCSIException("Sensor was not recognised for file: \"" + fileHdr + "\"")
 
-    def sortDuplicateFiles(self, lutFile, headersDIR, archivesDIR, cpArchives2DIR):
+                hdrFullPath = os.path.join(headersDIR, dupHdrs[baseName])
+                sensorClass = sensorFact.getSensorClassFromName(sensor, False, None)
+                sensorClass.extractHeaderParameters(hdrFullPath, "")
+
+                cKeyTime = sensorClass.fileDateObj
+                if first:
+                    selKeyGenTime = cKeyTime
+                    selKey = baseName
+                    first = False
+                elif cKeyTime > selKeyGenTime:
+                    selKeyGenTime = cKeyTime
+                    selKey = baseName
+        else:
+            raise Exception("Don't know the selection method.")
+
+        for baseName in dupHdrs:
+            if not selKey == baseName:
+                fullPath2Del = os.path.join(headersDIR, baseName)
+                if os.path.exists(fullPath2Del):
+                    print("Deleting: " + fullPath2Del)
+                    shutil.rmtree(fullPath2Del)
+                if useArchs:
+                    archFile = os.path.join(archivesDIR ,dupArchs[baseName])
+                    archFileMV = os.path.join(cpArchives2DIR ,dupArchs[baseName])
+                    if os.path.isfile(archFile):
+                        print("Moving: " + archFile)
+                        shutil.move(archFile, archFileMV)
+
+    def sortDuplicateFiles(self, lutFile, headersDIR, archivesDIR, cpArchives2DIR, selectVersion):
+        """
+        """
         headersDIR = os.path.abspath(headersDIR)
-        archivesDIR = os.path.abspath(archivesDIR)
-        cpArchives2DIR = os.path.abspath(cpArchives2DIR)
-        if not archivesDIR is None:
-            if cpArchives2DIR is None:
-                print("If archives directory is specified then the output directory to which the duplicate archives will be moved must be specified.")
-                sys.exit()
+        useArchs = False
+        if (archivesDIR is not None) and (cpArchives2DIR is not None):
+            archivesDIR = os.path.abspath(archivesDIR)
+            cpArchives2DIR = os.path.abspath(cpArchives2DIR)
+            useArchs = True
+        elif (archivesDIR is not None) or (cpArchives2DIR is not None):
+            raise Exception("If archives directory is specified then the output directory to which the duplicate archives will be moved must be specified.")
+
         with open(lutFile, 'r') as f:
             jsonStrData = f.read()
         fileLUT = json.loads(jsonStrData)
 
-        for fileBase in fileLUT:
-            print("Processing: " + fileBase)
-            if 'Duplicates' in fileLUT[fileBase]:
-                for dup in fileLUT[fileBase]['Duplicates']:
+        for arcsiFileName in fileLUT:
+            print(arcsiFileName)
+            dupArchs = dict()
+            dupHdrs = dict()
+            dirName = os.path.dirname(fileLUT[arcsiFileName]['Header'])
+            dupHdrs[dirName] = fileLUT[arcsiFileName]['Header']
+            if useArchs:
+                dupArchs[dirName] = fileLUT[arcsiFileName]['Archive']
+            if 'Duplicates' in fileLUT[arcsiFileName]:
+                for dup in fileLUT[arcsiFileName]['Duplicates']:
                     if not headersDIR is None:
-                        archFile = os.path.join(archivesDIR, dup['Archive'])
-                        archOutFile = os.path.join(cpArchives2DIR, dup['Archive'])
-                        if os.path.isfile(archFile):
-                            print("Moving: " + archFile)
-                            shutil.move(archFile, archOutFile)
-                    if not headersDIR is None:
-                        dirName = self.findBaseDIR(dup['Header'])
-                        fullPath2Del = os.path.join(headersDIR, dirName)
-                        if os.path.exists(fullPath2Del):
-                            print("Deleting: " + fullPath2Del)
-                            shutil.rmtree(fullPath2Del)
+                        dirName = os.path.dirname(dup['Header'])
+                        dupHdrs[dirName] = dup['Header']
+                        if useArchs:
+                            dupArchs[dirName] = dup['Archive']
+            if len(dupHdrs) > 1:
+                self.selectFiles2Keep(dupHdrs, headersDIR, dupArchs, useArchs, selectVersion, archivesDIR, cpArchives2DIR)
             print("")
 
 if __name__ == '__main__':
@@ -128,6 +191,10 @@ if __name__ == '__main__':
     parser.add_argument("-d", "--dirout", type=str,
                         help='''A directory where the archives will be moved to.''')
 
+    parser.add_argument("-s", "--select", type=str, choices=["RANDOM", "LANDSAT"], default='RANDOM',
+                        help='''Specify the image output format (Note. Current just the KEA file format is supported, 
+                        use gdal_translate to convert to other formats (e.g., GeoTIFF) following completion.).''')
+
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -142,6 +209,6 @@ if __name__ == '__main__':
             sys.exit()
 
     arcsiObj = ARCSIRemoveDuplicates()
-    arcsiObj.sortDuplicateFiles(args.lut, args.workingdir, args.archivedir, args.dirout)
+    arcsiObj.sortDuplicateFiles(args.lut, args.workingdir, args.archivedir, args.dirout, args.select)
 
 
