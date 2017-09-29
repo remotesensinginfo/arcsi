@@ -192,8 +192,7 @@ if __name__ == '__main__':
                         help='''A directory where the archives will be moved to.''')
 
     parser.add_argument("-s", "--select", type=str, choices=["RANDOM", "LANDSAT"], default='RANDOM',
-                        help='''Specify the image output format (Note. Current just the KEA file format is supported, 
-                        use gdal_translate to convert to other formats (e.g., GeoTIFF) following completion.).''')
+                        help='''Specify whether the file kept is selected at random or whether for landsat images the generation time is used to select the file generated more recently.''')
 
 
     # Call the parser to parse the arguments.

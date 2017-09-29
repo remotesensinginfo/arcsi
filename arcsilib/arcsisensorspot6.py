@@ -559,7 +559,7 @@ class ARCSISPOT6Sensor (ARCSIAbstractSensor):
             else:
                 haveVecClouds = False
             if haveVecClouds:
-                rsgislib.vectorutils.rasterise2Image(self.cloudsMask, inputReflImage, outputCloudMaskImg, gdalFormat=outFormat, burnVal=1)
+                rsgislib.vectorutils.rasterise2Image(self.cloudsMask, inputReflImage, outputCloudMaskImg, gdalformat=outFormat, burnVal=1)
                 rsgislib.rastergis.populateStats(clumps=outputCloudMaskImg, addclrtab=True, calcpyramids=True, ignorezero=True, ratband=1)
             else:
                 rsgislib.imageutils.createCopyImage(inputReflImage, outputCloudMaskImg, 1, 0, outFormat, rsgislib.TYPE_8UINT)

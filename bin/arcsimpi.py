@@ -758,4 +758,4 @@ else:
             mpiComm.send(paramsObj, dest=0, tag=mpiTags.DONE)
         elif tag == mpiTags.EXIT:
             break
-    mpiComm.send(None, dest=0, tag=tags.EXIT)
+    mpiComm.send(None, dest=0, tag=mpiTags.EXIT)
