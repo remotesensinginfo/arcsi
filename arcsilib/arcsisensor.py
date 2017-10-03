@@ -1567,32 +1567,6 @@ class ARCSIAbstractSensor (object):
     @abstractmethod
     def setBandNames(self, imageFile): pass
 
-#    def interpolateImageFromPointData(self, templateInImage, xVals, yVals, zVals, outputImage, outFormat, smoothingParam, notNegOut, notNegMinVal):
-#        print("Interpolating Image: Number of Features = ", xVals.shape[0])
-#        rbfi = scipy.interpolate.rbf.Rbf(xVals, yVals, zVals, function='linear', smooth=smoothingParam)
-#
-#        reader = ImageReader(templateInImage, windowxsize=200, windowysize=200)
-#        writer = None
-#        for (info, block) in reader:
-#            pxlCoords = info.getBlockCoordArrays()
-#            interZ = rbfi(pxlCoords[0].flatten(), pxlCoords[1].flatten())
-#            if notNegOut:
-#                interZ = numpy.where(interZ < 0, notNegMinVal, interZ)
-#            out = numpy.reshape(interZ, block[0].shape)
-#            out = numpy.expand_dims(out, axis=0)
-#
-#            if writer is None:
-#                writer = ImageWriter(outputImage,
-#                                     info=info,
-#                                     firstblock=out,
-#                                     drivername=outFormat,
-#                                     creationoptions=[])
-#            else:
-#                writer.write(out)
-#        writer.close(calcStats=True)
-#        print("Interpolating Image - Complete")
-
-
     def interpolateImageFromPointData(self, templateInImage, xVals, yVals, zVals, outputImage, outFormat, smoothingParam, notNegOut, notNegMinVal):
         print("Interpolating Image: Number of Features = ", xVals.shape[0])
 

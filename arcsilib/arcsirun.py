@@ -1012,7 +1012,10 @@ def calcTopoShadowMask(paramsObj):
     if paramsObj.prodsToCalc["TOPOSHADOW"]:
         rsgisUtils = rsgislib.RSGISPyUtils()
         outName = paramsObj.outBaseName + "_toposhad" + paramsObj.outFormatExt
-        paramsObj.topoShadowImage = paramsObj.sensorClass.generateTopoDirectShadowMask(paramsObj.outDEMNameMsk, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath)
+        tmpDEMFile = paramsObj.outDEMNameMsk
+        if paramsObj.fullImgOuts:
+            tmpDEMFile = paramsObj.outDEMName
+        paramsObj.topoShadowImage = paramsObj.sensorClass.generateTopoDirectShadowMask(tmpDEMFile, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath)
         if paramsObj.calcStatsPy:
             print("Calculating Statistics...")
             rsgislib.rastergis.populateStats(paramsObj.topoShadowImage, True, True)
@@ -1529,9 +1532,13 @@ def runARCSIMulti(inputHeaders, sensorStr, inWKTFile, outFormat, outFilePath, ou
                 aotSum = 0.0
                 aotN = 0.0
                 for paramsObj in paramsLst:
-                    aotSum = aotSum + paramsObj.aotVal
-                    aotN = aotN + 1
-                avgAOT = aotSum / aotN
+                    if paramsObj.aotVal is not None:
+                        aotSum = aotSum + paramsObj.aotVal
+                        aotN = aotN + 1
+                if aotN > 0:
+                    avgAOT = aotSum / aotN
+                else:
+                    avgAOT = 0.05
                 for params in paramsLst:
                     paramsObj.aotVal = avgAOT
         

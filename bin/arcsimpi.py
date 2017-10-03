@@ -630,9 +630,13 @@ if (__name__ == '__main__') and (mpiRank == 0):
                         aotSum = 0.0
                         aotN = 0.0
                         for paramsObj in paramsLst:
-                            aotSum = aotSum + paramsObj.aotVal
-                            aotN = aotN + 1
-                        avgAOT = aotSum / aotN
+                            if paramsObj.aotVal is not None:
+                                aotSum = aotSum + paramsObj.aotVal
+                                aotN = aotN + 1
+                        if aotN > 0:
+                            avgAOT = aotSum / aotN
+                        else:
+                            avgAOT = 0.05
                         for params in paramsLst:
                             paramsObj.aotVal = avgAOT
                 
