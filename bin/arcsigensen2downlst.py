@@ -51,19 +51,22 @@ import sys
 import argparse
 # Import python time module
 import time
-# Import python sqlite3 module
-import sqlite3
 # Import the arcsi version number
 from arcsilib import ARCSI_VERSION
 # Import the ARCSI exception class
 from arcsilib.arcsiexception import ARCSIException
 # Import rsgislib module
 import rsgislib
+# Import the json module
+import json
 
-def genSen2DownloadList(dbFile, tile, outFile, outpath, cloudCover=None, startDate=None, endDate=None, multiDwn=False, lstCmds=False):
+def genSen2DownloadListGoogle(dbFile, tile, outFile, outpath, cloudCover=None, startDate=None, endDate=None, multiDwn=False, lstCmds=False):
     """
     Using sqlite database query and create a list of files to download
     """
+    # Import python sqlite3 module
+    import sqlite3
+
     try:
         ggSen2DBConn = sqlite3.connect(dbFile)
         ggSen2DBCursor = ggSen2DBConn.cursor()
@@ -102,6 +105,53 @@ def genSen2DownloadList(dbFile, tile, outFile, outpath, cloudCover=None, startDa
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)
 
+def genSen2DownloadListAWS(tile, outFile, outpath, limit=100, cloudCover=None, startDate=None, endDate=None, multiDwn=False, lstCmds=False):
+    """
+    Using query online AWS database and create a list of files to download
+    """
+    # Import python requests module
+    import requests
+
+    try:
+        devSeedURL = "https://api.developmentseed.org/satellites/?limit="+str(limit)+"&search=scene_id:S2*"+tile+"*"
+        if startDate is not None:
+            devSeedURL = devSeedURL + "&date_from="+startDate
+        if startDate is not None:
+            devSeedURL = devSeedURL + "&date_to="+endDate
+        if cloudCover is not None:
+            devSeedURL = devSeedURL + "&cloud_to="+cloudCover
+        
+        multiStr = ''
+        if multiDwn:
+            multiStr = ' --threaded '
+
+        r = requests.get(devSeedURL)
+        if r.status_code == 200:
+            cmdLst = []
+            jsonObj = json.loads(r.text)
+            nScenesFound = int(jsonObj['meta']['found'])
+            if nScenesFound > limit:
+                print("WARNING: The scene limit ("+str(limit)+") is smaller than the number of scenes available ("+str(nScenesFound)+")", file=sys.stderr)
+            if nScenesFound > 0:
+                resultsLst = jsonObj['results']
+                for rsult in resultsLst:
+                    if lstCmds:
+                        cmdLst.append("sentinelhub.aws --product " + rsult["product_id"] + " -f " + outpath + multiStr)
+                    else:
+                        cmdLst.append(rsult["product_id"])
+
+                rsgisUtils = rsgislib.RSGISPyUtils()
+                rsgisUtils.writeList2File(cmdLst, outFile)
+
+        else:
+            raise ARCSIException("Did not get response back from the server; try again later. If persists report as bug. Return code "+str(r.status_code))
+    except ARCSIException as e:
+        print("Error: {}".format(e), file=sys.stderr)
+    except Exception as e:
+        print("Error: {}".format(e), file=sys.stderr)
+
+
+
 if __name__ == '__main__':
     """
     The command line user interface to ARCSI generate Sentinel-2 file download list.
@@ -115,18 +165,27 @@ if __name__ == '__main__':
     # Request the version number.
     parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
     # Define the argument for specifying the input directory to be processed.
-    parser.add_argument("-f", "--dbfile", type=str, required=True, help='''Path to the database file.''')
+    parser.add_argument("-s", "--source", choices=['AWS','GOOG'], default='AWS', help='''Specify the sensor being processed.''')
+    parser.add_argument("-f", "--dbfile", type=str, help='''Path to the database file.''')
     parser.add_argument("-t", "--tile", type=str, required=True, help='''Sentinel-2 tile - note remove the preceeding 'T'.''')
     parser.add_argument("-o", "--output", type=str, required=True, help='''Output file with a list of files to download.''')
     parser.add_argument("--outpath", type=str, help='''Output path for the sentinel-2 SAFE files to download to on your system.''')
     parser.add_argument("--cloudcover", type=float, help='''Specify an upper limit for acceptable cloud cover.''')
     parser.add_argument("--startdate", type=str, help='''Specify a start date (YYYY-MM-DD).''')
     parser.add_argument("--enddate", type=str, help='''Specify a end date (YYYY-MM-DD).''')
+    parser.add_argument("--limit", type=int, default=100, help='''Specify the maximum number of files which are retrieved (AWS only).''')
     parser.add_argument("--multi", action='store_true', default=False, help='''Adds -m option to the gsutil download command.''')
     parser.add_argument("--lstcmds", action='store_true', default=False, help='''List download commands rather than just list of URLs''')
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
-    genSen2DownloadList(args.dbfile, args.tile, args.output, args.outpath, args.cloudcover, args.startdate, args.enddate, args.multi, args.lstcmds)
+    if args.source == 'GOOG':
+        if (args.dbfile == None) or (args.dbfile == ""):
+            raise Exception("A database file is required for generating download list from Google.")
+        genSen2DownloadListGoogle(args.dbfile, args.tile, args.output, args.outpath, args.cloudcover, args.startdate, args.enddate, args.multi, args.lstcmds)
+    elif args.source == 'AWS':
+        genSen2DownloadListAWS(args.tile, args.output, args.outpath, args.limit, args.cloudcover, args.startdate, args.enddate, args.multi, args.lstcmds)
+    else:
+        raise Exception("You must specify whether to search with Google or Amazon.")
 
