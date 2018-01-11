@@ -708,7 +708,16 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             root = tree.getroot()
 
             # Get Geometric Info Tag
-            geometricInfoTag = root.find('{https://psd-12.sentinel2.eo.esa.int/PSD/S2_PDI_Level-1C_Tile_Metadata.xsd}Geometric_Info')
+            geometricInfoTag = None
+
+            # Try for diffrent versions
+            for hdr_format_version in [12, 14]:
+                if geometricInfoTag is None:
+                    geometricInfoTag = root.find('{{https://psd-{}.sentinel2.eo.esa.int/PSD/S2_PDI_Level-1C_Tile_Metadata.xsd}}Geometric_Info'.format(hdr_format_version))
+
+            # If not found raise exception
+            if geometricInfoTag is None:
+                raise ARCSIException("Geometric_Info in granular header filed does not match expected formats")
 
             # Get Tile Geocoding tag.
             tileGeocoding = geometricInfoTag.find('Tile_Geocoding')
