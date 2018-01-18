@@ -115,11 +115,11 @@ def genSen2DownloadListAWS(tile, outFile, outpath, limit=100, cloudCover=None, s
     try:
         devSeedURL = "https://api.developmentseed.org/satellites/?limit="+str(limit)+"&search=scene_id:S2*"+tile+"*"
         if startDate is not None:
-            devSeedURL = devSeedURL + "&date_from="+startDate
+            devSeedURL = devSeedURL + "&date_from="+str(startDate)
         if startDate is not None:
-            devSeedURL = devSeedURL + "&date_to="+endDate
+            devSeedURL = devSeedURL + "&date_to="+str(endDate)
         if cloudCover is not None:
-            devSeedURL = devSeedURL + "&cloud_to="+cloudCover
+            devSeedURL = devSeedURL + "&cloud_to="+str(cloudCover)
         
         multiStr = ''
         if multiDwn:
