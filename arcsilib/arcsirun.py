@@ -281,7 +281,7 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
 
     # Read WKT file if provided.
     paramsObj.wktStr = None
-    if paramsObj.inWKTFile != None:
+    if paramsObj.inWKTFile is not None:
         paramsObj.wktStr = arcsiUtils.readTextFile(paramsObj.inWKTFile)
 
     # Step 1: Get the Sensor specific class from factory
@@ -633,10 +633,10 @@ def createValidMaskViewAngle(paramsObj):
         if not paramsObj.pxlResDefd:
             validImgDS = gdal.Open(paramsObj.validMaskImage, gdal.GA_ReadOnly)
             if validImgDS is None:
-                raise ARCSIException('Could not open the Valid Image Mask ' + validMaskImage)
+                raise ARCSIException('Could not open the Valid Image Mask ' + paramsObj.validMaskImage)
             geoTransform = validImgDS.GetGeoTransform()
             if geoTransform is None:
-                raise ARCSIException('Could read the geotransform from the Valid Image Mask ' + validMaskImage)
+                raise ARCSIException('Could read the geotransform from the Valid Image Mask ' + paramsObj.validMaskImage)
             paramsObj.xPxlRes = geoTransform[1]
             paramsObj.yPxlRes = geoTransform[5]
             paramsObj.pxlResDefd = True
@@ -665,12 +665,12 @@ def createValidMaskViewAngle(paramsObj):
 
     if paramsObj.reproject and ((paramsObj.viewAngleImg != "") and (paramsObj.viewAngleImg is not None)):
         if not paramsObj.pxlResDefd:
-            viewAngleImgDS = gdal.Open(viewAngleImg, gdal.GA_ReadOnly)
+            viewAngleImgDS = gdal.Open(paramsObj.viewAngleImg, gdal.GA_ReadOnly)
             if viewAngleImgDS is None:
-                raise ARCSIException('Could not open the Valid Image Mask ' + viewAngleImg)
+                raise ARCSIException('Could not open the Valid Image Mask ' + paramsObj.viewAngleImg)
             geoTransform = viewAngleImgDS.GetGeoTransform()
             if geoTransform is None:
-                raise ARCSIException('Could read the geotransform from the Valid Image Mask ' + viewAngleImg)
+                raise ARCSIException('Could read the geotransform from the Valid Image Mask ' + paramsObj.viewAngleImg)
             paramsObj.xPxlRes = geoTransform[1]
             paramsObj.yPxlRes = geoTransform[5]
             paramsObj.pxlResDefd = True
@@ -1085,7 +1085,7 @@ def estimateSceneAOT(paramsObj):
     if paramsObj.prodsToCalc["DDVAOT"]:
         outName = paramsObj.outBaseName + "_ddvaot" + paramsObj.outFormatExt
         paramsObj.aotFile = paramsObj.sensorClass.estimateImageToAODUsingDDV(paramsObj.radianceImage, paramsObj.toaImage, paramsObj.outDEMName, paramsObj.topoShadowImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.minAOT, paramsObj.maxAOT)
-        dataset = gdal.Open(aotFile, gdal.GA_Update)
+        dataset = gdal.Open(paramsObj.aotFile, gdal.GA_Update)
         dataset.GetRasterBand(1).SetDescription("AOT")
         dataset = None
         if paramsObj.calcStatsPy:
@@ -1100,7 +1100,7 @@ def estimateSceneAOT(paramsObj):
     if paramsObj.prodsToCalc["DOSAOT"]:
         outName = paramsObj.outBaseName + "_dosaot" + paramsObj.outFormatExt
         paramsObj.aotFile = paramsObj.sensorClass.estimateImageToAODUsingDOS(paramsObj.radianceImage, paramsObj.toaImage, paramsObj.outDEMName, paramsObj.topoShadowImage, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.tmpPath, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.minAOT, paramsObj.maxAOT, paramsObj.globalDOS, paramsObj.simpleDOS, paramsObj.dosOutRefl)
-        dataset = gdal.Open(aotFile, gdal.GA_Update)
+        dataset = gdal.Open(paramsObj.aotFile, gdal.GA_Update)
         dataset.GetRasterBand(1).SetDescription("AOT")
         dataset = None
         if paramsObj.calcStatsPy:
@@ -1178,7 +1178,7 @@ def calculateSREF(paramsObj):
                 statsAOT = rsgislib.imagecalc.getImageStatsInEnv(paramsObj.aotFile, 1, -9999, paramsObj.sensorClass.latTL, paramsObj.sensorClass.latBR, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.lonTL)
 
                 paramsObj.minAOT = arcsiUtils.findMinimumAOT(statsAOT[0])
-                if minAOT < 0.01:
+                if paramsObj.minAOT < 0.01:
                     minAOT = 0.05
                 paramsObj.maxAOT = arcsiUtils.findMaximumAOT(statsAOT[1])
 
@@ -1187,7 +1187,7 @@ def calculateSREF(paramsObj):
 
                 aotRange = (paramsObj.maxAOT - paramsObj.minAOT) / 0.05
                 numAOTSteps = math.ceil(aotRange) + 1
-                print("AOT Ranges from ", minAOT, " to ", maxAOT, " an LUT with ", numAOTSteps, " will be created.")
+                print("AOT Ranges from ", paramsObj.minAOT, " to ", paramsObj.maxAOT, " an LUT with ", numAOTSteps, " will be created.")
                 paramsObj.processSREFStr = '_rad_srefdemaot'
                 outName = paramsObj.outBaseName + paramsObj.processStageStr + paramsObj.processSREFStr + paramsObj.outFormatExt
                 paramsObj.srefImage, paramsObj.sixsLUTCoeffs = paramsObj.sensorClass.convertImageToSurfaceReflAOTDEMElevLUT(paramsObj.radianceImage, paramsObj.outDEMName, paramsObj.aotFile, paramsObj.outFilePath, outName, paramsObj.outFormat, paramsObj.aeroProfile, paramsObj.atmosProfile, paramsObj.grdRefl, paramsObj.useBRDF, paramsObj.minElev, paramsObj.maxElev, paramsObj.minAOT, paramsObj.maxAOT, paramsObj.scaleFactor)

@@ -47,7 +47,8 @@ import os.path
 import argparse
 # Import python subprocess module
 import subprocess
-
+# Import the sys module
+import sys
 
 def readTextFile2List(file):
     """
