@@ -11,109 +11,49 @@ http://stackoverflow.com/questions/7250659/python-code-to-generate-part-of-sphin
 
 import subprocess
 import os
+import glob
 
-def get_command_out(command):
-   """ Get output from command """
+def get_script_help(script):
+    """ Get output from command """
 
-   out = subprocess.Popen(command,stdin=subprocess.PIPE,
-                          stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+    out = subprocess.check_output([script, "-h"])
 
-   (stdout, stderr) = out.communicate()
+    stdout_lines = out.decode().split('\n')
+    tabbed_lines = ''
+    for line in stdout_lines:
+        tabbed_lines += '    {}\n'.format(line)
+    return tabbed_lines
 
-   stdout_lines = stdout.decode().split('\n')
-   tabbed_lines = ''
-   for line in stdout_lines:
-       tabbed_lines += '    {}\n'.format(line)
 
-   return tabbed_lines
+if __name__ == "__main__":
 
-outfile = os.path.join(os.path.split(__file__)[0],'scripts.rst')
+    outfile = os.path.join(os.path.split(__file__)[0],'scripts.rst')
+    scripts_list = glob.glob("../../bin/*py")
 
-arcsi_out = get_command_out(['arcsi.py','-h'])
-arcsibuildcmdslist_out = get_command_out(['arcsibuildcmdslist.py','-h'])
-arcsiextractdata_out = get_command_out(['arcsiextractdata.py','-h'])
-arcsiextractroistats_out = get_command_out(['arcsiextractroistats.py','-h'])
-arcsiplotextractedstats_out = get_command_out(['arcsiplotextractedstats.py','-h'])
-arcsisolarirradiance_out = get_command_out(['arcsisolarirradiance.py','-h'])
-arcsisortlandsat_out = get_command_out(['arcsisortlandsat.py','-h'])
-arcsispecresponsefuncs_out = get_command_out(['arcsispecresponsefuncs.py','-h'])
 
-scripts_text = '''
+    scripts_text = '''
 
 Scripts
 ========
 
-arcsi.py
--------------------
+'''
+    for script in scripts_list:
+        try:
+            script_out = get_script_help(script)
+        except Exception as err:
+            print("Couldn't run {}\n{}".format(script, err))
 
-Main ARCSI script
+        scripts_text = '''{}
 
-.. code-block:: text 
+{}
+------------------------------
+
+.. code-block:: text
 
 {}
 
 
-arcsibuildcmdslist.py
--------------------
+'''.format(scripts_text, os.path.basename(script), script_out)
 
-.. code-block:: text 
-
-{}
-
-arcsiextractdata.py
--------------------
-
-.. code-block:: text 
-
-{}
-
-arcsiextractroistats.py
-----------------------
-
-.. code-block:: text 
-
-{}
-
-arcsiplotextractedstats.py
-------------------------
-
-.. code-block:: text 
-
-{}
-
-
-arcsisolarirradiance.py
-----------------------
-
-.. code-block:: text 
-
-{}
-
-arcsisortlandsat.py
-----------------------
-
-.. code-block:: text 
-
-{}
-
-
-arcsispecresponsefuncs.py
-------------------------
-
-.. code-block:: text 
-
-{}
-
-
-
-'''.format(arcsi_out, 
-        arcsibuildcmdslist_out, 
-        arcsiextractdata_out, 
-        arcsiextractroistats_out,
-        arcsiplotextractedstats_out,
-        arcsisolarirradiance_out, 
-        arcsisortlandsat_out,
-        arcsispecresponsefuncs_out)
-
-with open(outfile,'w') as f:
-    f.write(scripts_text)
+    with open(outfile,'w') as f:
+        f.write(scripts_text)

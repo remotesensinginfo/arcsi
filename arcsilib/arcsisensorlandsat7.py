@@ -55,6 +55,8 @@ from osgeo import osr
 from osgeo import ogr
 # Import OS path module for manipulating the file system
 import os.path
+# Import the sys module
+import sys
 # Import the RSGISLib Image Calibration Module.
 import rsgislib.imagecalibration
 # Import the RSGISLib Image Utilities Module.
