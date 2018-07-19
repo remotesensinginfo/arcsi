@@ -57,6 +57,8 @@ import os.path
 import rsgislib.imagecalibration
 # Import the RSGISLib Image Calculation Module
 import rsgislib.imagecalc
+import rsgislib.segmentation
+import rsgislib.segmentation.segutils
 # Import the collections module
 import collections
 # Import the py6s module for running 6S from python.
@@ -954,7 +956,7 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
             ratDS = None
 
             rsgislib.rastergis.spatialLocation(thresImageClumpsFinal, "Eastings", "Northings")
-            rsgislib.rastergis.selectClumpsOnGrid(thresImageClumpsFinal, "Selected", "PredictAOTFor", "Eastings", "Northings", "MeanB1DOS", "min", 20, 20)
+            rsgislib.rastergis.selectClumpsOnGrid(thresImageClumpsFinal, "Selected", "PredictAOTFor", "Eastings", "Northings", "MeanBlueDOS", "min", 20, 20)
 
             ratDS = gdal.Open(thresImageClumpsFinal, gdal.GA_Update)
             MeanBlueDOS = rat.readColumn(ratDS, "MeanBlueDOS")
@@ -972,9 +974,9 @@ class ARCSIWorldView3Sensor (ARCSIAbstractSensor):
             minAOT = 0.0
             minDist = 0.0
 
-            aotVals = numpy.zeros_like(MeanB1RAD, dtype=numpy.float)
+            aotVals = numpy.zeros_like(MeanBlueRAD, dtype=numpy.float)
 
-            for i in range(len(MeanB1RAD)):
+            for i in range(len(MeanBlueRAD)):
                 if PredictAOTFor[i] == 1:
                     print("Predicting AOD for Segment ", i)
                     for j in range(numAOTValTests):
