@@ -103,7 +103,7 @@ class ARCSIRemoveDuplicates (object):
                 elif filePrefix3 == 'LC8' or filePrefix4 == 'LS08' or filePrefix4 == 'LC08':
                     sensor = 'ls8'
                 else:
-                    raise ARCSIException("Sensor was not recognised for file: \"" + fileHdr + "\"")
+                    raise ARCSIException("Sensor was not recognised for file: \"" + baseName + "\"")
 
                 hdrFullPath = os.path.join(headersDIR, dupHdrs[baseName])
                 sensorClass = sensorFact.getSensorClassFromName(sensor, False, None)
