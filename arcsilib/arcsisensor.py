@@ -1025,6 +1025,7 @@ class ARCSIAbstractSensor (object):
             outputStdSREFImage = os.path.join(outputPath, outputName)
             outputStdSREFWholeImage = os.path.join(outputPath, outputWholeName)
             tmpBaseName = os.path.splitext(outputName)[0]
+            tmpWholeBaseName = os.path.splitext(outputWholeName)[0]
             imgExtension = arcsiUtils.getFileExtension(outFormat)
             tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
 
@@ -1050,24 +1051,24 @@ class ARCSIAbstractSensor (object):
 
             # Derive the valid area mask
             validMaskSREF = os.path.join(tmpBaseDIR, tmpBaseName+'_validMask'+imgExtension)
-            if inputSREFWholeImage is None:
-                rsgislib.imageutils.genValidMask(inputSREFImage, validMaskSREF, outFormat, 0.0)
-            else:
-                rsgislib.imageutils.genValidMask(inputSREFWholeImage, validMaskSREF, outFormat, 0.0)
+            validMaskSREFWhole = os.path.join(tmpBaseDIR, tmpWholeBaseName + '_validMask' + imgExtension)
+            if inputSREFWholeImage is not None:
+                rsgislib.imageutils.genValidMask(inputSREFWholeImage, validMaskSREFWhole, outFormat, 0.0)
+            rsgislib.imageutils.genValidMask(inputSREFImage, validMaskSREF, outFormat, 0.0)
 
             # Calculate the solar irradiance
             solarIrradianceImg = os.path.join(tmpBaseDIR, tmpBaseName+'_solarirr'+imgExtension)
+            solarIrradianceWholeImg = os.path.join(tmpBaseDIR, tmpWholeBaseName + '_solarirr' + imgExtension)
             if aotLUT:
                 raise ARCSIException("Doh! Currently don't have an implementation of rsgislib.imagecalibration.calcIrradianceImageElevLUT for using an Elev and AOT LUT...")
             else:
-                if inputSREFWholeImage is None:
-                    rsgislib.imagecalibration.calcIrradianceImageElevLUT(validMaskSREF, inputDEMFile, incidAngleImg, slopeImg, inputSREFImage, inputTopoShadowMask, solarIrradianceImg, outFormat, solarZen, scaleFactor, sixsLUTCoeffs)
-                else:
-                    rsgislib.imagecalibration.calcIrradianceImageElevLUT(validMaskSREF, inputDEMFile, incidAngleImg, slopeImg, inputSREFWholeImage, inputTopoShadowMask, solarIrradianceImg, outFormat, solarZen, scaleFactor, sixsLUTCoeffs)
+                if inputSREFWholeImage is not None:
+                    rsgislib.imagecalibration.calcIrradianceImageElevLUT(validMaskSREFWhole, inputDEMFile, incidAngleImg, slopeImg, inputSREFWholeImage, inputTopoShadowMask, solarIrradianceWholeImg, outFormat, solarZen, scaleFactor, sixsLUTCoeffs)
+                rsgislib.imagecalibration.calcIrradianceImageElevLUT(validMaskSREF, inputDEMFile, incidAngleImg, slopeImg, inputSREFImage, inputTopoShadowMask, solarIrradianceImg, outFormat, solarZen, scaleFactor, sixsLUTCoeffs)
 
             rsgislib.imagecalibration.calcStandardisedReflectanceSD2010(validMaskSREF, inputSREFImage, solarIrradianceImg, incidAngleImg, existAngleImg, outputStdSREFImage, outFormat, scaleFactor, brdfBeta, outIncidenceAngle, outExitanceAngle)
             if inputSREFWholeImage is not None:
-                rsgislib.imagecalibration.calcStandardisedReflectanceSD2010(validMaskSREF, inputSREFWholeImage, solarIrradianceImg, incidAngleImg, existAngleImg, outputStdSREFWholeImage, outFormat, scaleFactor, brdfBeta, outIncidenceAngle, outExitanceAngle)
+                rsgislib.imagecalibration.calcStandardisedReflectanceSD2010(validMaskSREFWhole, inputSREFWholeImage, solarIrradianceWholeImg, incidAngleImg, existAngleImg, outputStdSREFWholeImage, outFormat, scaleFactor, brdfBeta, outIncidenceAngle, outExitanceAngle)
             else:
                 outputStdSREFWholeImage = ""
 
@@ -1592,7 +1593,6 @@ class ARCSIAbstractSensor (object):
                 writer.write(out)
         writer.close(calcStats=True)
         print("Interpolating Image - Complete")
-
 
     @abstractmethod
     def cleanLocalFollowProcessing(self): pass
