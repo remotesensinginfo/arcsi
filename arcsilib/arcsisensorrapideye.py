@@ -264,17 +264,19 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     self.fileName = os.path.join(filesDIR, productInfo.find('{http://earth.esa.int/eop}fileName').text.strip())
                 print('self.fileName = ', self.fileName)
 
-                # Haven't been defined yet!!
-                self.xTL = 0.0
-                self.yTL = 0.0
-                self.xTR = 0.0
-                self.yTR = 0.0
-                self.xBL = 0.0
-                self.yBL = 0.0
-                self.xBR = 0.0
-                self.yBR = 0.0
-                self.xCentre = 0.0
-                self.yCentre = 0.0
+                rsgisUtils = rsgislib.RSGISPyUtils()
+                minX, maxX, minY, maxY = rsgisUtils.getImageBBOX(self.fileName)
+
+                self.xTL = minX
+                self.yTL = maxY
+                self.xTR = maxX
+                self.yTR = maxY
+                self.xBL = minX
+                self.yBL = minY
+                self.xBR = maxX
+                self.yBR = minY
+                self.xCentre = minX + ((maxX - minX) / 2)
+                self.yCentre = minY + ((maxY - minY) / 2)
 
             elif (hdrExt.lower() == '.json') or (hdrExt.lower() == 'json'):
                 with open(inputHeader, 'r') as f:
@@ -355,22 +357,21 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
 
                 self.radioCorrApplied = True # JSON doesn't specify this!! Assume true :s
 
-                # Haven't been defined yet!!
-                self.xTL = 0.0
-                self.yTL = 0.0
-                self.xTR = 0.0
-                self.yTR = 0.0
-                self.xBL = 0.0
-                self.yBL = 0.0
-                self.xBR = 0.0
-                self.yBR = 0.0
-                self.xCentre = 0.0
-                self.yCentre = 0.0
-                ##raise ARCSIException("STOPPED!! NOT FULLY IMPLEMENTED - JSON HEADER PARSING.")
+                rsgisUtils = rsgislib.RSGISPyUtils()
+                minX, maxX, minY, maxY = rsgisUtils.getImageBBOX(self.fileName)
+
+                self.xTL = minX
+                self.yTL = maxY
+                self.xTR = maxX
+                self.yTR = maxY
+                self.xBL = minX
+                self.yBL = minY
+                self.xBR = maxX
+                self.yBR = minY
+                self.xCentre = minX + ((maxX - minX) / 2)
+                self.yCentre = minY + ((maxY - minY) / 2)
             else:
                 raise ARCSIException("Header file extention is not recognised - support either xml or json.")
-
-
 
         except Exception as e:
             raise e
