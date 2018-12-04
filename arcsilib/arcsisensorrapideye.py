@@ -73,8 +73,6 @@ import xml.etree.ElementTree as ET
 import numpy
 # Import the GDAL python module
 import osgeo.gdal as gdal
-# Import the python subprocess module - used to call commands line tools.
-import subprocess
 # Import the RIOS RAT module
 from rios import rat
 # Import JSON module
@@ -706,12 +704,10 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         return outDist
 
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
-        print("Not implemented\n")
-        sys.exit()
+        raise ARCSIException("findDDVTargets is not implemented.")
 
     def estimateImageToAODUsingDDV(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
-        print("Not implemented\n")
-        sys.exit()
+        raise ARCSIException("estimateImageToAODUsingDDV is not implemented.")
 
     def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl):
         try:
@@ -831,7 +827,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         try:
             return self.estimateSingleAOTFromDOSBandImpl(radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl, 1)
         except Exception as e:
-            raise
+            raise e
 
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)

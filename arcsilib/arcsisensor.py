@@ -907,7 +907,7 @@ class ARCSIAbstractSensor (object):
                 rsgislib.rastergis.populateStats(clumps=cloudsRmSmallClass, addclrtab=True, calcpyramids=True, ignorezero=True)
                 
                 dist2Clouds = os.path.join(imgTmpDIR, basename+'_dist2Clouds.kea')
-                rsgislib.imagecalc.calcDist2ImgVals(cloudsRmSmallClass, dist2Clouds, 1, valsImgBand=1, gdalFormat='KEA', maxDist=20, noDataVal=20, unitGEO=False)
+                rsgislib.imagecalc.calcDist2ImgVals(cloudsRmSmallClass, dist2Clouds, 1, valsImgBand=1, gdalformat='KEA', maxDist=20, noDataVal=20, unitGEO=False)
                 rsgislib.imageutils.popImageStats(dist2Clouds, usenodataval=True, nodataval=0, calcpyramids=True)
                 
                 finalCloudMask = os.path.join(imgTmpDIR, basename+'_finalCloudMask.kea')
