@@ -1247,7 +1247,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         fmaskConfig.setTOARefScaling(float(self.imgIntScaleFactor))
         fmaskConfig.setMinCloudSize(8)
 
-        fmaskConfig.setSen2displacementTest(True)
+        fmaskConfig.setSen2displacementTest(False) # Frantz et al implementation.
         fmaskConfig.setCloudBufferSize(10)
         fmaskConfig.setShadowBufferSize(10)
         
