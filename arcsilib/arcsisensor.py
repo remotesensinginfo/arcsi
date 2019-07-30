@@ -300,7 +300,16 @@ class ARCSIAbstractSensor (object):
         It is expected that individual sensors may override this function.
         """
         date = self.acquisitionTime.strftime("%Y%m%d")
-        pos = "lat" + str(round(self.latCentre,)).replace('.', '').replace('-', '') + "lon" + str(round(self.lonCentre,2)).replace('.', '').replace('-', '')
+
+        east_west = 'e'
+        if self.lonCentre < 0:
+            east_west = 'w'
+        north_south = 'n'
+        if self.latCentre < 0:
+            north_south = 's'
+        pos = "lat" + north_south + str(round(self.latCentre, 1)).replace('.', '').replace('-', '') + "lon" \
+              + east_west + str(round(self.lonCentre, 1)).replace('.', '').replace('-', '')
+
         outname = self.sensor + "_" + date + "_" + pos
         return outname
 

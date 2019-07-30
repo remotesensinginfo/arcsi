@@ -80,6 +80,8 @@ import shutil
 # Using python-fmask (http://pythonfmask.org)
 import fmask.config
 import fmask.fmask
+# Import the sys module
+import sys
 
 class ARCSISen2SpectralBandObj(object):
     """
