@@ -630,10 +630,13 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             tmpReflStackOut = os.path.join(tmpBaseDIR, tmpBaseName+'_TOAreflStack.kea')
             rsgislib.imageutils.stackImageBands([inputReflImage, tmpTOAB9Out], None, tmpReflStackOut, None, 0, 'KEA', rsgislib.TYPE_16UINT)
 
-            tmpThermalLayer = self.band10File
-            if not rsgisUtils.doGDALLayersHaveSameProj(inputThermalImage, self.band10File):
+            tmpThermStack = os.path.join(tmpBaseDIR, tmpBaseName + '_ThermB10B11Stack.kea')
+            rsgislib.imageutils.stackImageBands([self.band10File, self.band11File], None, tmpThermStack, None, 0, 'KEA', rsgislib.TYPE_16UINT)
+
+            tmpThermalLayer = tmpThermStack
+            if not rsgisUtils.doGDALLayersHaveSameProj(inputThermalImage, tmpThermStack):
                 tmpThermalLayer = os.path.join(tmpBaseDIR, tmpBaseName+'_thermalresample.kea')
-                rsgislib.imageutils.resampleImage2Match(inputThermalImage, self.band10File, tmpThermalLayer, 'KEA', 'cubic', rsgislib.TYPE_32FLOAT)
+                rsgislib.imageutils.resampleImage2Match(inputThermalImage, tmpThermStack, tmpThermalLayer, 'KEA', 'cubic', rsgislib.TYPE_32FLOAT)
 
             minCloudSize = 0
             cloudBufferDistance = 150

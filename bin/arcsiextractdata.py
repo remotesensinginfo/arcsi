@@ -98,7 +98,6 @@ class ARCSIExtractData (object):
         except Exception as e:
             print('IOError Occurred: ' + str(e))
 
-
     def untarFiles(self, filelist, outDIR, noFolders):
         tarcommand = 'tar -xvf '
         command = ''
@@ -212,8 +211,6 @@ class ARCSIExtractData (object):
 
         except Exception as e:
             print('IOError Occurred: ' + str(e))
-
-
 
     def run4DIR(self, inputDIR, outputDIR, noFolders):
         inputDIR = os.path.abspath(inputDIR)
