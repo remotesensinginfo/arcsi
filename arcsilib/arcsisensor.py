@@ -300,7 +300,16 @@ class ARCSIAbstractSensor (object):
         It is expected that individual sensors may override this function.
         """
         date = self.acquisitionTime.strftime("%Y%m%d")
-        pos = "lat" + str(round(self.latCentre,)).replace('.', '').replace('-', '') + "lon" + str(round(self.lonCentre,2)).replace('.', '').replace('-', '')
+
+        east_west = 'e'
+        if self.lonCentre < 0:
+            east_west = 'w'
+        north_south = 'n'
+        if self.latCentre < 0:
+            north_south = 's'
+        pos = "lat" + north_south + str(round(self.latCentre, 1)).replace('.', '').replace('-', '') + "lon" \
+              + east_west + str(round(self.lonCentre, 1)).replace('.', '').replace('-', '')
+
         outname = self.sensor + "_" + date + "_" + pos
         return outname
 
@@ -907,7 +916,7 @@ class ARCSIAbstractSensor (object):
                 rsgislib.rastergis.populateStats(clumps=cloudsRmSmallClass, addclrtab=True, calcpyramids=True, ignorezero=True)
                 
                 dist2Clouds = os.path.join(imgTmpDIR, basename+'_dist2Clouds.kea')
-                rsgislib.imagecalc.calcDist2ImgVals(cloudsRmSmallClass, dist2Clouds, 1, valsImgBand=1, gdalFormat='KEA', maxDist=20, noDataVal=20, unitGEO=False)
+                rsgislib.imagecalc.calcDist2ImgVals(cloudsRmSmallClass, dist2Clouds, 1, valsImgBand=1, gdalformat='KEA', maxDist=20, noDataVal=20, unitGEO=False)
                 rsgislib.imageutils.popImageStats(dist2Clouds, usenodataval=True, nodataval=0, calcpyramids=True)
                 
                 finalCloudMask = os.path.join(imgTmpDIR, basename+'_finalCloudMask.kea')
@@ -1025,6 +1034,7 @@ class ARCSIAbstractSensor (object):
             outputStdSREFImage = os.path.join(outputPath, outputName)
             outputStdSREFWholeImage = os.path.join(outputPath, outputWholeName)
             tmpBaseName = os.path.splitext(outputName)[0]
+            tmpWholeBaseName = os.path.splitext(outputWholeName)[0]
             imgExtension = arcsiUtils.getFileExtension(outFormat)
             tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
 
@@ -1050,24 +1060,24 @@ class ARCSIAbstractSensor (object):
 
             # Derive the valid area mask
             validMaskSREF = os.path.join(tmpBaseDIR, tmpBaseName+'_validMask'+imgExtension)
-            if inputSREFWholeImage is None:
-                rsgislib.imageutils.genValidMask(inputSREFImage, validMaskSREF, outFormat, 0.0)
-            else:
-                rsgislib.imageutils.genValidMask(inputSREFWholeImage, validMaskSREF, outFormat, 0.0)
+            validMaskSREFWhole = os.path.join(tmpBaseDIR, tmpWholeBaseName + '_validMask' + imgExtension)
+            if inputSREFWholeImage is not None:
+                rsgislib.imageutils.genValidMask(inputSREFWholeImage, validMaskSREFWhole, outFormat, 0.0)
+            rsgislib.imageutils.genValidMask(inputSREFImage, validMaskSREF, outFormat, 0.0)
 
             # Calculate the solar irradiance
             solarIrradianceImg = os.path.join(tmpBaseDIR, tmpBaseName+'_solarirr'+imgExtension)
+            solarIrradianceWholeImg = os.path.join(tmpBaseDIR, tmpWholeBaseName + '_solarirr' + imgExtension)
             if aotLUT:
                 raise ARCSIException("Doh! Currently don't have an implementation of rsgislib.imagecalibration.calcIrradianceImageElevLUT for using an Elev and AOT LUT...")
             else:
-                if inputSREFWholeImage is None:
-                    rsgislib.imagecalibration.calcIrradianceImageElevLUT(validMaskSREF, inputDEMFile, incidAngleImg, slopeImg, inputSREFImage, inputTopoShadowMask, solarIrradianceImg, outFormat, solarZen, scaleFactor, sixsLUTCoeffs)
-                else:
-                    rsgislib.imagecalibration.calcIrradianceImageElevLUT(validMaskSREF, inputDEMFile, incidAngleImg, slopeImg, inputSREFWholeImage, inputTopoShadowMask, solarIrradianceImg, outFormat, solarZen, scaleFactor, sixsLUTCoeffs)
+                if inputSREFWholeImage is not None:
+                    rsgislib.imagecalibration.calcIrradianceImageElevLUT(validMaskSREFWhole, inputDEMFile, incidAngleImg, slopeImg, inputSREFWholeImage, inputTopoShadowMask, solarIrradianceWholeImg, outFormat, solarZen, scaleFactor, sixsLUTCoeffs)
+                rsgislib.imagecalibration.calcIrradianceImageElevLUT(validMaskSREF, inputDEMFile, incidAngleImg, slopeImg, inputSREFImage, inputTopoShadowMask, solarIrradianceImg, outFormat, solarZen, scaleFactor, sixsLUTCoeffs)
 
             rsgislib.imagecalibration.calcStandardisedReflectanceSD2010(validMaskSREF, inputSREFImage, solarIrradianceImg, incidAngleImg, existAngleImg, outputStdSREFImage, outFormat, scaleFactor, brdfBeta, outIncidenceAngle, outExitanceAngle)
             if inputSREFWholeImage is not None:
-                rsgislib.imagecalibration.calcStandardisedReflectanceSD2010(validMaskSREF, inputSREFWholeImage, solarIrradianceImg, incidAngleImg, existAngleImg, outputStdSREFWholeImage, outFormat, scaleFactor, brdfBeta, outIncidenceAngle, outExitanceAngle)
+                rsgislib.imagecalibration.calcStandardisedReflectanceSD2010(validMaskSREFWhole, inputSREFWholeImage, solarIrradianceWholeImg, incidAngleImg, existAngleImg, outputStdSREFWholeImage, outFormat, scaleFactor, brdfBeta, outIncidenceAngle, outExitanceAngle)
             else:
                 outputStdSREFWholeImage = ""
 
@@ -1592,7 +1602,6 @@ class ARCSIAbstractSensor (object):
                 writer.write(out)
         writer.close(calcStats=True)
         print("Interpolating Image - Complete")
-
 
     @abstractmethod
     def cleanLocalFollowProcessing(self): pass

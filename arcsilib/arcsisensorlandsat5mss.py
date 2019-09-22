@@ -256,7 +256,7 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
             if "GRID_CELL_SIZE_REFLECTIVE" in headerParams:
                 self.gridCellSizeRefl = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_REFLECTIVE"], 60.0)
 
-            ileDateStr = headerParams["FILE_DATE"].strip()
+            fileDateStr = headerParams["FILE_DATE"].strip()
             fileDateStr = fileDateStr.replace('Z', '')
             self.fileDateObj = datetime.datetime.strptime(fileDateStr, "%Y-%m-%dT%H:%M:%S")
 
