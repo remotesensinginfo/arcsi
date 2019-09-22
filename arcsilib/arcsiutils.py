@@ -198,6 +198,30 @@ class ARCSIUtils (object):
         oSpecResp = resamFunc(oWVLens)
         return oWVLens, oSpecResp
 
+    def getESUNValue(self, radiance, toaRefl, day, month, year, solarZenith):
+        """
+        Get the ESUN value where a radiance and TOA Reflectance value are known
+        for a pixel.
+        :param radiance:
+        :param toaRefl:
+        :param day:
+        :param month:
+        :param year:
+        :param solarZenith:
+        :return:
+        """
+        import rsgislib.imagecalibration
+        julianDay = rsgislib.imagecalibration.getJulianDay(year, month, day)
+        solarDist = rsgislib.imagecalibration.calcSolarDistance(julianDay)
+        # pi * L * d2
+        step1 = math.pi * radiance * (solarDist * solarDist)
+        # step1 / toaRefl
+        step2 = step1 / toaRefl
+        # step2 / cos(solarZenith)
+        esun = step2 / math.cos(math.radians(solarZenith))
+        return esun
+
+
     def isSummerOrWinter(self, lat, long, date):
         summerWinter = 0
         if lat < 0:
@@ -248,15 +272,14 @@ class ARCSIUtils (object):
             raise ARCSIException("Could not open the srcImg.")
         destDS = gdal.Open(destImg, gdal.GA_Update)
         if destDS == None:
-            raise ARCSIException("Could not open the destImg.")
             srcDS = None
+            raise ARCSIException("Could not open the destImg.")
 
         numGCPs = srcDS.GetGCPCount()
         if numGCPs > 0:
             gcpProj = srcDS.GetGCPProjection()
             gcpList = srcDS.GetGCPs()
             destDS.SetGCPs(gcpList, gcpProj)
-
         srcDS = None
         destDS = None
 
@@ -532,6 +555,9 @@ class ARCSISensorFactory(object):
         elif sensor == 'rapideye':
             from arcsilib.arcsisensorrapideye import ARCSIRapidEyeSensor
             sensorClass = ARCSIRapidEyeSensor(debugMode, inputImage)
+        elif sensor == 'planetscope':
+            from arcsilib.arcsisensorplanetscope import ARCSIPlanetScopeSensor
+            sensorClass = ARCSIPlanetScopeSensor(debugMode, inputImage)
         elif sensor == 'wv2':
             from arcsilib.arcsisensorworldview2 import ARCSIWorldView2Sensor
             sensorClass = ARCSIWorldView2Sensor(debugMode, inputImage)

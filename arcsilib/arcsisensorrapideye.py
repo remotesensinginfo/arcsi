@@ -73,8 +73,6 @@ import xml.etree.ElementTree as ET
 import numpy
 # Import the GDAL python module
 import osgeo.gdal as gdal
-# Import the python subprocess module - used to call commands line tools.
-import subprocess
 # Import the RIOS RAT module
 from rios import rat
 # Import JSON module
@@ -142,7 +140,6 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     rapideyeUrl = '{http://schemas.rapideye.de/products/productMetadataSensor}'
                     eoMetaData = metaDataProperty.find(rapideyeUrl+'EarthObservationMetaData')
                 productType = eoMetaData.find('{http://earth.esa.int/eop}productType').text.strip()
-                #print("productType = \'" + productType + "\'")
 
                 if (productType == "L1B") and (self.userSpInputImage is None):
                     raise ARCSIException("L1B data is supported by ARCSI only when a user defined image is provided.")
@@ -151,44 +148,27 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
 
                 eoPlatform = root.find('{http://www.opengis.net/gml}using').find('{http://earth.esa.int/eop}EarthObservationEquipment').find('{http://earth.esa.int/eop}platform').find('{http://earth.esa.int/eop}Platform')
                 self.platShortHand = eoPlatform.find('{http://earth.esa.int/eop}shortName').text.strip()
-                #print("self.platShortHand = ", self.platShortHand)
                 self.platSerialId = eoPlatform.find('{http://earth.esa.int/eop}serialIdentifier').text.strip()
-                #print("self.platSerialId = ", self.platSerialId)
                 self.platOrbitType = eoPlatform.find('{http://earth.esa.int/eop}orbitType').text.strip()
-                #print("self.platOrbitType = ", self.platOrbitType)
-
-                #if (self.platSerialId != "RE-1") or (self.platSerialId != "RE-2") or (self.platSerialId != "RE-3") or (self.platSerialId != "RE-4"):
-                #    raise ARCSIException("Do no recognise the spacecraft needs to be RE-1, RE-2, RE-3 or RE-4.")
 
                 eoInstrument = root.find('{http://www.opengis.net/gml}using').find('{http://earth.esa.int/eop}EarthObservationEquipment').find('{http://earth.esa.int/eop}instrument').find('{http://earth.esa.int/eop}Instrument')
                 self.instShortHand = eoInstrument.find('{http://earth.esa.int/eop}shortName').text.strip()
-                #print("self.instShortHand = ", self.instShortHand)
 
                 eoSensor = root.find('{http://www.opengis.net/gml}using').find('{http://earth.esa.int/eop}EarthObservationEquipment').find('{http://earth.esa.int/eop}sensor').find(rapideyeUrl+'Sensor')
                 self.senrType = eoSensor.find('{http://earth.esa.int/eop}sensorType').text.strip()
-                #print("self.senrType = ", self.senrType)
                 self.senrRes = float(eoSensor.find('{http://earth.esa.int/eop}resolution').text.strip())
-                #print("self.senrRes = ", self.senrRes)
                 self.senrScanType = eoSensor.find(rapideyeUrl+'scanType').text.strip()
-                #print("self.senrScanType = ", self.senrScanType)
 
                 eoAcquParams = root.find('{http://www.opengis.net/gml}using').find('{http://earth.esa.int/eop}EarthObservationEquipment').find('{http://earth.esa.int/eop}acquisitionParameters').find(rapideyeUrl+'Acquisition')
 
                 self.acquIncidAngle = float(eoAcquParams.find('{http://earth.esa.int/eop}incidenceAngle').text.strip())
-                #print("self.acquIncidAngle: ", self.acquIncidAngle)
                 self.acquAzimuthAngle = float(eoAcquParams.find(rapideyeUrl+'azimuthAngle').text.strip())
-                #print("self.acquAzimuthAngle: ", self.acquAzimuthAngle)
                 self.acquCraftViewAngle = float(eoAcquParams.find(rapideyeUrl+'spaceCraftViewAngle').text.strip())
-                #print("self.acquCraftViewAngle: ", self.acquCraftViewAngle)
 
                 self.solarZenith = 90-float(eoAcquParams.find('{http://earth.esa.int/opt}illuminationElevationAngle').text.strip())
-                #print("self.solarZenith: ", self.solarZenith)
                 self.solarAzimuth = float(eoAcquParams.find('{http://earth.esa.int/opt}illuminationAzimuthAngle').text.strip())
-                #print("self.solarAzimuth: ", self.solarAzimuth)
                 self.sensorZenith = self.acquCraftViewAngle
-                #print("self.sensorZenith: ", self.sensorZenith)
                 self.sensorAzimuth = self.acquAzimuthAngle
-                #print("self.sensorAzimuth: ", self.sensorAzimuth)
                 timeStr = eoAcquParams.find(rapideyeUrl+'acquisitionDateTime').text.strip()
                 timeStr = timeStr.replace('Z', '')
                 try:
@@ -202,7 +182,6 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                             self.acquisitionTime = datetime.datetime.strptime(timeStrTmp, "%Y-%m-%dT%H:%M:%S.%f")
                         except Exception as e:
                             raise e
-                #print("self.acquisitionTime: ", self.acquisitionTime)
 
                 metadata = root.find('{http://www.opengis.net/gml}metaDataProperty').find(rapideyeUrl+'EarthObservationMetaData')
                 if not  metadata.find(rapideyeUrl+'tileId') is None:
@@ -211,16 +190,11 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     self.tileID = ""
                 self.orderID = metadata.find(rapideyeUrl+'orderId').text.strip()
                 self.pixelFormat = metadata.find(rapideyeUrl+'pixelFormat').text.strip()
-                #print("self.tileID = ", self.tileID)
-                #print("self.pixelFormat = ", self.pixelFormat)
-
 
                 centrePt = root.find('{http://www.opengis.net/gml}target').find(rapideyeUrl+'Footprint').find('{http://www.opengis.net/gml}centerOf').find('{http://www.opengis.net/gml}Point').find('{http://www.opengis.net/gml}pos').text.strip()
                 centrePtSplit = centrePt.split(' ')
                 self.latCentre = float(centrePtSplit[0])
                 self.lonCentre = float(centrePtSplit[1])
-                #print("self.latCentre = ", self.latCentre)
-                #print("self.lonCentre = ", self.lonCentre)
 
                 imgBounds = root.find('{http://www.opengis.net/gml}target').find(rapideyeUrl+'Footprint').find(rapideyeUrl+'geographicLocation')
                 tlPoint = imgBounds.find(rapideyeUrl+'topLeft')
@@ -236,16 +210,6 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                 self.latBL = float(blPoint.find(rapideyeUrl+'latitude').text)
                 self.lonBL = float(blPoint.find(rapideyeUrl+'longitude').text)
 
-                #print("self.latTL = ", self.latTL)
-                #print("self.lonTL = ", self.lonTL)
-                #print("self.latTR = ", self.latTR)
-                #print("self.lonTR = ", self.lonTR)
-                #print("self.latBR = ", self.latBR)
-                #print("self.lonBR = ", self.lonBR)
-                #print("self.latBL = ", self.latBL)
-                #print("self.lonBL = ", self.lonBL)
-
-
                 productInfo = root.find('{http://www.opengis.net/gml}resultOf').find(rapideyeUrl+'EarthObservationResult').find('{http://earth.esa.int/eop}product').find(rapideyeUrl+'ProductInformation')
 
                 spatialRef = productInfo.find(rapideyeUrl+'spatialReferenceSystem')
@@ -255,10 +219,8 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                 inProj.ImportFromEPSG(epsgCode)
                 if self.inWKT is "":
                     self.inWKT = inProj.ExportToWkt()
-                #print("WKT: ", self.inWKT)
 
                 self.numOfBands = int(productInfo.find(rapideyeUrl+'numBands').text.strip())
-                #print('self.numOfBands = ', self.numOfBands)
                 if self.numOfBands != 5:
                     raise ARCSIException("The number of image band is not equal to 5 according to XML header.")
 
@@ -275,14 +237,12 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                         self.radioCorrVersion = 'Unknown'
                 else:
                     self.radioCorrVersion = 'Not Applied'
-                #print('self.radioCorrVersion = ', self.radioCorrVersion)
 
                 atmosCorrAppliedStr = productInfo.find(rapideyeUrl+'atmosphericCorrectionApplied').text.strip()
                 if atmosCorrAppliedStr == "true":
                     self.atmosCorrApplied = True
                 else:
                     self.atmosCorrApplied = False
-                #print('self.atmosCorrApplied = ', self.atmosCorrApplied)
 
                 if self.atmosCorrApplied:
                     raise ARCSIException("An atmosheric correction has already been applied according to the metadata.")
@@ -292,10 +252,8 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     self.elevCorrApplied = True
                 else:
                     self.elevCorrApplied = False
-                #print('self.elevCorrApplied = ', self.elevCorrApplied)
 
                 self.geoCorrLevel = productInfo.find(rapideyeUrl+'geoCorrectionLevel').text.strip()
-                #print('self.geoCorrLevel = ', self.geoCorrLevel)
 
                 filesDIR = os.path.dirname(inputHeader)
                 if not self.userSpInputImage is None:
@@ -304,23 +262,24 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     self.fileName = os.path.join(filesDIR, productInfo.find('{http://earth.esa.int/eop}fileName').text.strip())
                 print('self.fileName = ', self.fileName)
 
-                # Haven't been defined yet!!
-                self.xTL = 0.0
-                self.yTL = 0.0
-                self.xTR = 0.0
-                self.yTR = 0.0
-                self.xBL = 0.0
-                self.yBL = 0.0
-                self.xBR = 0.0
-                self.yBR = 0.0
-                self.xCentre = 0.0
-                self.yCentre = 0.0
+                rsgisUtils = rsgislib.RSGISPyUtils()
+                minX, maxX, minY, maxY = rsgisUtils.getImageBBOX(self.fileName)
+
+                self.xTL = minX
+                self.yTL = maxY
+                self.xTR = maxX
+                self.yTR = maxY
+                self.xBL = minX
+                self.yBL = minY
+                self.xBR = maxX
+                self.yBR = minY
+                self.xCentre = minX + ((maxX - minX) / 2)
+                self.yCentre = minY + ((maxY - minY) / 2)
 
             elif (hdrExt.lower() == '.json') or (hdrExt.lower() == 'json'):
                 with open(inputHeader, 'r') as f:
                     jsonStrData = f.read()
                 reHdrInfo = json.loads(jsonStrData)
-                #print(reHdrInfo)
 
                 if 'properties' in reHdrInfo:
                     if 'provider' in reHdrInfo['properties']:
@@ -334,20 +293,13 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
 
                 if 'sat' in reHdrInfo['properties']:
                     self.acquIncidAngle = arcsiUtils.str2Float(reHdrInfo['properties']['sat']['off_nadir'])
-                    #print("self.acquIncidAngle: ", self.acquIncidAngle)
                     self.acquAzimuthAngle = arcsiUtils.str2Float(reHdrInfo['properties']['sat']['azimuth_angle'])
-                    #print("self.acquAzimuthAngle: ", self.acquAzimuthAngle)
                     self.acquCraftViewAngle = arcsiUtils.str2Float(reHdrInfo['properties']['sat']['view_angle'])
-                    #print("self.acquCraftViewAngle: ", self.acquCraftViewAngle)
 
                     self.solarZenith = 90-arcsiUtils.str2Float(reHdrInfo['properties']['sun']['altitude'])
-                    #print("self.solarZenith: ", self.solarZenith)
                     self.solarAzimuth = arcsiUtils.str2Float(reHdrInfo['properties']['sun']['azimuth'])
-                    #print("self.solarAzimuth: ", self.solarAzimuth)
                     self.sensorZenith = self.acquCraftViewAngle
-                    #print("self.sensorZenith: ", self.sensorZenith)
                     self.sensorAzimuth = self.acquAzimuthAngle
-                    #print("self.sensorAzimuth: ", self.sensorAzimuth)
                 else:
                     raise ARCSIException("JSON Header is not expect format for RapidEye.")
 
@@ -361,15 +313,12 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                             self.acquisitionTime = datetime.datetime.strptime(timeStr, "%Y-%m-%dT%H:%M:%S")
                         except Exception as e:
                             raise e
-                    #print("self.acquisitionTime: ", self.acquisitionTime)
                 else:
                     raise ARCSIException("JSON Header is not expect format for RapidEye.")
 
                 if 'rapideye' in reHdrInfo['properties']:
                     self.tileID = reHdrInfo['properties']['rapideye']['tile_id']
                     self.catalogID = reHdrInfo['properties']['rapideye']['catalog_id']
-                    #print("self.tileID = ", self.tileID)
-                    #print("self.catalogID = ", self.catalogID)
                 else:
                     raise ARCSIException("JSON Header is not expect format for RapidEye.")
 
@@ -386,8 +335,6 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
 
                         self.latCentre = self.latTL + (self.latBR - self.latTL)/2
                         self.lonCentre = self.lonTL + (self.lonTR - self.lonTL)/2
-                        #print("self.latCentre = ", self.latCentre)
-                        #print("self.lonCentre = ", self.lonCentre)
                     else:
                         raise ARCSIException("JSON Header is not expect format for RapidEye.")
                 else:
@@ -397,37 +344,32 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
                     self.fileName = os.path.abspath(self.userSpInputImage)
                 else:
                     baseHdrName = os.path.splitext(inputHeader)[0]
-                    #print(baseHdrName)
                     fileBaseName = baseHdrName.replace('_metadata', '')
-                    #print(fileBaseName)
                     imgFiles = glob.glob(fileBaseName+'*analytic.tif')
                     if len(imgFiles) == 0:
                         raise ARCSIException("Could not find input image file.")
                     if len(imgFiles) > 1:
                         raise ARCSIException("Found multiple potential input image files - don't know which one is correct specify input image using arcsi.py.")
                     self.fileName = imgFiles[0]
-                    #filesDIR = os.path.dirname(inputHeader)
-                    #self.fileName = os.path.join(filesDIR, productInfo.find('{http://earth.esa.int/eop}fileName').text.strip())
                 print('self.fileName = ', self.fileName)
 
                 self.radioCorrApplied = True # JSON doesn't specify this!! Assume true :s
 
-                # Haven't been defined yet!!
-                self.xTL = 0.0
-                self.yTL = 0.0
-                self.xTR = 0.0
-                self.yTR = 0.0
-                self.xBL = 0.0
-                self.yBL = 0.0
-                self.xBR = 0.0
-                self.yBR = 0.0
-                self.xCentre = 0.0
-                self.yCentre = 0.0
-                ##raise ARCSIException("STOPPED!! NOT FULLY IMPLEMENTED - JSON HEADER PARSING.")
+                rsgisUtils = rsgislib.RSGISPyUtils()
+                minX, maxX, minY, maxY = rsgisUtils.getImageBBOX(self.fileName)
+
+                self.xTL = minX
+                self.yTL = maxY
+                self.xTR = maxX
+                self.yTR = maxY
+                self.xBL = minX
+                self.yBL = minY
+                self.xBR = maxX
+                self.yBR = minY
+                self.xCentre = minX + ((maxX - minX) / 2)
+                self.yCentre = minY + ((maxY - minY) / 2)
             else:
                 raise ARCSIException("Header file extention is not recognised - support either xml or json.")
-
-
 
         except Exception as e:
             raise e
@@ -762,12 +704,10 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         return outDist
 
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
-        print("Not implemented\n")
-        sys.exit()
+        raise ARCSIException("findDDVTargets is not implemented.")
 
     def estimateImageToAODUsingDDV(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax):
-        print("Not implemented\n")
-        sys.exit()
+        raise ARCSIException("estimateImageToAODUsingDDV is not implemented.")
 
     def estimateImageToAODUsingDOS(self, inputRADImage, inputTOAImage, inputDEMFile, shadowMask, outputPath, outputName, outFormat, tmpPath, aeroProfile, atmosProfile, grdRefl, aotValMin, aotValMax, globalDOS, simpleDOS, dosOutRefl):
         try:
@@ -887,7 +827,7 @@ class ARCSIRapidEyeSensor (ARCSIAbstractSensor):
         try:
             return self.estimateSingleAOTFromDOSBandImpl(radianceImage, toaImage, inputDEMFile, tmpPath, outputName, outFormat, aeroProfile, atmosProfile, grdRefl, minAOT, maxAOT, dosOutRefl, 1)
         except Exception as e:
-            raise
+            raise e
 
     def setBandNames(self, imageFile):
         dataset = gdal.Open(imageFile, gdal.GA_Update)

@@ -132,6 +132,8 @@ def setupSen2DB(dbFile):
                             lineComps[7] = '1'
                         elif lineComps[7].strip() == 'FAILED':
                             lineComps[7] = '0'
+                        else:
+                            lineComps[7] = '0'
                         sqlcmd = "INSERT INTO sen2 (COUNT, GRANULE_ID, PRODUCT_ID, DATATAKE_IDENTIFIER, MGRS_TILE, SENSING_TIME, TOTAL_SIZE, CLOUD_COVER, GEOMETRIC_QUALITY_FLAG, GENERATION_TIME, NORTH_LAT, SOUTH_LAT, WEST_LON, EAST_LON, BASE_URL) VALUES ("+str(keyCount)+", '"+lineComps[0]+"', '"+lineComps[1]+"', '"+lineComps[2]+"', '"+lineComps[3]+"', '"+lineComps[4]+"', '"+lineComps[5]+"', "+lineComps[6]+", "+lineComps[7]+", '"+lineComps[8]+"', "+lineComps[9]+", "+lineComps[10]+", "+lineComps[11]+", "+lineComps[12]+", '"+lineComps[13]+"')"
                         #print(sqlcmd)
                         ggSen2DBConn.execute(sqlcmd)
