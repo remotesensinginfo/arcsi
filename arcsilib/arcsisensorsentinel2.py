@@ -1199,7 +1199,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrrVals)
         return outputImage
 
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor, cloud_msk_methods=None):
         outputImage = os.path.join(outputPath, outputName)
         tmpBaseName = os.path.splitext(outputName)[0]
         tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
@@ -1209,83 +1209,141 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             os.makedirs(tmpBaseDIR)
             tmpDIRExisted = False
 
-        sen2ImgB01_tmp = os.path.join(tmpBaseDIR, tmpBaseName+'_B01.kea')
-        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB01, sen2ImgB01_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT, multicore=False)
-        sen2ImgB09_tmp = os.path.join(tmpBaseDIR, tmpBaseName+'_B09.kea')
-        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB09, sen2ImgB09_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT, multicore=False)
-        sen2ImgB10_tmp = os.path.join(tmpBaseDIR, tmpBaseName+'_B10.kea')
-        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB10, sen2ImgB10_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT, multicore=False)
+        #########################################################################################################
+        # Create 13 band tmp images which has all image bands for input into cloud masking.
+        sen2ImgB01_tmp = os.path.join(tmpBaseDIR, tmpBaseName + '_B01.kea')
+        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB01, sen2ImgB01_tmp, 'KEA',
+                                                'nearestneighbour', rsgislib.TYPE_16UINT, multicore=False)
+        sen2ImgB09_tmp = os.path.join(tmpBaseDIR, tmpBaseName + '_B09.kea')
+        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB09, sen2ImgB09_tmp, 'KEA',
+                                                'nearestneighbour', rsgislib.TYPE_16UINT, multicore=False)
+        sen2ImgB10_tmp = os.path.join(tmpBaseDIR, tmpBaseName + '_B10.kea')
+        rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB10, sen2ImgB10_tmp, 'KEA',
+                                                'nearestneighbour', rsgislib.TYPE_16UINT, multicore=False)
 
-        tmpTOAImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmasktmpTOA.kea')
+        # Stack Image Bands
+        tmpTOAImg = os.path.join(tmpBaseDIR, tmpBaseName + '_pyfmasktmpTOA.kea')
         if self.imgIntScaleFactor != 10000:
-            vrtImgB1B9B10 = os.path.join(tmpBaseDIR, tmpBaseName+'_b01b09b10_60mBands.vrt')
-            cmdVRT = 'gdalbuildvrt -separate ' + vrtImgB1B9B10 + ' ' + sen2ImgB01_tmp + ' ' + sen2ImgB09_tmp + ' ' + sen2ImgB10_tmp
+            vrtImgB1B9B10 = os.path.join(tmpBaseDIR, tmpBaseName + '_b01b09b10_60mBands.vrt')
+            cmdVRT = 'gdalbuildvrt -separate {0} {1} {2} {3}'.format(vrtImgB1B9B10, sen2ImgB01_tmp, sen2ImgB09_tmp,
+                                                                     sen2ImgB10_tmp)
             try:
                 subprocess.call(cmdVRT, shell=True)
             except OSError as e:
                 raise ARCSIException('Could not successful execute command: ' + cmdVRT)
-            sen2ImgB1B9B10Rescaled = os.path.join(tmpBaseDIR, tmpBaseName+'_B01B09B10Rescaled.kea')
-            rsgislib.imagecalc.imageMath(vrtImgB1B9B10, sen2ImgB1B9B10Rescaled, '(b1/10000)*'+str(self.imgIntScaleFactor), 'KEA', rsgislib.TYPE_16UINT)
-            rsgislib.imageutils.stackImageBands([inputReflImage, sen2ImgB1B9B10Rescaled], None, tmpTOAImg, None, 0, 'KEA', rsgislib.TYPE_16UINT)
+            sen2ImgB1B9B10Rescaled = os.path.join(tmpBaseDIR, tmpBaseName + '_B01B09B10Rescaled.kea')
+            rsgislib.imagecalc.imageMath(vrtImgB1B9B10, sen2ImgB1B9B10Rescaled,
+                                         '(b1/10000)*{}'.format(self.imgIntScaleFactor), 'KEA', rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.stackImageBands([inputReflImage, sen2ImgB1B9B10Rescaled], None, tmpTOAImg, None, 0,
+                                                'KEA', rsgislib.TYPE_16UINT)
         else:
-            rsgislib.imageutils.stackImageBands([inputReflImage, sen2ImgB01_tmp, sen2ImgB09_tmp, sen2ImgB10_tmp], None, tmpTOAImg, None, 0, 'KEA', rsgislib.TYPE_16UINT)
+            rsgislib.imageutils.stackImageBands([inputReflImage, sen2ImgB01_tmp, sen2ImgB09_tmp, sen2ImgB10_tmp], None,
+                                                tmpTOAImg, None, 0, 'KEA', rsgislib.TYPE_16UINT)
 
-        fmaskReflImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskRefl.kea')
-        rsgislib.imageutils.selectImageBands(tmpTOAImg, fmaskReflImg, 'KEA', rsgislib.TYPE_16UINT, [11,1,2,3,4,5,6,7,8,12,13,9,10])
+        # Re-order image bands to be in correct order.
+        fmaskReflImg = os.path.join(tmpBaseDIR, tmpBaseName + '_pyfmaskRefl.kea')
+        rsgislib.imageutils.selectImageBands(tmpTOAImg, fmaskReflImg, 'KEA', rsgislib.TYPE_16UINT,
+                                             [11, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 9, 10])
+        #########################################################################################################
 
-        anglesInfo = fmask.config.AnglesFileInfo(inputViewAngleImg, 3, inputViewAngleImg, 2, inputViewAngleImg, 1, inputViewAngleImg, 0)        
+        if (cloud_msk_methods is None) or (('FMASK' in cloud_msk_methods) or ('FMASK_DISP' in cloud_msk_methods)):
+            anglesInfo = fmask.config.AnglesFileInfo(inputViewAngleImg, 3, inputViewAngleImg, 2, inputViewAngleImg, 1, inputViewAngleImg, 0)
 
-        fmaskCloudsImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskCloudsResult.kea')
-        fmaskFilenames = fmask.config.FmaskFilenames()
-        fmaskFilenames.setTOAReflectanceFile(fmaskReflImg)
-        fmaskFilenames.setSaturationMask(inputSatImage)
-        fmaskFilenames.setOutputCloudMaskFile(fmaskCloudsImg)
-        
-        fmaskConfig = fmask.config.FmaskConfig(fmask.config.FMASK_SENTINEL2)
-        fmaskConfig.setAnglesInfo(anglesInfo)
-        fmaskConfig.setKeepIntermediates(True)
-        fmaskConfig.setVerbose(True)
-        fmaskConfig.setTempDir(tmpBaseDIR)
-        fmaskConfig.setTOARefScaling(float(self.imgIntScaleFactor))
-        fmaskConfig.setMinCloudSize(8)
+            fmaskCloudsImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskCloudsResult.kea')
+            fmaskFilenames = fmask.config.FmaskFilenames()
+            fmaskFilenames.setTOAReflectanceFile(fmaskReflImg)
+            fmaskFilenames.setSaturationMask(inputSatImage)
+            fmaskFilenames.setOutputCloudMaskFile(fmaskCloudsImg)
 
-        fmaskConfig.setSen2displacementTest(False) # Frantz et al implementation.
-        fmaskConfig.setCloudBufferSize(10)
-        fmaskConfig.setShadowBufferSize(10)
-        
-        fmask.fmask.doFmask(fmaskFilenames, fmaskConfig)
+            fmaskConfig = fmask.config.FmaskConfig(fmask.config.FMASK_SENTINEL2)
+            fmaskConfig.setAnglesInfo(anglesInfo)
+            fmaskConfig.setKeepIntermediates(True)
+            fmaskConfig.setVerbose(True)
+            fmaskConfig.setTempDir(tmpBaseDIR)
+            fmaskConfig.setTOARefScaling(float(self.imgIntScaleFactor))
+            fmaskConfig.setMinCloudSize(8)
 
-        rsgislib.imagecalc.imageMath(fmaskCloudsImg, outputImage, '(b1==2)?1:(b1==3)?2:0', outFormat, rsgislib.TYPE_8UINT)
-        if outFormat == 'KEA':
-            rsgislib.rastergis.populateStats(outputImage, True, True)
-            ratDataset = gdal.Open(outputImage, gdal.GA_Update)
-            red = rat.readColumn(ratDataset, 'Red')
-            green = rat.readColumn(ratDataset, 'Green')
-            blue = rat.readColumn(ratDataset, 'Blue')
-            ClassName = numpy.empty_like(red, dtype=numpy.dtype('a255'))
+            if (cloud_msk_methods is not None) and ('FMASK_DISP' in cloud_msk_methods):
+                fmaskConfig.setSen2displacementTest(True) # Frantz et al implementation.
+            else:
+                fmaskConfig.setSen2displacementTest(False)  # Frantz et al implementation.
+            fmaskConfig.setCloudBufferSize(10)
+            fmaskConfig.setShadowBufferSize(10)
 
-            red[0] = 0
-            green[0] = 0
-            blue[0] = 0
+            fmask.fmask.doFmask(fmaskFilenames, fmaskConfig)
 
-            if (red.shape[0] == 2) or (red.shape[0] == 3):
-                red[1] = 0
-                green[1] = 0
-                blue[1] = 255
-                ClassName[1] = 'Clouds'
+            rsgislib.imagecalc.imageMath(fmaskCloudsImg, outputImage, '(b1==2)?1:(b1==3)?2:0', outFormat, rsgislib.TYPE_8UINT)
+            if outFormat == 'KEA':
+                rsgislib.rastergis.populateStats(outputImage, True, True)
+                ratDataset = gdal.Open(outputImage, gdal.GA_Update)
+                red = rat.readColumn(ratDataset, 'Red')
+                green = rat.readColumn(ratDataset, 'Green')
+                blue = rat.readColumn(ratDataset, 'Blue')
+                ClassName = numpy.empty_like(red, dtype=numpy.dtype('a255'))
 
-                if(red.shape[0] == 3):
-                    red[2] = 0
-                    green[2] = 255
-                    blue[2] = 255
-                    ClassName[2] = 'Shadows'
+                red[0] = 0
+                green[0] = 0
+                blue[0] = 0
 
-            rat.writeColumn(ratDataset, "Red", red)
-            rat.writeColumn(ratDataset, "Green", green)
-            rat.writeColumn(ratDataset, "Blue", blue)
-            rat.writeColumn(ratDataset, "ClassName", ClassName)
-            ratDataset = None
-        rsgislib.imageutils.copyProjFromImage(outputImage, inputReflImage)
+                if (red.shape[0] == 2) or (red.shape[0] == 3):
+                    red[1] = 0
+                    green[1] = 0
+                    blue[1] = 255
+                    ClassName[1] = 'Clouds'
+
+                    if(red.shape[0] == 3):
+                        red[2] = 0
+                        green[2] = 255
+                        blue[2] = 255
+                        ClassName[2] = 'Shadows'
+
+                rat.writeColumn(ratDataset, "Red", red)
+                rat.writeColumn(ratDataset, "Green", green)
+                rat.writeColumn(ratDataset, "Blue", blue)
+                rat.writeColumn(ratDataset, "ClassName", ClassName)
+                ratDataset = None
+            rsgislib.imageutils.copyProjFromImage(outputImage, inputReflImage)
+        elif('S2CLOUDLESS' in cloud_msk_methods):
+            from arcsilib.s2cloudless.RunS2Cloudless import run_s2cloudless
+
+            out_cloud_msk = outputImage #os.path.join(tmpBaseDIR, tmpBaseName+'_s2cloudless_cloud_msk.kea')
+            out_prob_img = os.path.join(tmpBaseDIR, tmpBaseName+'_s2cloudless_cloud_prob.kea')
+
+            run_s2cloudless(fmaskReflImg, out_prob_img, out_cloud_msk, outFormat, toa_scale_factor=float(self.imgIntScaleFactor))
+
+            if outFormat == 'KEA':
+                rsgislib.rastergis.populateStats(out_cloud_msk, True, True)
+                ratDataset = gdal.Open(out_cloud_msk, gdal.GA_Update)
+                red = rat.readColumn(ratDataset, 'Red')
+                green = rat.readColumn(ratDataset, 'Green')
+                blue = rat.readColumn(ratDataset, 'Blue')
+                ClassName = numpy.empty_like(red, dtype=numpy.dtype('a255'))
+
+                red[0] = 0
+                green[0] = 0
+                blue[0] = 0
+
+                if (red.shape[0] == 2) or (red.shape[0] == 3):
+                    red[1] = 0
+                    green[1] = 0
+                    blue[1] = 255
+                    ClassName[1] = 'Clouds'
+
+                    if(red.shape[0] == 3):
+                        red[2] = 0
+                        green[2] = 255
+                        blue[2] = 255
+                        ClassName[2] = 'Shadows'
+
+                rat.writeColumn(ratDataset, "Red", red)
+                rat.writeColumn(ratDataset, "Green", green)
+                rat.writeColumn(ratDataset, "Blue", blue)
+                rat.writeColumn(ratDataset, "ClassName", ClassName)
+                ratDataset = None
+            rsgislib.imageutils.copyProjFromImage(outputImage, inputReflImage)
+
+        else:
+            raise ARCSIException("The cloud masking methods specified for Sentinel-2 does not exist.")
 
         if not self.debugMode:
             if not tmpDIRExisted:
