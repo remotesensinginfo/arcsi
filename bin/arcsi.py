@@ -72,10 +72,10 @@ from arcsilib import ARCSI_SENSORS_LIST
 from arcsilib import ARCSI_PRODUCTS_LIST
 # Import the list of gdal file formats arcsi supports
 from arcsilib import ARCSI_GDALFORMATS_LIST
+# Import the list of sentinel-2 cloud masking methods
+from arcsilib import ARCSI_CLOUD_METHODS_LIST
 # Import rsgislib library
 import rsgislib
-
-
 
 
 """
@@ -304,7 +304,8 @@ don't currently support the sensor you require.''')
                         choices=['near', 'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average'],
                         help='''Specifies interpolation algorithm when resampling image bands to a new resolution (e.g., Sentinel-2)
                                 (Note. the options are those in gdalwarp).''')
-
+    parser.add_argument("--cloudmethods", type=str, nargs='+', default=None, choices=ARCSI_CLOUD_METHODS_LIST,
+                        help='''Specify the method(s) of cloud masking. Current only Sentinel-2 has options).''')
     parser.add_argument("--cs_initdist", type=int, default=3000,
                                      help='''When clear-sky regions are being defined this parameter
                                                is the initial distance (m) from cloud objects to generate the initial
@@ -602,9 +603,9 @@ don't currently support the sensor you require.''')
         runTimer = rsgislib.RSGISTime()
         runTimer.start(True)
         if args.multi:
-            arcsilib.arcsirun.runARCSIMulti(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, args.dem, args.demnodata, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, args.scalefac, args.interp, args.interpresamp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres, args.ncores, args.keepfileends)
+            arcsilib.arcsirun.runARCSIMulti(args.inputheader, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, args.dem, args.demnodata, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, args.scalefac, args.interp, args.interpresamp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres, args.ncores, args.keepfileends, args.cloudmethods)
         else:
-            arcsilib.arcsirun.runARCSI(args.inputheader, args.imagefile, args.cloudmask, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, args.dem, args.demnodata, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, args.scalefac, args.interp, args.interpresamp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres, args.keepfileends)
+            arcsilib.arcsirun.runARCSI(args.inputheader, args.imagefile, args.cloudmask, args.sensor, args.inwkt, args.format, args.outpath, args.outbasename, args.outwkt, args.outproj4, args.projabbv, args.ximgres, args.yimgres, args.prods, args.stats, args.aeropro, args.atmospro, args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude, args.atmosozone, args.atmoswater, atmosOZoneWaterSpecified, args.aerowater, args.aerodust, args.aerooceanic, args.aerosoot, aeroComponentsSpecified, args.aot, args.vis, args.tmpath, args.minaot, args.maxaot, args.lowaot, args.upaot, args.dem, args.demnodata, args.aotfile, (not args.localdos), args.dosout, args.simpledos, args.debug, args.scalefac, args.interp, args.interpresamp, args.cs_initdist, args.cs_initminsize, args.cs_finaldist, args.cs_morphop, args.fullimgouts, args.checkouts, args.classmlclouds, args.cloudtrainclouds, args.cloudtrainother, args.resample2lowres, args.keepfileends, args.cloudmethods)
 
         runTimer.end(True, "ARCSI took ", " to process the input image. Thank you for using ARCSI.")
         print("\n\n")

@@ -720,7 +720,7 @@ class ARCSIAbstractSensor (object):
     def convertImageToTOARefl(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor): pass
 
     @abstractmethod
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor): pass
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor, cloud_msk_methods=None): pass
 
     @abstractmethod
     def createCloudMaskDataArray(self, inImgDataArr): pass
