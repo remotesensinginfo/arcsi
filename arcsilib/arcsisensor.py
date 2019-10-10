@@ -508,6 +508,51 @@ class ARCSIAbstractSensor (object):
     def hasThermal(self):
         return False
 
+    def getBBOXLatLon(self):
+        """
+        :return: (MinLon, MaxLon, MinLat, MaxLat)
+        """
+        minLon = self.lonTL
+        if self.lonBL < minLon:
+            minLon = self.lonBL
+
+        maxLon = self.lonBR
+        if self.lonTR > maxLon:
+            maxLon = self.lonTR
+
+        minLat = self.latBL
+        if self.latBR < minLat:
+            minLat = self.latBR
+
+        maxLat = self.latTL
+        if self.latTR > maxLat:
+            maxLat = self.latTR
+
+        return (minLon, maxLon, minLat, maxLat)
+
+    def getBBOX(self):
+        """
+        :return: (MinX, MaxX, MinY, MaxY)
+        """
+        minX = self.xTL
+        if self.xBL < minX:
+            minX = self.xBL
+
+        maxX = self.xBR
+        if self.xTR > maxX:
+            maxX = self.xTR
+
+        minY = self.yBR
+        if self.yBL < minY:
+            minY = self.yBL
+
+        maxY = self.yTL
+        if self.yTR > maxY:
+            maxY = self.yTR
+
+        return (minX, maxX, minY, maxY)
+
+
     def getReProjBBOX(self, wktFile, proj4File, useWKT2Reproject, xPxlRes, yPxlRes, snap2Grid):
         arcsiUtils = ARCSIUtils()
         projImgBBOX = dict()
