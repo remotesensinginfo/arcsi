@@ -83,7 +83,7 @@ class ARCSIBuildCommands (object):
                 subdirList[:] = []
         return outFiles
 
-    def buildCmds(self, inputPath, inputIsDIR, outputFile, headerSearchStr, searchDepth, sensor, inwkt, format, outpath, prods, stats, aeropro, atmospro, aeroimg, atmosimg, grdrefl, surfacealtitude, atmosozone, atmoswater, aerowater, aerodust, aerooceanic, aerosoot, aot, vis, tmpath, minaot, maxaot, dem, localdos, dosout, simpledos, scalefac, outwkt, outproj4, projabbv, interp, interpresamp, checkouts, fullimgouts, classmlclouds, cloudtrainclouds, cloudtrainother, resample2lowres, keepfileends, multi, ncores):
+    def buildCmds(self, inputPath, inputIsDIR, outputFile, headerSearchStr, searchDepth, sensor, inwkt, format, outpath, prods, stats, aeropro, atmospro, aeroimg, atmosimg, grdrefl, surfacealtitude, atmosozone, atmoswater, aerowater, aerodust, aerooceanic, aerosoot, aot, vis, tmpath, minaot, maxaot, dem, dem_no_data_val, localdos, dosout, simpledos, scalefac, outwkt, outproj4, projabbv, interp, interpresamp, checkouts, fullimgouts, classmlclouds, cloudtrainclouds, cloudtrainother, resample2lowres, keepfileends, multi, ncores):
 
         inputPath = os.path.abspath(inputPath)
         outputFile = os.path.abspath(outputFile)
@@ -150,6 +150,8 @@ class ARCSIBuildCommands (object):
                cmd = cmd + " --tmpath \"" + os.path.abspath(tmpath) + "\""
             if dem is not None:
                cmd = cmd + " --dem \"" + os.path.abspath(dem) + "\""
+            if dem_no_data_val is not None:
+               cmd = cmd + " --demnodata " + str(dem_no_data_val)
             if aeroimg is not None:
                cmd = cmd + " --aeroimg \"" + os.path.abspath(aeroimg) + "\""
             elif aeropro is not None:
@@ -377,6 +379,9 @@ if __name__ == '__main__':
                         help='''Specify a DEM which is to be used for building
                         an LUT and applying 6S coefficients with respect to elevation.''')
 
+    parser.add_argument("--demnodata", type=float,
+                        help='''Specify a no data value for the input DEM image file.''')
+
     parser.add_argument("--localdos", action='store_true', default=False,
                         help='''Specifies that a local DOS should be applied
                         rather than a global DOS.''')
@@ -468,7 +473,7 @@ if __name__ == '__main__':
                      args.aeroimg, args.atmosimg, args.grdrefl, args.surfacealtitude,
                      args.atmosozone, args.atmoswater, args.aerowater,
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath,
-                     args.minaot, args.maxaot, args.dem, args.localdos, args.dosout, args.simpledos,
+                     args.minaot, args.maxaot, args.dem, args.demnodata, args.localdos, args.dosout, args.simpledos,
                      args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.interpresamp, 
                      args.checkouts, args.fullimgouts, args.classmlclouds, args.cloudtrainclouds, 
                      args.cloudtrainother, args.resample2lowres, args.keepfileends, args.multi, args.ncores)
