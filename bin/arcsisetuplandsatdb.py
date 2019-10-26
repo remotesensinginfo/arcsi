@@ -131,7 +131,7 @@ def setupLandsatDB(dbFile):
                         #print(sqlcmd)
                         ggLandsatDBConn.execute(sqlcmd)
                         keyCount = keyCount + 1
-                        if commitCounter == 5000:
+                        if commitCounter == 10000:
                             ggLandsatDBConn.commit()
                             sys.stdout.write("#")
                             sys.stdout.flush()

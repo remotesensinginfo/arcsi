@@ -60,7 +60,7 @@ from arcsilib.arcsiexception import ARCSIException
 # Import rsgislib module
 import rsgislib
 
-def genLandsatDownloadList(dbFile, lsPath, lsRow, outFile, outpath, sensorID=None, spacecraftID=None, collection=None, cloudCover=None, startDate=None, endDate=None, multiDwn=False, lstCmds=False):
+def genLandsatDownloadList(dbFile, lsPath, lsRow, outFile, outpath, sensorID=None, spacecraftID=None, collection=None, cloudCover=None, startDate=None, endDate=None, limit=None, multiDwn=False, lstCmds=False):
     """
     Using sqlite database query and create a list of files to download
     """
@@ -96,6 +96,9 @@ def genLandsatDownloadList(dbFile, lsPath, lsRow, outFile, outpath, sensorID=Non
         if not endDate is None:
             query = query + ' AND date(SENSING_TIME) < date(?)'
             queryVar.append(endDate)
+
+        if not limit is None:
+            query = query + ' ORDER BY CLOUD_COVER ASC LIMIT {}'.format(limit)
         
         multiStr = ''
         if multiDwn:
@@ -140,11 +143,12 @@ if __name__ == '__main__':
     parser.add_argument("--cloudcover", type=float, help='''Specify an upper limit for acceptable cloud cover.''')
     parser.add_argument("--startdate", type=str, help='''Specify a start date (YYYY-MM-DD).''')
     parser.add_argument("--enddate", type=str, help='''Specify a end date (YYYY-MM-DD).''')
+    parser.add_argument("--limit", type=int, help='''Specify a limit for the number of scenes returned - scenes are sorted by cloud cover''')
     parser.add_argument("--multi", action='store_true', default=False, help='''Adds -m option to the gsutil download command.''')
     parser.add_argument("--lstcmds", action='store_true', default=False, help='''List download commands rather than just list of URLs''')
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
-    genLandsatDownloadList(args.dbfile, args.path, args.row, args.output, args.outpath, args.sensor, args.spacecraft, args.collection, args.cloudcover, args.startdate, args.enddate, args.multi, args.lstcmds)
+    genLandsatDownloadList(args.dbfile, args.path, args.row, args.output, args.outpath, args.sensor, args.spacecraft, args.collection, args.cloudcover, args.startdate, args.enddate, args.limit, args.multi, args.lstcmds)
 
