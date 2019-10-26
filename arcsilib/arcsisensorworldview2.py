@@ -205,16 +205,8 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             self.latBR = float(imageTileInfoTag.find('LRLAT').text.strip())
             self.lonBR = float(imageTileInfoTag.find('LRLON').text.strip())
 
-            wgs84latlonProj = osr.SpatialReference()
-            wgs84latlonProj.ImportFromEPSG(4326)
-
-            wktPt = 'POINT(%s %s)' % (self.xCentre, self.yCentre)
-            point = ogr.CreateGeometryFromWkt(wktPt)
-            point.AssignSpatialReference(inProj)
-            point.TransformTo(wgs84latlonProj)
-
-            self.latCentre = point.GetY()
-            self.lonCentre = point.GetX()
+            arcsiUtils = ARCSIUtils()
+            self.latCentre, self.lonCentre = arcsiUtils.getLatLong(inProj, self.xCentre, self.yCentre)
 
             filesDIR = os.path.dirname(inputHeader)
             if not self.userSpInputImage is None:

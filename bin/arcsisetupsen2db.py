@@ -138,7 +138,7 @@ def setupSen2DB(dbFile):
                         #print(sqlcmd)
                         ggSen2DBConn.execute(sqlcmd)
                         keyCount = keyCount + 1
-                        if commitCounter == 5000:
+                        if commitCounter == 10000:
                             ggSen2DBConn.commit()
                             sys.stdout.write("#")
                             sys.stdout.flush()

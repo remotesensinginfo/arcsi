@@ -363,15 +363,18 @@ class ARCSIUtils (object):
             outVal = outVal + val
         return outVal / float(len(vals))
 
-    def getLatLong(self, inProj, x, y):
+    def getLatLong(self, inProjObj, x, y):
         wgs84latlonProj = osr.SpatialReference()
         wgs84latlonProj.ImportFromEPSG(4326)
-        wktPt = 'POINT(%s %s)' % (x, y)
+        if inProjObj.EPSGTreatsAsLatLong():
+            wktPt = 'POINT(%s %s)' % (y, x)
+        else:
+            wktPt = 'POINT(%s %s)' % (x, y)
         point = ogr.CreateGeometryFromWkt(wktPt)
-        point.AssignSpatialReference(inProj)
+        point.AssignSpatialReference(inProjObj)
         point.TransformTo(wgs84latlonProj)
-        latVal = point.GetY()
-        longVal = point.GetX()
+        latVal = point.GetX()
+        longVal = point.GetY()
         return latVal, longVal
 
     def convertVisabilityToAOT(self, vis):

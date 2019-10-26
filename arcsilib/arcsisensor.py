@@ -561,8 +561,6 @@ class ARCSIAbstractSensor (object):
         projImgBBOX['MinY'] = 0.0
         projImgBBOX['MaxY'] = 0.0
 
-        yPxlResAbs = math.fabs(yPxlRes)
-
         srcProj = osr.SpatialReference()
         srcProj.ImportFromWkt(self.inWKT)
 
@@ -574,24 +572,20 @@ class ARCSIAbstractSensor (object):
             proj4Str = arcsiUtils.readTextFile(proj4File)
             tarProj.ImportFromProj4(proj4Str)
 
-        wktPt = 'POINT(%s %s)' % (self.xTL, self.yTL)
-        point = ogr.CreateGeometryFromWkt(wktPt)
-        point.AssignSpatialReference(srcProj)
-        point.TransformTo(tarProj)
+        in_bbox = self.getBBOX()
+        rsgis_utils = rsgislib.RSGISPyUtils()
+        out_bbox = rsgis_utils.reprojBBOX(in_bbox, srcProj, tarProj)
 
-        minXPt = (math.floor(point.GetX()/xPxlRes)*xPxlRes)
-        maxYPt = (math.ceil(point.GetY()/yPxlResAbs)*yPxlResAbs)
+        yPxlResAbs = math.fabs(yPxlRes)
+
+        minXPt = (math.floor(out_bbox[0] / xPxlRes) * xPxlRes)
+        maxYPt = (math.ceil(out_bbox[3] / yPxlResAbs) * yPxlResAbs)
 
         projImgBBOX['MinX'] = minXPt
         projImgBBOX['MaxY'] = maxYPt
 
-        wktPt = 'POINT(%s %s)' % (self.xBR, self.yBR)
-        point = ogr.CreateGeometryFromWkt(wktPt)
-        point.AssignSpatialReference(srcProj)
-        point.TransformTo(tarProj)
-
-        maxXPt = (math.ceil(point.GetX()/xPxlRes)*xPxlRes)
-        minYPt = (math.floor(point.GetY()/yPxlResAbs)*yPxlResAbs)
+        maxXPt = (math.ceil(out_bbox[1] / xPxlRes) * xPxlRes)
+        minYPt = (math.floor(out_bbox[2] / yPxlResAbs) * yPxlResAbs)
 
         projImgBBOX['MaxX'] = maxXPt
         projImgBBOX['MinY'] = minYPt

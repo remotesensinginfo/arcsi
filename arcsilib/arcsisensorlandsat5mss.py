@@ -207,18 +207,7 @@ class ARCSILandsat5MSSSensor (ARCSIAbstractSensor):
             self.xCentre = self.xTL + ((self.xTR - self.xTL)/2)
             self.yCentre = self.yBR + ((self.yTL - self.yBR)/2)
 
-            wgs84latlonProj = osr.SpatialReference()
-            wgs84latlonProj.ImportFromEPSG(4326)
-
-            wktPt = 'POINT(%s %s)' % (self.xCentre, self.yCentre)
-            #print(wktPt)
-            point = ogr.CreateGeometryFromWkt(wktPt)
-            point.AssignSpatialReference(inProj)
-            point.TransformTo(wgs84latlonProj)
-            #print(point)
-
-            self.latCentre = point.GetY()
-            self.lonCentre = point.GetX()
+            self.latCentre, self.lonCentre = arcsiUtils.getLatLong(inProj, self.xCentre, self.yCentre)
 
             #print("Lat: " + str(self.latCentre) + " Long: " + str(self.lonCentre))
 
