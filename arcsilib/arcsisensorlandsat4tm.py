@@ -228,9 +228,7 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
             self.xCentre = self.xTL + ((self.xTR - self.xTL)/2)
             self.yCentre = self.yBR + ((self.yTL - self.yBR)/2)
 
-            self.latCentre, self.lonCentre = arcsiUtils.getLatLong(inProj, self.xCentre, self.yCentre)
-
-            #print("Lat: " + str(self.latCentre) + " Long: " + str(self.lonCentre))
+            self.lonCentre, self.latCentre = arcsiUtils.getLongLat(inProj, self.xCentre, self.yCentre)
 
             filesDIR = os.path.dirname(inputHeader)
 
