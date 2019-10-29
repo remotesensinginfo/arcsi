@@ -302,7 +302,7 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
     #         the aerosol and atmosphere generic model to use for conversion to SREF
     if paramsObj.aeroProfileOptionImg is not None:
         print("Get aero profile from image...")
-        aeroProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(paramsObj.aeroProfileOptionImg, 1, 1, None, paramsObj.sensorClass.latTL, paramsObj.sensorClass.latBR, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.lonTL)[0])
+        aeroProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(paramsObj.aeroProfileOptionImg, 1, 1, None, paramsObj.sensorClass.lonTL, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.latBR, paramsObj.sensorClass.latTL)[0])
 
         if aeroProfileMode is 1:
             paramsObj.aeroProfileOption = "Maritime"
@@ -314,7 +314,7 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
         print("")
     if paramsObj.atmosProfileOptionImg is not None:
         print("Get atmos profile from image...")
-        atmosProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(paramsObj.atmosProfileOptionImg, 1, 1, None, paramsObj.sensorClass.latTL, paramsObj.sensorClass.latBR, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.lonTL)[0])
+        atmosProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(paramsObj.atmosProfileOptionImg, 1, 1, None, paramsObj.sensorClass.lonTL, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.latBR, paramsObj.sensorClass.latTL)[0])
         summerWinter = arcsiUtils.isSummerOrWinter(paramsObj.sensorClass.latCentre, paramsObj.sensorClass.lonCentre, paramsObj.sensorClass.acquisitionTime )
         if atmosProfileMode is 1:
             paramsObj.atmosProfileOption = "Tropical"
@@ -1070,6 +1070,7 @@ def performDOS(paramsObj):
             print("")
         paramsObj.prodsCalculated["DOS"] = True
 
+
 def estimateSceneAOT(paramsObj):
     # Use image to estimate AOT values
     if paramsObj.prodsToCalc["DOSAOTSGL"]:
@@ -1150,7 +1151,7 @@ def calculateSREF(paramsObj):
             paramsObj.calcdOutVals['ARCSI_ELEVATION_VALUE'] = paramsObj.surfaceAltitude
         else:
             # Calc Min, Max Elevation for region intersecting with the image.
-            statsElev = rsgislib.imagecalc.getImageStatsInEnv(paramsObj.outDEMName, 1, paramsObj.demNoDataVal, paramsObj.sensorClass.latTL, paramsObj.sensorClass.latBR, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.lonTL)
+            statsElev = rsgislib.imagecalc.getImageStatsInEnv(paramsObj.outDEMName, 1, float(paramsObj.demNoDataVal), paramsObj.sensorClass.lonTL, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.latBR, paramsObj.sensorClass.latTL)
 
             print("Minimum Elevation = ", statsElev[0])
             print("Maximum Elevation = ", statsElev[1])
@@ -1177,7 +1178,7 @@ def calculateSREF(paramsObj):
                 paramsObj.aotLUT = False
             else:
                 print("Build an AOT and DEM LUT...")
-                statsAOT = rsgislib.imagecalc.getImageStatsInEnv(paramsObj.aotFile, 1, -9999, paramsObj.sensorClass.latTL, paramsObj.sensorClass.latBR, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.lonTL)
+                statsAOT = rsgislib.imagecalc.getImageStatsInEnv(paramsObj.aotFile, 1, float(-9999), paramsObj.sensorClass.lonTL, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.latBR, paramsObj.sensorClass.latTL)
 
                 paramsObj.minAOT = arcsiUtils.findMinimumAOT(statsAOT[0])
                 if paramsObj.minAOT < 0.01:

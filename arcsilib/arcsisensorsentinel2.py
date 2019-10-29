@@ -803,11 +803,11 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             self.xCentre = self.xTL + ((self.xTR - self.xTL)/2)
             self.yCentre = self.yBR + ((self.yTL - self.yBR)/2)
 
-            self.latCentre, self.lonCentre = arcsiUtils.getLatLong(inProj, self.xCentre, self.yCentre)
-            self.latTL, self.lonTL = arcsiUtils.getLatLong(inProj, self.xTL, self.yTL)
-            self.latTR, self.lonTR = arcsiUtils.getLatLong(inProj, self.xTR, self.yTR)
-            self.latBL, self.lonBL = arcsiUtils.getLatLong(inProj, self.xBL, self.yBL)
-            self.latBR, self.lonBR = arcsiUtils.getLatLong(inProj, self.xBR, self.yBR)            
+            self.lonCentre, self.latCentre = arcsiUtils.getLongLat(inProj, self.xCentre, self.yCentre)
+            self.lonTL, self.latTL = arcsiUtils.getLongLat(inProj, self.xTL, self.yTL)
+            self.lonTR, self.latTR = arcsiUtils.getLongLat(inProj, self.xTR, self.yTR)
+            self.lonBL, self.latBL = arcsiUtils.getLongLat(inProj, self.xBL, self.yBL)
+            self.lonBR, self.latBR = arcsiUtils.getLongLat(inProj, self.xBR, self.yBR)
 
             # Get Tile angles tag.
             tileAngles = geometricInfoTag.find('Tile_Angles')

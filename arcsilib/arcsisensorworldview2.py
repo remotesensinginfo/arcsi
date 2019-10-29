@@ -206,7 +206,7 @@ class ARCSIWorldView2Sensor (ARCSIAbstractSensor):
             self.lonBR = float(imageTileInfoTag.find('LRLON').text.strip())
 
             arcsiUtils = ARCSIUtils()
-            self.latCentre, self.lonCentre = arcsiUtils.getLatLong(inProj, self.xCentre, self.yCentre)
+            self.lonCentre, self.latCentre = arcsiUtils.getLongLat(inProj, self.xCentre, self.yCentre)
 
             filesDIR = os.path.dirname(inputHeader)
             if not self.userSpInputImage is None:
