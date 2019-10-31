@@ -8,8 +8,8 @@ from distutils.version import LooseVersion
 import os
 
 ARCSI_VERSION_MAJOR = 3
-ARCSI_VERSION_MINOR = 4
-ARCSI_VERSION_PATCH = 2
+ARCSI_VERSION_MINOR = 5
+ARCSI_VERSION_PATCH = 0
 
 ARCSI_VERSION = str(ARCSI_VERSION_MAJOR) + "."  + str(ARCSI_VERSION_MINOR) + "." + str(ARCSI_VERSION_PATCH)
 ARCSI_VERSION_OBJ = LooseVersion(ARCSI_VERSION)
@@ -25,7 +25,7 @@ ARCSI_SENSORS_LIST = ['ls1', 'ls2', 'ls3', 'ls4mss', 'ls4tm', 'ls5mss', 'ls5tm',
 ARCSI_PRODUCTS_LIST = ['RAD', 'SATURATE', 'TOA', 'CLOUDS', 'CLEARSKY', 'DDVAOT', 'DOSAOT', 'DOSAOTSGL', 'SREF', 'STDSREF', 'DOS', 'THERMAL', 'TOPOSHADOW', 'FOOTPRINT', 'METADATA', 'SHARP']
 ARCSI_ARCHIVE_EXE_LIST = [".tar.gz", ".tgz", ".TAR.GZ", ".TGZ", ".tar", ".TAR", ".zip", ".ZIP", ".tar.bz", ".TAR.BZ", ".tar.bz2", ".TAR.BZ2"]
 ARCSI_GDALFORMATS_LIST = ['KEA']
-ARCSI_CLOUD_METHODS_LIST = ['FMASK', 'FMASK_DISP', 'S2CLOUDLESS']
+ARCSI_CLOUD_METHODS_LIST = ['FMASK', 'FMASK_DISP', 'S2CLOUDLESS', 'LSMSK']
 
 # Get install prefix
 install_prefix = __file__[:__file__.find('lib')]

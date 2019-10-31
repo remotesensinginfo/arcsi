@@ -605,65 +605,87 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             if not os.path.exists(tmpBaseDIR):
                 os.makedirs(tmpBaseDIR)
                 tmpDIRExisted = False
-            tmpFMaskOut = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskout.kea')
 
-            # Create tmp TOA stack with Band 9 (Cirrus)
-            tmpTOAB9Out = os.path.join(tmpBaseDIR, tmpBaseName+'_TOAB9.kea')
-            toaExp = '((b1*'+str(self.b9ReflMulti)+')+'+str(self.b9ReflAdd)+')*'+str(scaleFactor)
-            rsgislib.imagecalc.imageMath(self.band9File, tmpTOAB9Out, toaExp, 'KEA', rsgislib.TYPE_16UINT, False)
-            if not rsgisUtils.doGDALLayersHaveSameProj(inputReflImage, tmpTOAB9Out):
-                tmpTOAB9OutNotProj = tmpTOAB9Out
-                tmpTOAB9Out = os.path.join(tmpBaseDIR, tmpBaseName+'_TOAB9_reproj.kea')
-                rsgislib.imageutils.resampleImage2Match(inputReflImage, tmpTOAB9OutNotProj, tmpTOAB9Out, 'KEA', 'cubic', rsgislib.TYPE_16UINT)
+            if (cloud_msk_methods is None) or (cloud_msk_methods == 'FMASK'):
+                tmpFMaskOut = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskout.kea')
 
-            tmpReflStackOut = os.path.join(tmpBaseDIR, tmpBaseName+'_TOAreflStack.kea')
-            rsgislib.imageutils.stackImageBands([inputReflImage, tmpTOAB9Out], None, tmpReflStackOut, None, 0, 'KEA', rsgislib.TYPE_16UINT)
+                # Create tmp TOA stack with Band 9 (Cirrus)
+                tmpTOAB9Out = os.path.join(tmpBaseDIR, tmpBaseName+'_TOAB9.kea')
+                toaExp = '((b1*'+str(self.b9ReflMulti)+')+'+str(self.b9ReflAdd)+')*'+str(scaleFactor)
+                rsgislib.imagecalc.imageMath(self.band9File, tmpTOAB9Out, toaExp, 'KEA', rsgislib.TYPE_16UINT, False)
+                if not rsgisUtils.doGDALLayersHaveSameProj(inputReflImage, tmpTOAB9Out):
+                    tmpTOAB9OutNotProj = tmpTOAB9Out
+                    tmpTOAB9Out = os.path.join(tmpBaseDIR, tmpBaseName+'_TOAB9_reproj.kea')
+                    rsgislib.imageutils.resampleImage2Match(inputReflImage, tmpTOAB9OutNotProj, tmpTOAB9Out, 'KEA', 'cubic', rsgislib.TYPE_16UINT)
 
-            tmpThermStack = os.path.join(tmpBaseDIR, tmpBaseName + '_ThermB10B11Stack.kea')
-            rsgislib.imageutils.stackImageBands([self.band10File, self.band11File], None, tmpThermStack, None, 0, 'KEA', rsgislib.TYPE_16UINT)
+                tmpReflStackOut = os.path.join(tmpBaseDIR, tmpBaseName+'_TOAreflStack.kea')
+                rsgislib.imageutils.stackImageBands([inputReflImage, tmpTOAB9Out], None, tmpReflStackOut, None, 0, 'KEA', rsgislib.TYPE_16UINT)
 
-            tmpThermalLayer = tmpThermStack
-            if not rsgisUtils.doGDALLayersHaveSameProj(inputThermalImage, tmpThermStack):
-                tmpThermalLayer = os.path.join(tmpBaseDIR, tmpBaseName+'_thermalresample.kea')
-                rsgislib.imageutils.resampleImage2Match(inputThermalImage, tmpThermStack, tmpThermalLayer, 'KEA', 'cubic', rsgislib.TYPE_32FLOAT)
+                tmpThermStack = os.path.join(tmpBaseDIR, tmpBaseName + '_ThermB10B11Stack.kea')
+                rsgislib.imageutils.stackImageBands([self.band10File, self.band11File], None, tmpThermStack, None, 0, 'KEA', rsgislib.TYPE_16UINT)
 
-            minCloudSize = 0
-            cloudBufferDistance = 150
-            shadowBufferDistance = 300
+                tmpThermalLayer = tmpThermStack
+                if not rsgisUtils.doGDALLayersHaveSameProj(inputThermalImage, tmpThermStack):
+                    tmpThermalLayer = os.path.join(tmpBaseDIR, tmpBaseName+'_thermalresample.kea')
+                    rsgislib.imageutils.resampleImage2Match(inputThermalImage, tmpThermStack, tmpThermalLayer, 'KEA', 'cubic', rsgislib.TYPE_32FLOAT)
 
-            fmaskFilenames = fmask.config.FmaskFilenames()
-            fmaskFilenames.setTOAReflectanceFile(tmpReflStackOut)
-            fmaskFilenames.setThermalFile(tmpThermalLayer)
-            fmaskFilenames.setSaturationMask(inputSatImage)
-            fmaskFilenames.setOutputCloudMaskFile(tmpFMaskOut)
+                minCloudSize = 0
+                cloudBufferDistance = 150
+                shadowBufferDistance = 300
 
-            thermalGain1040um = self.b10RadMulti
-            thermalOffset1040um = self.b10RadAdd
-            thermalBand1040um = 0
-            thermalInfo = fmask.config.ThermalFileInfo(thermalBand1040um, thermalGain1040um, thermalOffset1040um, self.k1ConstB10, self.k2ConstB10)
+                fmaskFilenames = fmask.config.FmaskFilenames()
+                fmaskFilenames.setTOAReflectanceFile(tmpReflStackOut)
+                fmaskFilenames.setThermalFile(tmpThermalLayer)
+                fmaskFilenames.setSaturationMask(inputSatImage)
+                fmaskFilenames.setOutputCloudMaskFile(tmpFMaskOut)
 
-            anglesInfo = fmask.config.AnglesFileInfo(inputViewAngleImg, 3, inputViewAngleImg, 2, inputViewAngleImg, 1, inputViewAngleImg, 0)
+                thermalGain1040um = self.b10RadMulti
+                thermalOffset1040um = self.b10RadAdd
+                thermalBand1040um = 0
+                thermalInfo = fmask.config.ThermalFileInfo(thermalBand1040um, thermalGain1040um, thermalOffset1040um, self.k1ConstB10, self.k2ConstB10)
 
-            fmaskConfig = fmask.config.FmaskConfig(fmask.config.FMASK_LANDSAT8)
-            fmaskConfig.setTOARefScaling(float(scaleFactor))
-            fmaskConfig.setThermalInfo(thermalInfo)
-            fmaskConfig.setAnglesInfo(anglesInfo)
-            fmaskConfig.setKeepIntermediates(False)
-            fmaskConfig.setVerbose(True)
-            fmaskConfig.setTempDir(tmpBaseDIR)
-            fmaskConfig.setMinCloudSize(minCloudSize)
-            fmaskConfig.setEqn17CloudProbThresh(fmask.config.FmaskConfig.Eqn17CloudProbThresh)
-            fmaskConfig.setEqn20NirSnowThresh(fmask.config.FmaskConfig.Eqn20NirSnowThresh)
-            fmaskConfig.setEqn20GreenSnowThresh(fmask.config.FmaskConfig.Eqn20GreenSnowThresh)
+                anglesInfo = fmask.config.AnglesFileInfo(inputViewAngleImg, 3, inputViewAngleImg, 2, inputViewAngleImg, 1, inputViewAngleImg, 0)
 
-            # Work out a suitable buffer size, in pixels, dependent on the resolution of the input TOA image
-            toaImgInfo = rios.fileinfo.ImageInfo(inputReflImage)
-            fmaskConfig.setCloudBufferSize(int(cloudBufferDistance / toaImgInfo.xRes))
-            fmaskConfig.setShadowBufferSize(int(shadowBufferDistance / toaImgInfo.xRes))
-            
-            fmask.fmask.doFmask(fmaskFilenames, fmaskConfig)
+                fmaskConfig = fmask.config.FmaskConfig(fmask.config.FMASK_LANDSAT8)
+                fmaskConfig.setTOARefScaling(float(scaleFactor))
+                fmaskConfig.setThermalInfo(thermalInfo)
+                fmaskConfig.setAnglesInfo(anglesInfo)
+                fmaskConfig.setKeepIntermediates(False)
+                fmaskConfig.setVerbose(True)
+                fmaskConfig.setTempDir(tmpBaseDIR)
+                fmaskConfig.setMinCloudSize(minCloudSize)
+                fmaskConfig.setEqn17CloudProbThresh(fmask.config.FmaskConfig.Eqn17CloudProbThresh)
+                fmaskConfig.setEqn20NirSnowThresh(fmask.config.FmaskConfig.Eqn20NirSnowThresh)
+                fmaskConfig.setEqn20GreenSnowThresh(fmask.config.FmaskConfig.Eqn20GreenSnowThresh)
 
-            rsgislib.imagecalc.imageMath(tmpFMaskOut, outputImage, '(b1==2)?1:(b1==3)?2:0', outFormat, rsgislib.TYPE_8UINT)
+                # Work out a suitable buffer size, in pixels, dependent on the resolution of the input TOA image
+                toaImgInfo = rios.fileinfo.ImageInfo(inputReflImage)
+                fmaskConfig.setCloudBufferSize(int(cloudBufferDistance / toaImgInfo.xRes))
+                fmaskConfig.setShadowBufferSize(int(shadowBufferDistance / toaImgInfo.xRes))
+
+                fmask.fmask.doFmask(fmaskFilenames, fmaskConfig)
+
+                rsgislib.imagecalc.imageMath(tmpFMaskOut, outputImage, '(b1==2)?1:(b1==3)?2:0', outFormat, rsgislib.TYPE_8UINT)
+
+            elif (cloud_msk_methods == 'LSMSK'):
+                if not os.path.exists(self.bandQAFile):
+                    raise ARCSIException("The QA band is not present - cannot use this for cloud masking.")
+
+                bqa_img_file = self.bandQAFile
+                if not rsgisUtils.doGDALLayersHaveSameProj(bqa_img_file, inputReflImage):
+                    bqa_img_file = os.path.join(tmpBaseDIR, tmpBaseName+'_BQA.kea')
+                    rsgislib.imageutils.resampleImage2Match(inputReflImage, self.bandQAFile, bqa_img_file, 'KEA',
+                                                            'nearestneighbour', rsgislib.TYPE_8UINT, noDataVal=0,
+                                                            multicore=False)
+
+                exp = '(b1==2800)||(b1==2804)||(b1==2808)||(b1==2812)||(b1==6896)||(b1==6900)||(b1==6904)||(b1==6908)?1:' \
+                      '(b1==2976)||(b1==2980)||(b1==2984)||(b1==2988)||(b1==3008)||(b1==3012)||(b1==3016)||(b1==3020)||' \
+                      '(b1==7072)||(b1==7076)||(b1==7080)||(b1==7084)||(b1==7104)||(b1==7108)||(b1==7112)||(b1==7116)?2:0'
+                rsgislib.imagecalc.imageMath(bqa_img_file, outputImage, exp, outFormat, rsgislib.TYPE_8UINT)
+
+            else:
+                raise ARCSIException("Landsat only has FMASK and LSMSK cloud masking options; option provided is unknown.")
+
             if outFormat == 'KEA':
                 rsgislib.rastergis.populateStats(outputImage, True, True)
                 ratDataset = gdal.Open(outputImage, gdal.GA_Update)
@@ -682,7 +704,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
                     blue[1] = 255
                     ClassName[1] = 'Clouds'
 
-                    if(red.shape[0] == 3):
+                    if (red.shape[0] == 3):
                         red[2] = 0
                         green[2] = 255
                         blue[2] = 255

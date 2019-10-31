@@ -82,6 +82,8 @@ import fmask.config
 import fmask.fmask
 # Import the sys module
 import sys
+# Import the RSGISLib import morphology module
+import rsgislib.imagemorphology
 
 class ARCSISen2SpectralBandObj(object):
     """
@@ -1244,7 +1246,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                                              [11, 1, 2, 3, 4, 5, 6, 7, 8, 12, 13, 9, 10])
         #########################################################################################################
 
-        if (cloud_msk_methods is None) or (('FMASK' in cloud_msk_methods) or ('FMASK_DISP' in cloud_msk_methods)):
+        if (cloud_msk_methods is None) or ((cloud_msk_methods == 'FMASK') or (cloud_msk_methods == 'FMASK_DISP')):
             anglesInfo = fmask.config.AnglesFileInfo(inputViewAngleImg, 3, inputViewAngleImg, 2, inputViewAngleImg, 1, inputViewAngleImg, 0)
 
             fmaskCloudsImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskCloudsResult.kea')
@@ -1303,15 +1305,30 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             rsgislib.imageutils.copyProjFromImage(outputImage, inputReflImage)
         elif('S2CLOUDLESS' in cloud_msk_methods):
             from arcsilib.s2cloudless.RunS2Cloudless import run_s2cloudless
+            from arcsilib.s2cloudless.RunS2Cloudless import run_pyfmask_shadow_masking
 
-            out_cloud_msk = outputImage #os.path.join(tmpBaseDIR, tmpBaseName+'_s2cloudless_cloud_msk.kea')
+            out_cloud_msk = os.path.join(tmpBaseDIR, tmpBaseName+'_s2cloudless_cloud_msk.kea')
             out_prob_img = os.path.join(tmpBaseDIR, tmpBaseName+'_s2cloudless_cloud_prob.kea')
 
             run_s2cloudless(fmaskReflImg, out_prob_img, out_cloud_msk, outFormat, toa_scale_factor=float(self.imgIntScaleFactor))
 
+            out_cloud_closed_msk = os.path.join(tmpBaseDIR, tmpBaseName + '_s2cloudless_cloud_msk_closed.kea')
+            out_cloud_closed_msk_tmp = os.path.join(tmpBaseDIR, tmpBaseName + '_s2cloudless_cloud_msk_closed_tmp.kea')
+
+            morph_operator = os.path.join(tmpBaseDIR, 'morph_circ5')
+            morph_operator_file = '{}.gmtxt'.format(morph_operator)
+            morph_op_size = 5
+            rsgislib.imagemorphology.createCircularOp(morph_operator, morph_op_size)
+
+            rsgislib.imagemorphology.imageClosing(out_cloud_msk, out_cloud_closed_msk, out_cloud_closed_msk_tmp,
+                                                  morph_operator_file, True, morph_op_size, 'KEA', rsgislib.TYPE_8UINT)
+
+            run_pyfmask_shadow_masking(fmaskReflImg, inputSatImage, inputViewAngleImg, out_cloud_closed_msk, tmpBaseDIR,
+                                       float(self.imgIntScaleFactor), outputImage)
+
             if outFormat == 'KEA':
-                rsgislib.rastergis.populateStats(out_cloud_msk, True, True)
-                ratDataset = gdal.Open(out_cloud_msk, gdal.GA_Update)
+                rsgislib.rastergis.populateStats(outputImage, True, True)
+                ratDataset = gdal.Open(outputImage, gdal.GA_Update)
                 red = rat.readColumn(ratDataset, 'Red')
                 green = rat.readColumn(ratDataset, 'Green')
                 blue = rat.readColumn(ratDataset, 'Blue')
