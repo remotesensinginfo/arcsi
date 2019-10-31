@@ -65,6 +65,8 @@ from arcsilib import ARCSI_SENSORS_LIST
 from arcsilib import ARCSI_GDALFORMATS_LIST
 # Import the list of products arcsi supports
 from arcsilib import ARCSI_PRODUCTS_LIST
+# Import the list of sentinel-2 and landsat cloud masking methods
+from arcsilib import ARCSI_CLOUD_METHODS_LIST
 # Import the ARCSI exception class
 from arcsilib.arcsiexception import ARCSIException
 
@@ -83,7 +85,7 @@ class ARCSIBuildCommands (object):
                 subdirList[:] = []
         return outFiles
 
-    def buildCmds(self, inputPath, inputIsDIR, outputFile, headerSearchStr, searchDepth, sensor, inwkt, format, outpath, prods, stats, aeropro, atmospro, aeroimg, atmosimg, grdrefl, surfacealtitude, atmosozone, atmoswater, aerowater, aerodust, aerooceanic, aerosoot, aot, vis, tmpath, minaot, maxaot, dem, dem_no_data_val, localdos, dosout, simpledos, scalefac, outwkt, outproj4, projabbv, interp, interpresamp, checkouts, fullimgouts, classmlclouds, cloudtrainclouds, cloudtrainother, resample2lowres, keepfileends, multi, ncores):
+    def buildCmds(self, inputPath, inputIsDIR, outputFile, headerSearchStr, searchDepth, sensor, inwkt, format, outpath, prods, stats, aeropro, atmospro, aeroimg, atmosimg, grdrefl, surfacealtitude, atmosozone, atmoswater, aerowater, aerodust, aerooceanic, aerosoot, aot, vis, tmpath, minaot, maxaot, dem, dem_no_data_val, localdos, dosout, simpledos, scalefac, outwkt, outproj4, projabbv, interp, interpresamp, checkouts, fullimgouts, cloudmethods, classmlclouds, cloudtrainclouds, cloudtrainother, resample2lowres, keepfileends, multi, ncores):
 
         inputPath = os.path.abspath(inputPath)
         outputFile = os.path.abspath(outputFile)
@@ -206,6 +208,8 @@ class ARCSIBuildCommands (object):
                 cmd = cmd + " --checkouts "
             if fullimgouts:
                 cmd = cmd + " --fullimgouts "
+            if cloudmethods is not None:
+                cmd = cmd + " --cloudmethods " + str(cloudmethods)
             if classmlclouds:
                 cmd = cmd + " --classmlclouds "
                 if not cloudtrainclouds == None:
@@ -424,6 +428,11 @@ if __name__ == '__main__':
                     If a file with the same base name is found then processing will not proceed - i.e., files will
                     not be overwritten.''')
 
+    parser.add_argument("--cloudmethods", type=str, default=None, choices=ARCSI_CLOUD_METHODS_LIST,
+                        help='''Specify the method(s) of cloud masking. Current Sentinel-2 and Landsat have options).
+                            Sentinel-2: FMASK, FMASK_DISP or S2CLOUDLESS. Landsat: FMASK or LSMSK, FMASK is current
+                            the default for both.''')
+
     parser.add_argument("--classmlclouds", action='store_true', default=False,
                         help='''Specifies that the generic machine learning based clouds classification process
                         should be used. Note. --cloudtrainclouds and --cloudtrainother need to be specified if this 
@@ -475,6 +484,6 @@ if __name__ == '__main__':
                      args.aerodust, args.aerooceanic, args.aerosoot, args.aot, args.vis, args.tmpath,
                      args.minaot, args.maxaot, args.dem, args.demnodata, args.localdos, args.dosout, args.simpledos,
                      args.scalefac, args.outwkt, args.outproj4, args.projabbv, args.interp, args.interpresamp, 
-                     args.checkouts, args.fullimgouts, args.classmlclouds, args.cloudtrainclouds, 
+                     args.checkouts, args.fullimgouts, args.cloudmethods, args.classmlclouds, args.cloudtrainclouds,
                      args.cloudtrainother, args.resample2lowres, args.keepfileends, args.multi, args.ncores)
 
