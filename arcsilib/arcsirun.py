@@ -195,7 +195,7 @@ class ARCSIParamsObj (object):
         outDEMNameMsk=""
         demNoDataVal = -32768.0
         topoShadowImage=""
-        footprintShpFile=""
+        footprintVecFile=""
         metaDataFile=""
         propOfCloud = 0.0
         propOfClearSky = 0.0
@@ -572,7 +572,7 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
         if paramsObj.demNoDataVal is None:
             raise ARCSIException("A no data value for the inputted DEM has not been defined - cannot continue without a no data value. A no data value can be define using the --demnodata option.")
     paramsObj.topoShadowImage=""
-    paramsObj.footprintShpFile=""
+    paramsObj.footprintVecFile=""
     paramsObj.metaDataFile=""
     paramsObj.propOfCloud = 0.0
     paramsObj.propOfClearSky = 0.0
@@ -708,11 +708,11 @@ def createFootprint(paramsObj):
         outFootprintLyrName = ''
         if paramsObj.reproject:
             outFootprintLyrName = paramsObj.outBaseNameProj + "_footprint"
-            paramsObj.footprintShpFile = paramsObj.sensorClass.generateImageFootprint(paramsObj.validMaskImageProj, paramsObj.outFilePath, outFootprintLyrName)
+            paramsObj.footprintVecFile = paramsObj.sensorClass.generateImageFootprint(paramsObj.validMaskImageProj, paramsObj.outFilePath, outFootprintLyrName)
         else:
             outFootprintLyrName = paramsObj.outBaseName + "_footprint"
-            paramsObj.footprintShpFile = paramsObj.sensorClass.generateImageFootprint(paramsObj.validMaskImage, paramsObj.outFilePath, outFootprintLyrName)
-        paramsObj.finalOutFiles["FOOTPRINT"] = paramsObj.footprintShpFile
+            paramsObj.footprintVecFile = paramsObj.sensorClass.generateImageFootprint(paramsObj.validMaskImage, paramsObj.outFilePath, outFootprintLyrName)
+        paramsObj.finalOutFiles["FOOTPRINT"] = paramsObj.footprintVecFile
         paramsObj.prodsCalculated["FOOTPRINT"] = True
         print("")
 

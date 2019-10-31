@@ -642,14 +642,14 @@ class ARCSIAbstractSensor (object):
 
         numFeats = minXXValsSub.shape[0]
 
-        outShpLayerNamePath = os.path.join(outputPath, outputName)
-        driver = ogr.GetDriverByName("ESRI Shapefile")
-        if os.path.exists(outShpLayerNamePath+".shp"):
-            driver.DeleteDataSource(outShpLayerNamePath+".shp")
-        outDatasource = driver.CreateDataSource(outShpLayerNamePath+ ".shp")
+        outVecLayerNamePath = os.path.join(outputPath, outputName)
+        driver = ogr.GetDriverByName("GeoJSON")
+        if os.path.exists("{}.geojson".format(outVecLayerNamePath)):
+            driver.DeleteDataSource("{}.geojson".format(outVecLayerNamePath))
+        outDatasource = driver.CreateDataSource("{}.geojson".format(outVecLayerNamePath))
         raster_srs = osr.SpatialReference()
         raster_srs.ImportFromWkt(ratDataset.GetProjectionRef())
-        outLayer = outDatasource.CreateLayer(outShpLayerNamePath, srs=raster_srs)
+        outLayer = outDatasource.CreateLayer(outputName, srs=raster_srs)
 
         fieldYearDefn = ogr.FieldDefn('Year', ogr.OFTInteger)
         fieldYearDefn.SetWidth(6)
@@ -721,7 +721,7 @@ class ARCSIAbstractSensor (object):
 
         outDatasource.Destroy()
         ratDataset = None
-        return outShpLayerNamePath+".shp"
+        return "{}.geojson".format(outVecLayerNamePath)
 
     def generateTopoDirectShadowMask(self,  inputDEMImage, outputPath, outputName, outFormat, tmpPath):
         try:
