@@ -668,7 +668,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
                 rsgislib.imagecalc.imageMath(tmpFMaskOut, outputImage, '(b1==2)?1:(b1==3)?2:0', outFormat, rsgislib.TYPE_8UINT)
 
             elif (cloud_msk_methods == 'LSMSK'):
-                if not os.path.exists(self.bandQAFile):
+                if (self.bandQAFile == "") or (not os.path.exists(self.bandQAFile)):
                     raise ARCSIException("The QA band is not present - cannot use this for cloud masking.")
 
                 bqa_img_file = self.bandQAFile
