@@ -100,6 +100,7 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
         self.band5File = ""
         self.band6File = ""
         self.band7File = ""
+        self.bandQAFile = ""
         self.row = 0
         self.path = 0
 
@@ -239,6 +240,12 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
             self.band5File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_5"])
             self.band6File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_6"])
             self.band7File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_7"])
+
+            try:
+                self.bandQAFile = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_QUALITY"])
+            except KeyError:
+                print("Warning - the quality band is not available. Are you using collection 1 data?")
+                self.bandQAFile = ""
 
             self.b1CalMin = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MIN_BAND_1"], 1.0)
             self.b1CalMax = arcsiUtils.str2Float(headerParams["QUANTIZE_CAL_MAX_BAND_1"], 255.0)
@@ -533,7 +540,7 @@ class ARCSILandsat4TMSensor (ARCSIAbstractSensor):
 
                 rsgislib.imagecalc.imageMath(tmpFMaskOut, outputImage, '(b1==2)?1:(b1==3)?2:0', outFormat, rsgislib.TYPE_8UINT)
             elif (cloud_msk_methods == 'LSMSK'):
-                if not os.path.exists(self.bandQAFile):
+                if (self.bandQAFile == "") or (not os.path.exists(self.bandQAFile)):
                     raise ARCSIException("The QA band is not present - cannot use this for cloud masking.")
 
                 bqa_img_file = self.bandQAFile
