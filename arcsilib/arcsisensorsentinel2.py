@@ -1276,7 +1276,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             out_cloud_msk = os.path.join(tmpBaseDIR, tmpBaseName+'_s2cloudless_cloud_msk.kea')
             out_prob_img = os.path.join(tmpBaseDIR, tmpBaseName+'_s2cloudless_cloud_prob.kea')
 
-            run_s2cloudless(fmaskReflImg, out_prob_img, out_cloud_msk, outFormat,
+            run_s2cloudless(fmaskReflImg, out_prob_img, out_cloud_msk, outFormat, tmpBaseDIR,
                             toa_scale_factor=float(self.imgIntScaleFactor), min_obj_size=8)
             run_pyfmask_shadow_masking(fmaskReflImg, inputSatImage, inputViewAngleImg, out_cloud_msk, tmpBaseDIR,
                                        float(self.imgIntScaleFactor), outputImage)
@@ -1287,7 +1287,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
 
             out_s2less_cloud_msk = os.path.join(tmpBaseDIR, tmpBaseName + '_s2cloudless_cloud_msk.kea')
             out_s2less_prob_img = os.path.join(tmpBaseDIR, tmpBaseName + '_s2cloudless_cloud_prob.kea')
-            run_s2cloudless(fmaskReflImg, out_s2less_prob_img, out_s2less_cloud_msk, outFormat,
+            run_s2cloudless(fmaskReflImg, out_s2less_prob_img, out_s2less_cloud_msk, outFormat, tmpBaseDIR,
                             toa_scale_factor=float(self.imgIntScaleFactor), min_obj_size=8)
 
             out_fmsk_cloud_msk = os.path.join(tmpBaseDIR, tmpBaseName + '_fmsk_cloud_msk.kea')
@@ -1298,7 +1298,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             bandDefns = []
             bandDefns.append(rsgislib.imagecalc.BandDefn('s2l', out_s2less_cloud_msk, 1))
             bandDefns.append(rsgislib.imagecalc.BandDefn('fmsk', out_fmsk_cloud_msk, 1))
-            rsgislib.imagecalc.bandMath(out_cloud_msk, '(s2l==1)&&(fmsk==1)&1:0', outFormat, rsgislib.TYPE_8UINT,
+            rsgislib.imagecalc.bandMath(out_cloud_msk, '(s2l==1)&&(fmsk==1)?1:0', outFormat, rsgislib.TYPE_8UINT,
                                         bandDefns)
 
             run_pyfmask_shadow_masking(fmaskReflImg, inputSatImage, inputViewAngleImg, out_cloud_msk, tmpBaseDIR,
