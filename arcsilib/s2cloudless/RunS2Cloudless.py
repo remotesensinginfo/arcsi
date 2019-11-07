@@ -170,5 +170,6 @@ def run_fmask_cloud_msk(sen2_toa_img, sen2_sat_img, sen2_view_angles_img, fmask_
     print("\tlandThreshold=", landThreshold)
 
     print("FMASK: Cloud layer, pass 3")
-    fmask.fmask.doCloudLayerFinalPass(fmaskFilenames, fmaskConfig, pass1file, pass2file, landThreshold, Tlow, missingThermal)
+    tmp_out_cloud_msk = fmask.fmask.doCloudLayerFinalPass(fmaskFilenames, fmaskConfig, pass1file, pass2file, landThreshold, Tlow, missingThermal)
 
+    rsgislib.imageutils.gdal_translate(tmp_out_cloud_msk, fmask_cloud_out_msk, gdal_format='KEA')
