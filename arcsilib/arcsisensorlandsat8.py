@@ -675,7 +675,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
                 if not rsgisUtils.doGDALLayersHaveSameProj(bqa_img_file, inputReflImage):
                     bqa_img_file = os.path.join(tmpBaseDIR, tmpBaseName+'_BQA.kea')
                     rsgislib.imageutils.resampleImage2Match(inputReflImage, self.bandQAFile, bqa_img_file, 'KEA',
-                                                            'nearestneighbour', rsgislib.TYPE_8UINT, noDataVal=0,
+                                                            'nearestneighbour', rsgislib.TYPE_16UINT, noDataVal=0,
                                                             multicore=False)
 
                 exp = '(b1==2800)||(b1==2804)||(b1==2808)||(b1==2812)||(b1==6896)||(b1==6900)||(b1==6904)||(b1==6908)?1:' \
