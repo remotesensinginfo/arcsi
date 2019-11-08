@@ -84,6 +84,8 @@ import fmask.fmask
 import sys
 # Import the RSGISLib import morphology module
 import rsgislib.imagemorphology
+# Import the RSGISLib import image utils module
+import rsgislib.imageutils
 
 class ARCSISen2SpectralBandObj(object):
     """
@@ -1294,6 +1296,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             run_fmask_cloud_msk(fmaskReflImg, inputSatImage, inputViewAngleImg, out_fmsk_cloud_msk, tmpBaseDIR,
                                 float(self.imgIntScaleFactor))
 
+            # Combine cloud masks
             out_cloud_msk = os.path.join(tmpBaseDIR, tmpBaseName + '_fmsk_s2l_cloud_msk.kea')
             bandDefns = []
             bandDefns.append(rsgislib.imagecalc.BandDefn('s2l', out_s2less_cloud_msk, 1))
@@ -1301,7 +1304,28 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             rsgislib.imagecalc.bandMath(out_cloud_msk, '(s2l==1)&&(fmsk==1)?1:0', outFormat, rsgislib.TYPE_8UINT,
                                         bandDefns)
 
-            run_pyfmask_shadow_masking(fmaskReflImg, inputSatImage, inputViewAngleImg, out_cloud_msk, tmpBaseDIR,
+            # Remove small cloud features
+            out_cloud_msk_clumps = os.path.join(tmpBaseDIR, tmpBaseName + '_fmsk_s2l_cloud_msk_clumps.kea')
+            rsgislib.segmentation.clump(out_cloud_msk, out_cloud_msk_clumps, 'KEA', False, 0, False)
+            rsgislib.rastergis.populateStats(clumps=out_cloud_msk_clumps, addclrtab=True, calcpyramids=False,
+                                             ignorezero=True)
+            out_cloud_msk_clumps_rmsml = os.path.join(tmpBaseDIR, tmpBaseName + '_fmsk_s2l_cloud_msk_clumps_rmsml.kea')
+            rsgislib.segmentation.rmSmallClumps(out_cloud_msk_clumps, out_cloud_msk_clumps_rmsml, 8, 'KEA')
+            out_cloud_msk_rmsml = os.path.join(tmpBaseDIR, tmpBaseName + '_fmsk_s2l_cloud_msk_rmsml.kea')
+            rsgislib.imagecalc.imageMath(out_cloud_msk_clumps_rmsml, out_cloud_msk_rmsml, 'b1>0?1:0', 'KEA',
+                                         rsgislib.TYPE_8UINT)
+
+            # Buffer the cloud features
+            morph_operator = os.path.join(tmpBaseDIR, 'morph_circ5')
+            morph_operator_file = '{}.gmtxt'.format(morph_operator)
+            morph_op_size = 5
+            rsgislib.imagemorphology.createCircularOp(morph_operator, morph_op_size)
+            out_cloud_msk_dil = os.path.join(tmpBaseDIR, tmpBaseName + '_fmsk_s2l_cloud_msk_dilate.kea')
+            rsgislib.imagemorphology.imageDilate(out_cloud_msk_rmsml, out_cloud_msk_dil, morph_operator_file,
+                                                 True, 5, 'KEA', rsgislib.TYPE_8UINT)
+
+            # Find shadow mask and add it to cloud mask.
+            run_pyfmask_shadow_masking(fmaskReflImg, inputSatImage, inputViewAngleImg, out_cloud_msk_dil, tmpBaseDIR,
                                        float(self.imgIntScaleFactor), outputImage)
         else:
             raise ARCSIException("The cloud masking methods specified for Sentinel-2 does not exist.")
