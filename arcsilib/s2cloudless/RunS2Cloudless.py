@@ -161,7 +161,7 @@ def run_fmask_cloud_msk(sen2_toa_img, sen2_sat_img, sen2_view_angles_img, fmask_
 
     missingThermal = True
 
-    print("FMASK: Cloud layer, pass 3")
+    print("FMASK: Cloud layer, pass 1")
     (pass1file, Twater, Tlow, Thigh, NIR_17, nonNullCount) = fmask.fmask.doPotentialCloudFirstPass(fmaskFilenames, fmaskConfig, missingThermal)
     print("\tTwater=", Twater, "Tlow=", Tlow, "Thigh=", Thigh, "NIR_17=", NIR_17, "nonNullCount=", nonNullCount)
 

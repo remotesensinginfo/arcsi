@@ -263,8 +263,6 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                 raise ARCSIException("Cannot find the product type - is this really a Sentinel-2 image file?")
             elif productType != 'S2MSI1C':
                 raise ARCSIException("Expecting Sentinel-2 product type \'S2MSI1C\'")
-            else:
-                print("Found Sentinel-2 image file product \'S2MSI1C\'")
 
             self.processingLevel = productInfoTag.find('PROCESSING_LEVEL').text.strip()
             self.processingBaseline = productInfoTag.find('PROCESSING_BASELINE').text.strip()
