@@ -9,7 +9,7 @@ import os
 
 ARCSI_VERSION_MAJOR = 3
 ARCSI_VERSION_MINOR = 6
-ARCSI_VERSION_PATCH = 3
+ARCSI_VERSION_PATCH = 4
 
 ARCSI_VERSION = str(ARCSI_VERSION_MAJOR) + "."  + str(ARCSI_VERSION_MINOR) + "." + str(ARCSI_VERSION_PATCH)
 ARCSI_VERSION_OBJ = LooseVersion(ARCSI_VERSION)
@@ -35,10 +35,10 @@ DEFAULT_ARCSI_ATMOSIMG_PATH = os.path.join(install_prefix,"share","arcsi", "Worl
 
 # Check files exit - set to none if they don't
 if not os.path.isfile(DEFAULT_ARCSI_ATMOSIMG_PATH):
-   DEFAULT_ARCSI_ATMOSIMG_PATH = None
+    DEFAULT_ARCSI_ATMOSIMG_PATH = None
 if not os.path.isfile(DEFAULT_ARCSI_AEROIMG_PATH):
-   DEFAULT_ARCSI_AEROIMG_PATH = None
+    DEFAULT_ARCSI_AEROIMG_PATH = None
 
 if os.environ.get('RIOS_DFLT_DRIVER', None) == None:
-	os.environ['RIOS_DFLT_DRIVER'] = 'KEA'
+    os.environ['RIOS_DFLT_DRIVER'] = 'KEA'
 
