@@ -32,6 +32,12 @@ across an image.
 
     out_tmp_cloud_msk = os.path.join(tmp_base_dir, 'tmp_init_s2less_cloud_msk.kea')
 
+    try:
+        import tqdm
+        progress_bar = rsgislib.TQDMProgressBar()
+    except:
+        progress_bar = cuiprogress.GDALProgressBar()
+
     infiles = applier.FilenameAssociations()
     infiles.s2image = input_img
     outfiles = applier.FilenameAssociations()
@@ -41,7 +47,7 @@ across an image.
     otherargs.s2_pxl_cloud_detect = s2_pxl_cloud_detect
     otherargs.toa_scale_factor = toa_scale_factor
     aControls = applier.ApplierControls()
-    aControls.progress = cuiprogress.CUIProgressBar()
+    aControls.progress = progress_bar
     aControls.drivername = gdalformat
     aControls.omitPyramids = True
     aControls.calcStats = False
