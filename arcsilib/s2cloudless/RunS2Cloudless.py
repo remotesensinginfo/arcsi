@@ -29,7 +29,6 @@ across an image.
 
 """
     s2_pxl_cloud_detect = S2PixelCloudDetector(all_bands=True)
-
     out_tmp_cloud_msk = os.path.join(tmp_base_dir, 'tmp_init_s2less_cloud_msk.kea')
 
     try:
