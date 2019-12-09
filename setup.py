@@ -36,7 +36,7 @@ from distutils.core import setup
 import os
 
 setup(name='ARCSI',
-    version='3.6.3',
+    version='3.7.0',
     description='Atmospheric and Radiometic Correction of Satellite Imagery',
     author='Pete Bunting and Dan Clewley',
     author_email='pfb@aber.ac.uk, daniel.clewley@gmail.com',
@@ -46,7 +46,7 @@ setup(name='ARCSI',
     data_files=[(os.path.join('share','arcsi'),
                 [os.path.join('data','WorldAerosolParams.kea'),
                  os.path.join('data','WorldAtmosphereParams.kea'),
-                 os.path.join('data','pixel_s2_cloud_detector_lightGBM_v0.1.joblib.dat')])],
+                 os.path.join('data','pixel_s2_cloud_detector_lightGBM_v0.1.txt')])],
     license='LICENSE.txt',
     url='https://bitbucket.org/petebunting/arcsi',
     classifiers=['Intended Audience :: Developers',
