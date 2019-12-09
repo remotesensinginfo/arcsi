@@ -2,21 +2,20 @@
 Module for making pixel-based classification on Sentinel-2 L1C imagery
 """
 
-import copy
 import os
 import warnings
 import numpy as np
 
 from scipy.ndimage.filters import convolve
 from skimage.morphology import disk, dilation
-import joblib
+import lightgbm as lgb
 
 from .PixelClassifier import PixelClassifier
 
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
-S2CLOUDLESS_MODEL_FILENAME = 'pixel_s2_cloud_detector_lightGBM_v0.1.joblib.dat'
+S2CLOUDLESS_MODEL_FILENAME = 'pixel_s2_cloud_detector_lightGBM_v0.1.txt'
 install_prefix = __file__[:__file__.find('lib')]
 DEFAULT_ARCSI_S2CLOUDLESS_MODEL = os.path.join(install_prefix, "share","arcsi", S2CLOUDLESS_MODEL_FILENAME)
 
@@ -80,7 +79,7 @@ class S2PixelCloudDetector:
         """
         Loads the classifier.
         """
-        self.classifier = PixelClassifier(joblib.load(filename))
+        self.classifier = PixelClassifier(lgb.Booster(model_file=filename))
 
     def get_cloud_probability_maps(self, X):
         """
@@ -119,9 +118,7 @@ class S2PixelCloudDetector:
         :return: raster cloud mask
         :rtype: numpy array (shape n_images x n x m)
         """
-
         cloud_probs = self.get_cloud_probability_maps(X)
-
         return self.get_mask_from_prob(cloud_probs)
 
     def get_mask_from_prob(self, cloud_probs, threshold=None):
