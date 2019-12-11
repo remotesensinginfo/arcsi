@@ -9,9 +9,9 @@ import numpy as np
 from scipy.ndimage.filters import convolve
 from skimage.morphology import disk, dilation
 import lightgbm as lgb
+import lightgbm.LGBMClassifier
 
 from .PixelClassifier import PixelClassifier
-
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -79,7 +79,9 @@ class S2PixelCloudDetector:
         """
         Loads the classifier.
         """
-        self.classifier = PixelClassifier(lgb.Booster(model_file=filename))
+        lgb_classifer = lightgbm.LGBMClassifier()
+        lgb_classifer.booster_ = lgb.Booster(model_file=filename)
+        self.classifier = PixelClassifier(lgb_classifer)
 
     def get_cloud_probability_maps(self, X):
         """
