@@ -35,6 +35,7 @@
 ############################################################################
 
 import rsgislib
+import os
 import os.path
 import elevation
 import argparse
@@ -63,11 +64,15 @@ if __name__ == '__main__':
     parser.add_argument("-o", "--output", type=str, required=True, help='''The output DEM file - outputs as a GeoTIFF.''')
     parser.add_argument("-b", "--buffer", type=float, default=0.5, help='''Specify the buffer around the image for which the DEM will be downloaded.''')
     parser.add_argument("-l", "--limit", type=int, default=10, help="A limit on the number of tiles which can be downloaded.")
+    parser.add_argument("-t", "--tmp", type=str, required=True, help='''A temporary directory to do work in.''')
     # Call the parser to parse the arguments.
     args = parser.parse_args()
     
     output_img = os.path.abspath(args.output)
-    
+    tmp_dir = os.path.abspath(args.tmp)
+    if not os.path.exists(tmp_dir):
+        os.mkdir(tmp_dir)
+
     sensorFact = ARCSISensorFactory()
     sensor_cls_obj = sensorFact.getSensorClassFromName(args.sensor, False, None)
     sensor_cls_obj.extractHeaderParameters(args.inputheader, None)
@@ -76,7 +81,7 @@ if __name__ == '__main__':
     bounds_ext = (image_bbox_latlon[0]-args.buffer, image_bbox_latlon[2]-args.buffer, image_bbox_latlon[1]+args.buffer, image_bbox_latlon[3]+args.buffer)
     print(bounds_ext)
     try:
-        elevation.clip(bounds=bounds_ext, output=output_img, max_download_tiles=args.limit)
+        elevation.clip(bounds=bounds_ext, output=output_img, max_download_tiles=args.limit, cache_dir=tmp_dir)
     except Exception as e:
         print("An error has occurred when downloading and processing the DEM data. Try re-running as data is cached.")
         raise e
