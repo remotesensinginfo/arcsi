@@ -1287,7 +1287,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             run_pyfmask_shadow_masking(fmaskReflImg, inputSatImage, inputViewAngleImg, out_cloud_msk, tmpBaseDIR,
                                        float(self.imgIntScaleFactor), outputImage)
         elif ('S2LESSFMSK' in cloud_msk_methods):
-            import arcsilib.s2cloudless import run_s2cloudless
+            from arcsilib.s2cloudless import run_s2cloudless
             from arcsilib.s2cloudless import run_fmask_cloud_msk
             from arcsilib.s2cloudless import run_pyfmask_shadow_masking
 
