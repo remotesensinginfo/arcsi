@@ -6,7 +6,7 @@ Module that contains the ARCSIException class.
 #
 #  Copyright 2013 ARCSI.
 #
-#  ARCSI: 'Atmospheric and Radiometic Correction of Satellite Imagery'
+#  ARCSI: 'Atmospheric and Radiometric Correction of Satellite Imagery'
 #
 #  ARCSI is free software: you can redistribute it and/or modify
 #  it under the terms of the GNU General Public License as published by

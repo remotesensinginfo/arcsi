@@ -1196,10 +1196,15 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         solarIrrVals.append(IrrVal(irradiance=self.esun_B8))
         solarIrrVals.append(IrrVal(irradiance=self.esun_B11))
         solarIrrVals.append(IrrVal(irradiance=self.esun_B12))
-        rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat, rsgislib.TYPE_16UINT, scaleFactor, self.acquisitionTime.year, self.acquisitionTime.month, self.acquisitionTime.day, self.solarZenith, solarIrrVals)
+        rsgislib.imagecalibration.radiance2TOARefl(inputRadImage, outputImage, outFormat,
+                                                   rsgislib.TYPE_16UINT, scaleFactor, self.acquisitionTime.year,
+                                                   self.acquisitionTime.month, self.acquisitionTime.day,
+                                                   self.solarZenith, solarIrrVals)
         return outputImage
 
-    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg, inputValidImg, outputPath, outputName, outFormat, tmpPath, scaleFactor, cloud_msk_methods=None):
+    def generateCloudMask(self, inputReflImage, inputSatImage, inputThermalImage, inputViewAngleImg,
+                          inputValidImg, outputPath, outputName, outFormat, tmpPath,
+                          scaleFactor, cloud_msk_methods=None):
         outputImage = os.path.join(outputPath, outputName)
         tmpBaseName = os.path.splitext(outputName)[0]
         tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
@@ -1243,8 +1248,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         #########################################################################################################
 
         if (cloud_msk_methods is None) or ((cloud_msk_methods == 'FMASK') or (cloud_msk_methods == 'FMASK_DISP')):
-            anglesInfo = fmask.config.AnglesFileInfo(inputViewAngleImg, 3, inputViewAngleImg, 2, inputViewAngleImg, 1, inputViewAngleImg, 0)
-
+            anglesInfo = fmask.config.AnglesFileInfo(inputViewAngleImg, 3, inputViewAngleImg, 2, inputViewAngleImg, 1,
+                                                     inputViewAngleImg, 0)
             fmaskCloudsImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmaskCloudsResult.kea')
             fmaskFilenames = fmask.config.FmaskFilenames()
             fmaskFilenames.setTOAReflectanceFile(fmaskReflImg)
@@ -1270,25 +1275,26 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             rsgislib.imagecalc.imageMath(fmaskCloudsImg, outputImage, '(b1==2)?1:(b1==3)?2:0', outFormat,
                                          rsgislib.TYPE_8UINT)
         elif('S2CLOUDLESS' in cloud_msk_methods):
-            from arcsilib.s2cloudless.RunS2Cloudless import run_s2cloudless
-            from arcsilib.s2cloudless.RunS2Cloudless import run_pyfmask_shadow_masking
+            from arcsilib.s2cloudless import run_s2cloudless
+            from arcsilib.s2cloudless import run_pyfmask_shadow_masking
 
             out_cloud_msk = os.path.join(tmpBaseDIR, tmpBaseName+'_s2cloudless_cloud_msk.kea')
-            out_prob_img = os.path.join(tmpBaseDIR, tmpBaseName+'_s2cloudless_cloud_prob.kea')
 
-            run_s2cloudless(fmaskReflImg, out_prob_img, out_cloud_msk, outFormat, tmpBaseDIR,
-                            toa_scale_factor=float(self.imgIntScaleFactor), min_obj_size=8)
+            run_s2cloudless(fmaskReflImg, out_cloud_msk, inputValidImg, outFormat, tmpBaseDIR,
+                            toa_scale_factor=float(self.imgIntScaleFactor),
+                            min_obj_size=10, morph_close_size=5, morph_dilate_size=9)
+
             run_pyfmask_shadow_masking(fmaskReflImg, inputSatImage, inputViewAngleImg, out_cloud_msk, tmpBaseDIR,
                                        float(self.imgIntScaleFactor), outputImage)
         elif ('S2LESSFMSK' in cloud_msk_methods):
-            from arcsilib.s2cloudless.RunS2Cloudless import run_s2cloudless
-            from arcsilib.s2cloudless.RunS2Cloudless import run_fmask_cloud_msk
-            from arcsilib.s2cloudless.RunS2Cloudless import run_pyfmask_shadow_masking
+            import arcsilib.s2cloudless import run_s2cloudless
+            from arcsilib.s2cloudless import run_fmask_cloud_msk
+            from arcsilib.s2cloudless import run_pyfmask_shadow_masking
 
             out_s2less_cloud_msk = os.path.join(tmpBaseDIR, tmpBaseName + '_s2cloudless_cloud_msk.kea')
-            out_s2less_prob_img = os.path.join(tmpBaseDIR, tmpBaseName + '_s2cloudless_cloud_prob.kea')
-            run_s2cloudless(fmaskReflImg, out_s2less_prob_img, out_s2less_cloud_msk, outFormat, tmpBaseDIR,
-                            toa_scale_factor=float(self.imgIntScaleFactor), min_obj_size=8)
+            run_s2cloudless(fmaskReflImg, out_s2less_cloud_msk, inputValidImg, outFormat, tmpBaseDIR,
+                            toa_scale_factor=float(self.imgIntScaleFactor),
+                            min_obj_size=10, morph_close_size=5, morph_dilate_size=9)
 
             out_fmsk_cloud_msk = os.path.join(tmpBaseDIR, tmpBaseName + '_fmsk_cloud_msk.kea')
             run_fmask_cloud_msk(fmaskReflImg, inputSatImage, inputViewAngleImg, out_fmsk_cloud_msk, tmpBaseDIR,

@@ -5,7 +5,7 @@ Setup script for ARCSI. Use like this for Unix:
 $ python setup.py install
 
 """
-#  This file is part of 'ARCSI' - Atmospheric and Radiometic Correction of Satellite Imagery
+#  This file is part of 'ARCSI' - Atmospheric and Radiometric Correction of Satellite Imagery
 #  Copyright (C) 2013  Pete Bunting
 #
 #  This program is free software: you can redistribute it and/or modify
@@ -36,8 +36,8 @@ from distutils.core import setup
 import os
 
 setup(name='ARCSI',
-    version='3.7.2',
-    description='Atmospheric and Radiometic Correction of Satellite Imagery',
+    version='3.8.0',
+    description='Atmospheric and Radiometric Correction of Satellite Imagery',
     author='Pete Bunting and Dan Clewley',
     author_email='pfb@aber.ac.uk, daniel.clewley@gmail.com',
     scripts=['bin/arcsi.py', 'bin/arcsimpi.py', 'bin/arcsisolarirradiance.py', 'bin/arcsispecresponsefuncs.py', 'bin/arcsiextractdata.py', 'bin/arcsibuildcmdslist.py', 'bin/arcsisortlandsat.py', 'bin/arcsiextractroistats.py', 'bin/arcsiplotextractedstats.py', 'bin/arcsibuildextractfilecmds.py', 'bin/arcsibuildfilenameslu.py', 'bin/arcsifindnotprocessed.py', 'bin/arcsiremoveduplicates.py', 'bin/arcsicheckfilespresent.py', 'bin/arcsiarchivesnotextracted.py', 'bin/arcsicreatepy6scall.py', 'bin/arcsisplitsen2granules.py', 'bin/arcsisetupsen2db.py', 'bin/arcsigensen2downlst.py', 'bin/arcsisetuplandsatdb.py', 'bin/arcsigenlandsatdownlst.py', 'bin/arcsidwnldgoog.py', 'bin/arcsibuildmultifilelists.py', 'bin/arcsichecksen2ver.py', 'bin/arcsidwndem.py'],
@@ -50,14 +50,12 @@ setup(name='ARCSI',
     license='LICENSE.txt',
     url='https://bitbucket.org/petebunting/arcsi',
     classifiers=['Intended Audience :: Developers',
-    	  'Intended Audience :: Remote Sensing Scientists',
-    	  'Intended Audience :: Atmospheric Scientists',
-          'Operating System :: OS Independent',
-          'Programming Language :: Python :: 2',
-          'Programming Language :: Python :: 2.7',
-          'Programming Language :: Python :: 3',
-          'Programming Language :: Python :: 3.2',
-          'Programming Language :: Python :: 3.3',
-          'Programming Language :: Python :: 3.4',
-          'Programming Language :: Python :: 3.5',
-          'Programming Language :: Python :: 3.6'])
+                 'Intended Audience :: Remote Sensing Scientists',
+                 'Intended Audience :: Atmospheric Scientists',
+                 'Operating System :: OS Independent',
+                 'Programming Language :: Python :: 2',
+                 'Programming Language :: Python :: 2.7',
+                 'Programming Language :: Python :: 3',
+                 'Programming Language :: Python :: 3.6',
+                 'Programming Language :: Python :: 3.7'
+                 'Programming Language :: Python :: 3.8'])
