@@ -29,7 +29,7 @@ DEFAULT_ARCSI_S2CLOUDLESS_MODEL = os.path.join(install_prefix, "share","arcsi", 
 
 
 def run_fmask_cloud_msk(sen2_toa_img, sen2_sat_img, sen2_view_angles_img, fmask_cloud_out_msk,
-                        tmp_base_dir, toa_img_scale_factor):
+                        tmp_base_dir, toa_img_scale_factor, use_frantz_disp=False):
     """
 
     :param sen2_toa_img:
@@ -57,6 +57,10 @@ def run_fmask_cloud_msk(sen2_toa_img, sen2_sat_img, sen2_view_angles_img, fmask_
     fmaskConfig.setMinCloudSize(8)
     fmaskConfig.setCloudBufferSize(10)
     fmaskConfig.setShadowBufferSize(10)
+    if use_frantz_disp:
+        fmaskConfig.setSen2displacementTest(True)  # Frantz et al implementation.
+    else:
+        fmaskConfig.setSen2displacementTest(False)  # Frantz et al implementation.
 
     missingThermal = True
 

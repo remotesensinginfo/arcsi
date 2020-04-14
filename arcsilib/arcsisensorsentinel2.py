@@ -1286,7 +1286,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
 
             run_pyfmask_shadow_masking(fmaskReflImg, inputSatImage, inputViewAngleImg, out_cloud_msk, tmpBaseDIR,
                                        float(self.imgIntScaleFactor), outputImage)
-        elif ('S2LESSFMSK' in cloud_msk_methods):
+        elif ('S2LESSFMSK' in cloud_msk_methods) or ('S2LESSFMSKD' in cloud_msk_methods):
             from arcsilib.s2cloudless import run_s2cloudless
             from arcsilib.s2cloudless import run_fmask_cloud_msk
             from arcsilib.s2cloudless import run_pyfmask_shadow_masking
@@ -1297,8 +1297,11 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                             min_obj_size=10, morph_close_size=5, morph_dilate_size=9)
 
             out_fmsk_cloud_msk = os.path.join(tmpBaseDIR, tmpBaseName + '_fmsk_cloud_msk.kea')
+            use_frantz_disp = False
+            if 'S2LESSFMSKD' in cloud_msk_methods:
+                use_frantz_disp = True
             run_fmask_cloud_msk(fmaskReflImg, inputSatImage, inputViewAngleImg, out_fmsk_cloud_msk, tmpBaseDIR,
-                                float(self.imgIntScaleFactor))
+                                float(self.imgIntScaleFactor), use_frantz_disp)
 
             # Combine cloud masks
             out_cloud_msk = os.path.join(tmpBaseDIR, tmpBaseName + '_fmsk_s2l_cloud_msk.kea')
