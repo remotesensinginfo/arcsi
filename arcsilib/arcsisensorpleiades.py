@@ -508,7 +508,7 @@ class ARCSIPleiadesSensor (ARCSIAbstractSensor):
     def mosaicImageTiles(self, outputPath):
         baseName = self.generateOutputBaseName()
         self.fileName = os.path.join(outputPath, baseName+'_mosic.kea')
-        imageutils.createImageMosaic(self.inputImgFiles, self.fileName, self.inImgNoData, 0, 1, 0, 'KEA', rsgislib.imageutils.getRSGISLibDataType(self.inputImgFiles[0]))
+        rsgislib.imageutils.createImageMosaic(self.inputImgFiles, self.fileName, self.inImgNoData, 0, 1, 0, 'KEA', rsgislib.imageutils.getRSGISLibDataType(self.inputImgFiles[0]))
 
     def resampleImgRes(self, outputPath, resampleToLowResImg, resampleMethod='cubic', multicore=False):
         raise ARCSIException("Image data does not need resampling")

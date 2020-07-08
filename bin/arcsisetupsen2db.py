@@ -113,7 +113,7 @@ def setupSen2DB(dbFile):
             
             print("Create and load data into a sqlite db:")   
             ggSen2DBConn = sqlite3.connect(dbFile)
-            ggSen2DBConn.execute('''CREATE TABLE sen2 (COUNT PRIMARY KEY, GRANULE_ID text, PRODUCT_ID text, DATATAKE_IDENTIFIER text, MGRS_TILE text, SENSING_TIME text, TOTAL_SIZE text, CLOUD_COVER real, GEOMETRIC_QUALITY_FLAG int1, GENERATION_TIME text, NORTH_LAT real, SOUTH_LAT real, WEST_LON real, EAST_LON real, BASE_URL text)''')
+            ggSen2DBConn.execute('''CREATE TABLE sen2 (COUNT PRIMARY KEY, GRANULE_ID text, PRODUCT_ID text, DATATAKE_IDENTIFIER text, MGRS_TILE text, SENSING_TIME text, TOTAL_SIZE real, CLOUD_COVER real, GEOMETRIC_QUALITY_FLAG int1, GENERATION_TIME text, NORTH_LAT real, SOUTH_LAT real, WEST_LON real, EAST_LON real, BASE_URL text)''')
             
             with gzip.open(ggCSVSen2FileGZ,'r') as ggCSVSen2File:
                 commitCounter = 0
