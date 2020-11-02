@@ -62,7 +62,7 @@ if __name__ == '__main__':
     parser.add_argument("-i", "--inputheader", type=str, required=True, help='''Specify the input image header file.''')
     # Define the argument for specifying the output file.
     parser.add_argument("-o", "--output", type=str, required=True, help='''The output DEM file - outputs as a GeoTIFF.''')
-    parser.add_argument("-b", "--buffer", type=float, default=0.5, help='''Specify the buffer around the image for which the DEM will be downloaded.''')
+    parser.add_argument("-b", "--buffer", type=float, default=0.5, help='''Specify the buffer (in degrees) around the image for which the DEM will be downloaded.''')
     parser.add_argument("-l", "--limit", type=int, default=10, help="A limit on the number of tiles which can be downloaded.")
     parser.add_argument("-t", "--tmp", type=str, required=True, help='''A temporary directory to do work in.''')
     # Call the parser to parse the arguments.

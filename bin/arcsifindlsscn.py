@@ -60,7 +60,8 @@ from arcsilib.arcsiexception import ARCSIException
 # Import rsgislib module
 import rsgislib
 
-def genLandsatDownloadList(dbFile, lsPath, lsRow, outFile, outpath, sensorID=None, spacecraftID=None, collection=None, cloudCover=None, startDate=None, endDate=None, limit=None, multiDwn=False, lstCmds=False):
+
+def findLandsatSceneURL(dbFile, lsPath, lsRow, scnDate, sensorID=None, spacecraftID=None, collection=None, outCmd=False, multiDwn=False, outpath=None):
     """
     Using sqlite database query and create a list of files to download
     """
@@ -68,8 +69,8 @@ def genLandsatDownloadList(dbFile, lsPath, lsRow, outFile, outpath, sensorID=Non
         ggLandsatDBConn = sqlite3.connect(dbFile)
         ggLandsatDBCursor = ggLandsatDBConn.cursor()
         
-        queryVar = [lsPath, lsRow]
-        query = 'SELECT BASE_URL FROM LANDSAT WHERE WRS_PATH = ? AND WRS_ROW = ?'
+        queryVar = [lsPath, lsRow, scnDate]
+        query = 'SELECT BASE_URL FROM LANDSAT WHERE WRS_PATH = ? AND WRS_ROW = ? AND date(SENSING_TIME) == date(?)'
         
         if not sensorID is None:
             query = query + ' AND SENSOR_ID = ?'
@@ -84,35 +85,42 @@ def genLandsatDownloadList(dbFile, lsPath, lsRow, outFile, outpath, sensorID=Non
                 collection = 'N/A'
             query = query + ' AND COLLECTION_CATEGORY = ?'
             queryVar.append(collection)
-
-        if not cloudCover is None:
-            query = query + ' AND CLOUD_COVER < ?'
-            queryVar.append(cloudCover)
-            
-        if not startDate is None:
-            query = query + ' AND date(SENSING_TIME) > date(?)'
-            queryVar.append(startDate)
-            
-        if not endDate is None:
-            query = query + ' AND date(SENSING_TIME) < date(?)'
-            queryVar.append(endDate)
-
-        if not limit is None:
-            query = query + ' ORDER BY CLOUD_COVER ASC LIMIT {}'.format(limit)
         
-        multiStr = ''
-        if multiDwn:
-            multiStr = '-m'
+        
 
-        cmdLst = []
+        scn_url = ""
+        found_scn = False
+        found_mscns = False
         for row in ggLandsatDBCursor.execute(query,  queryVar):
-            if lstCmds:
-                cmdLst.append("gsutil {} cp -r {} {} ".format(multiStr, row[0], outpath))
+            if not found_scn:
+                scn_url = row[0]
+                found_scn = True
             else:
-                cmdLst.append(row[0])
+                if not found_mscns:
+                    print(scn_url)
+                print(row[0])
+                found_mscns = True
         
-        rsgisUtils = rsgislib.RSGISPyUtils()
-        rsgisUtils.writeList2File(cmdLst, outFile)
+        if not found_scn:
+            raise Exception("Was not able to find the scene...")
+        
+        if found_mscns:
+            raise Exception("Found multiple scenes... Do not know what to do.")
+        
+        if outCmd:
+            multiStr = ''
+            if multiDwn:
+                multiStr = '-m'
+                
+            out_path_str = '.'
+            if outpath is not None:
+                out_path_str = outpath
+            
+            cmd = "gsutil {} cp -r {} {}".format(multiStr, scn_url, out_path_str)
+            print(cmd)
+        else:
+            print(scn_url)
+        
         
     except ARCSIException as e:
         print("Error: {}".format(e), file=sys.stderr)
@@ -135,20 +143,17 @@ if __name__ == '__main__':
     parser.add_argument("-f", "--dbfile", type=str, required=True, help='''Path to the database file.''')
     parser.add_argument("-p", "--path", type=str, required=True, help='''Landsat path.''')
     parser.add_argument("-r", "--row", type=str, required=True, help='''Landsat row.''')
-    parser.add_argument("-o", "--output", type=str, required=True, help='''Output file with a list of files to download.''')
-    parser.add_argument("--outpath", type=str, required=True, help='''Output path for the landsat files to download to on your system.''')
+    parser.add_argument("--scndate", type=str, required=True, help='''Specify a scene date (YYYY-MM-DD).''')
     parser.add_argument("--sensor", type=str, choices=['OLI_TIRS', 'ETM', 'TM', 'MSS', 'MSS'], help='''Specify the landsat sensor you are interested''')
     parser.add_argument("--spacecraft", type=str, choices=['LANDSAT_8', 'LANDSAT_7', 'LANDSAT_5', 'LANDSAT_4', 'LANDSAT_3', 'LANDSAT_2', 'LANDSAT_1'], help='''Specify the landsat spacecraft you are interested''')
-    parser.add_argument("--collection", type=str, choices=['T1', 'T2', 'RT', 'PRE'], help='''Specify the landsat collection you are interested. For more information see https://landsat.usgs.gov/landsat-collections''')
-    parser.add_argument("--cloudcover", type=float, help='''Specify an upper limit for acceptable cloud cover.''')
-    parser.add_argument("--startdate", type=str, help='''Specify a start date (YYYY-MM-DD).''')
-    parser.add_argument("--enddate", type=str, help='''Specify a end date (YYYY-MM-DD).''')
-    parser.add_argument("--limit", type=int, help='''Specify a limit for the number of scenes returned - scenes are sorted by cloud cover''')
+    parser.add_argument("--collection", type=str,  default='T1', choices=['T1', 'T2', 'RT', 'PRE'], help='''Specify the landsat collection you are interested. For more information see https://landsat.usgs.gov/landsat-collections''')
     parser.add_argument("--multi", action='store_true', default=False, help='''Adds -m option to the gsutil download command.''')
-    parser.add_argument("--lstcmds", action='store_true', default=False, help='''List download commands rather than just list of URLs''')
+    parser.add_argument("--cmd", action='store_true', default=False, help='''List download command rather than just URL''')
+    parser.add_argument("--outpath", type=str, help='''Output path for the landsat files to download to on your system. If not provided then will be defined as the current directory (i.e., '.')''')
+
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
-    genLandsatDownloadList(args.dbfile, args.path, args.row, args.output, args.outpath, args.sensor, args.spacecraft, args.collection, args.cloudcover, args.startdate, args.enddate, args.limit, args.multi, args.lstcmds)
+    findLandsatSceneURL(args.dbfile, args.path, args.row, args.scndate, args.sensor, args.spacecraft, args.collection, args.cmd, args.multi, args.outpath)
 
