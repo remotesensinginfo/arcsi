@@ -90,6 +90,8 @@ import fmask.landsatangles
 import fmask.config
 import fmask.fmask
 import rios.fileinfo
+import rsgislib.segmentation
+import rsgislib.segmentation.segutils
 
 class ARCSILandsat7Sensor (ARCSIAbstractSensor):
     """
@@ -290,11 +292,15 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             self.band5File = os.path.join(filesDIR, metaFilenames[4])
             self.band7File = os.path.join(filesDIR, metaFilenames[6])
             self.bandPanFile = os.path.join(filesDIR, metaFilenames[7])
+
             try:
-                self.bandQAFile = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_QUALITY"])
+                self.bandQAFile = os.path.join(filesDIR, headerParams["FILE_NAME_QUALITY_L1_PIXEL"])
             except KeyError:
-                print("Warning - the quality band is not available. Are you using collection 1 data?")
-                self.bandQAFile = ""
+                try:
+                    self.bandQAFile = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_QUALITY"])
+                except KeyError:
+                    print("Warning - the quality band is not available. Pre-collection 1 data unsupported.")
+                    self.bandQAFile = ""
 
             try:
                 self.band6aFile = os.path.join(filesDIR,headerParams["FILE_NAME_BAND_6_VCID_1"])
@@ -404,8 +410,7 @@ class ARCSILandsat7Sensor (ARCSIAbstractSensor):
             # Read MTL header into python dict for python-fmask
             self.fmaskMTLInfo = fmask.config.readMTLFile(inputHeader)
 
-            fileDateStr = headerParams["FILE_DATE"].strip()
-            fileDateStr = fileDateStr.replace('Z', '')
+            fileDateStr = f"{headerParams['DATE_ACQUIRED'].strip()}T{headerParams['SCENE_CENTER_TIME'].split('.')[0]}"
             self.fileDateObj = datetime.datetime.strptime(fileDateStr, "%Y-%m-%dT%H:%M:%S")
 
         except Exception as e:

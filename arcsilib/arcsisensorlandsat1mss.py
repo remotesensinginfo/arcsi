@@ -75,6 +75,8 @@ from rios import rat
 import json
 # Import the solar angle tools from RSGISLib
 import rsgislib.imagecalibration.solarangles
+import rsgislib.segmentation
+import rsgislib.segmentation.segutils
 
 class ARCSILandsat1MSSSensor (ARCSIAbstractSensor):
     """
@@ -241,8 +243,7 @@ class ARCSILandsat1MSSSensor (ARCSIAbstractSensor):
             if "GRID_CELL_SIZE_REFLECTIVE" in headerParams:
                 self.gridCellSizeRefl = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_REFLECTIVE"], 60.0)
 
-            fileDateStr = headerParams["FILE_DATE"].strip()
-            fileDateStr = fileDateStr.replace('Z', '')
+            fileDateStr = f"{headerParams['DATE_ACQUIRED'].strip()}T{headerParams['SCENE_CENTER_TIME'].split('.')[0]}"
             self.fileDateObj = datetime.datetime.strptime(fileDateStr, "%Y-%m-%dT%H:%M:%S")
 
         except Exception as e:
@@ -608,6 +609,7 @@ class ARCSILandsat1MSSSensor (ARCSIAbstractSensor):
                 dosBlueImage = self.performLocalDOSOnSingleBand(inputTOAImage, 1, outputPath, tmpBaseName, "Blue", "KEA", tmpPath, minObjSize, darkPxlPercentile, blockSize, dosOutRefl)
 
             thresImageClumpsFinal = os.path.join(tmpPath, tmpBaseName + "_clumps" + imgExtension)
+
             rsgislib.segmentation.segutils.runShepherdSegmentation(inputTOAImage, thresImageClumpsFinal, tmpath=tmpPath, gdalformat="KEA", numClusters=40, minPxls=10, bands=[1,2,3,4], processInMem=True)
 
             stats2CalcTOA = list()

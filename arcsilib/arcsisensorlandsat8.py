@@ -296,7 +296,11 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             self.band9File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_9"])
             self.band10File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_10"])
             self.band11File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_11"])
-            self.bandQAFile = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_QUALITY"])
+
+            try:
+                self.bandQAFile = os.path.join(filesDIR, headerParams["FILE_NAME_QUALITY_L1_PIXEL"])
+            except KeyError:
+                self.bandQAFile = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_QUALITY"])
 
             self.b1RadMulti = arcsiUtils.str2Float(headerParams["RADIANCE_MULT_BAND_1"])
             self.b2RadMulti = arcsiUtils.str2Float(headerParams["RADIANCE_MULT_BAND_2"])
@@ -386,8 +390,7 @@ class ARCSILandsat8Sensor (ARCSIAbstractSensor):
             # Read MTL header into python dict for python-fmask
             self.fmaskMTLInfo = fmask.config.readMTLFile(inputHeader)
 
-            fileDateStr = headerParams["FILE_DATE"].strip()
-            fileDateStr = fileDateStr.replace('Z', '')
+            fileDateStr = f"{headerParams['DATE_ACQUIRED'].strip()}T{headerParams['SCENE_CENTER_TIME'].split('.')[0]}"
             self.fileDateObj = datetime.datetime.strptime(fileDateStr, "%Y-%m-%dT%H:%M:%S")
 
         except Exception as e:

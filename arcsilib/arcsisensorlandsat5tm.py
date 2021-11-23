@@ -277,10 +277,13 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             self.band7File = os.path.join(filesDIR, metaFilenames[6])
 
             try:
-                self.bandQAFile = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_QUALITY"])
+                self.bandQAFile = os.path.join(filesDIR, headerParams["FILE_NAME_QUALITY_L1_PIXEL"])
             except KeyError:
-                print("Warning - the quality band is not available. Are you using collection 1 data?")
-                self.bandQAFile = ""
+                try:
+                    self.bandQAFile = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_QUALITY"])
+                except KeyError:
+                    print("Warning - the quality band is not available. Pre-collection 1 data unsupported")
+                    self.bandQAFile = ""
 
             metaQCalMinList = []
             metaQCalMaxList = []
@@ -346,8 +349,7 @@ class ARCSILandsat5TMSensor (ARCSIAbstractSensor):
             if "GRID_CELL_SIZE_THERMAL" in headerParams:
                 self.gridCellSizeTherm = arcsiUtils.str2Float(headerParams["GRID_CELL_SIZE_THERMAL"], 30.0)
 
-            fileDateStr = headerParams["FILE_DATE"].strip()
-            fileDateStr = fileDateStr.replace('Z', '')
+            fileDateStr = f"{headerParams['DATE_ACQUIRED'].strip()}T{headerParams['SCENE_CENTER_TIME'].split('.')[0]}"
             self.fileDateObj = datetime.datetime.strptime(fileDateStr, "%Y-%m-%dT%H:%M:%S")
 
             # Read MTL header into python dict for python-fmask
