@@ -373,8 +373,8 @@ class ARCSIUtils (object):
         point = ogr.CreateGeometryFromWkt(wktPt)
         point.AssignSpatialReference(inProjObj)
         point.TransformTo(wgs84latlonProj)
-        longVal = point.GetY() # The order is lat/long so it is flipped.
-        latVal = point.GetX() # The order is lat/long so it is flipped.
+        longVal = point.GetX()
+        latVal = point.GetY()
         return longVal, latVal
 
     def convertVisabilityToAOT(self, vis):
