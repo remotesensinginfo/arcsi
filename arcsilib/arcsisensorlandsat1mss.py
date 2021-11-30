@@ -437,7 +437,7 @@ class ARCSILandsat1MSSSensor (ARCSIAbstractSensor):
         s.aot550 = aotVal
 
         # Band 1
-        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_MSS_B1)
+        s.wavelength = Py6S.Wavelength(Py6S.Params.PredefinedWavelengths.LANDSAT_MSS_B1)
         s.run()
         sixsCoeffs[0,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[0,1] = float(s.outputs.values['coef_xb'])
@@ -447,7 +447,7 @@ class ARCSILandsat1MSSSensor (ARCSIAbstractSensor):
         sixsCoeffs[0,5] = float(s.outputs.values['environmental_irradiance'])
 
         # Band 2
-        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_MSS_B2)
+        s.wavelength = Py6S.Wavelength(Py6S.Params.PredefinedWavelengths.LANDSAT_MSS_B2)
         s.run()
         sixsCoeffs[1,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[1,1] = float(s.outputs.values['coef_xb'])
@@ -457,7 +457,7 @@ class ARCSILandsat1MSSSensor (ARCSIAbstractSensor):
         sixsCoeffs[1,5] = float(s.outputs.values['environmental_irradiance'])
 
         # Band 3
-        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_MSS_B3)
+        s.wavelength = Py6S.Wavelength(Py6S.Params.PredefinedWavelengths.LANDSAT_MSS_B3)
         s.run()
         sixsCoeffs[2,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[2,1] = float(s.outputs.values['coef_xb'])
@@ -467,7 +467,7 @@ class ARCSILandsat1MSSSensor (ARCSIAbstractSensor):
         sixsCoeffs[2,5] = float(s.outputs.values['environmental_irradiance'])
 
         # Band 4
-        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_MSS_B4)
+        s.wavelength = Py6S.Wavelength(Py6S.Params.PredefinedWavelengths.LANDSAT_MSS_B4)
         s.run()
         sixsCoeffs[3,0] = float(s.outputs.values['coef_xa'])
         sixsCoeffs[3,1] = float(s.outputs.values['coef_xb'])
@@ -568,7 +568,7 @@ class ARCSILandsat1MSSSensor (ARCSIAbstractSensor):
         s.aot550 = aotVal
 
         # Band 1 (Blue!)
-        s.wavelength = Py6S.Wavelength(Py6S.SixSHelpers.PredefinedWavelengths.LANDSAT_MSS_B1)
+        s.wavelength = Py6S.Wavelength(Py6S.Params.PredefinedWavelengths.LANDSAT_MSS_B1)
         s.run()
         aX = float(s.outputs.values['coef_xa'])
         bX = float(s.outputs.values['coef_xb'])
