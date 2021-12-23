@@ -81,6 +81,8 @@ import shutil
 import fmask.config
 import fmask.fmask
 
+import sys
+
 class ARCSISen2SpectralBandObj(object):
     """
     This is a class to store the information associated with a Sentinel-2 image band.
@@ -174,7 +176,22 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         self.esun_B11 = 0.0
         self.esun_B12 = 0.0
 
+        self.ratiometric_offs_B0 = 0.0
+        self.ratiometric_offs_B1 = 0.0
+        self.ratiometric_offs_B2 = 0.0
+        self.ratiometric_offs_B3 = 0.0
+        self.ratiometric_offs_B4 = 0.0
+        self.ratiometric_offs_B5 = 0.0
+        self.ratiometric_offs_B6 = 0.0
+        self.ratiometric_offs_B7 = 0.0
+        self.ratiometric_offs_B8 = 0.0
+        self.ratiometric_offs_B9 = 0.0
+        self.ratiometric_offs_B10 = 0.0
+        self.ratiometric_offs_B11 = 0.0
+        self.ratiometric_offs_B12 = 0.0
+
         self.specBandInfo = dict()
+
 
         self.uniqueTileID = ''
 
@@ -235,8 +252,6 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             
             tree = ET.parse(inputHeader)
             root = tree.getroot()
-
-            hdrFileVersion = 'psd14'
 
             generalInfoTag = root.find('{https://psd-14.sentinel2.eo.esa.int/PSD/User_Product_Level-1C.xsd}General_Info')
             if generalInfoTag == None:
@@ -424,6 +439,7 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             quantificationValTag = None
             reflectanceConversionTag = None
             spectralInfoListTag = None
+            radiometricOffsetListTag = None
             physicalGainsTagsLst = list()
             for prodImgCharChild in productImgCharTag:
                 if prodImgCharChild.tag == 'Special_Values':
@@ -436,6 +452,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
                     spectralInfoListTag = prodImgCharChild
                 elif prodImgCharChild.tag == 'PHYSICAL_GAINS':
                     physicalGainsTagsLst.append(prodImgCharChild)
+                elif prodImgCharChild.tag == 'Radiometric_Offset_List':
+                    radiometricOffsetListTag = prodImgCharChild
 
             # Parse out the input no data and saturation value.
             for tag in specialValsTagsLst:
@@ -446,6 +464,37 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
 
             # Get the Quantification value.
             self.quantificationVal = arcsiUtils.str2Float(quantificationValTag.text.strip())
+
+            # Get radiometric offsets (is provided; introduced 79.90)
+            if radiometricOffsetListTag is not None:
+                for radiometricOffsetTag in radiometricOffsetListTag:
+                    if radiometricOffsetTag.attrib['band_id'] == '0':
+                        self.ratiometric_offs_B0 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '1':
+                        self.ratiometric_offs_B1 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '2':
+                        self.ratiometric_offs_B2 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '3':
+                        self.ratiometric_offs_B3 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '4':
+                        self.ratiometric_offs_B4 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '5':
+                        self.ratiometric_offs_B5 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '6':
+                        self.ratiometric_offs_B6 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '7':
+                        self.ratiometric_offs_B7 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '8':
+                        self.ratiometric_offs_B8 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '9':
+                        self.ratiometric_offs_B9 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '10':
+                        self.ratiometric_offs_B10 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '11':
+                        self.ratiometric_offs_B11 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+                    elif radiometricOffsetTag.attrib['band_id'] == '12':
+                        self.ratiometric_offs_B12 = arcsiUtils.str2Float(radiometricOffsetTag.text.strip())
+
 
             # Get the Physical Gain values.
             for physGainTag in physicalGainsTagsLst:
@@ -1133,30 +1182,122 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         print("Converting to Radiance")
         outputReflImage = os.path.join(outputPath, outputReflName)
         outputThermalImage = None
-        
-        inImgBands = list()
+
+        img_band02 = self.sen2ImgB02
+        img_band03 = self.sen2ImgB03
+        img_band04 = self.sen2ImgB04
+        img_band05 = self.sen2ImgB05_10m
+        img_band06 = self.sen2ImgB06_10m
+        img_band07 = self.sen2ImgB07_10m
+        img_band08 = self.sen2ImgB08
+        img_band08A = self.sen2ImgB8A_10m
+        img_band11 = self.sen2ImgB11_10m
+        img_band12 = self.sen2ImgB12_10m
+
         if self.resampleTo20m:
-            inImgBands.append(self.sen2ImgB02_20m)
-            inImgBands.append(self.sen2ImgB03_20m)
-            inImgBands.append(self.sen2ImgB04_20m)
-            inImgBands.append(self.sen2ImgB05)
-            inImgBands.append(self.sen2ImgB06)
-            inImgBands.append(self.sen2ImgB07)
-            inImgBands.append(self.sen2ImgB08_20m)
-            inImgBands.append(self.sen2ImgB8A)
-            inImgBands.append(self.sen2ImgB11)
-            inImgBands.append(self.sen2ImgB12)
-        else: 
-            inImgBands.append(self.sen2ImgB02)
-            inImgBands.append(self.sen2ImgB03)
-            inImgBands.append(self.sen2ImgB04)
-            inImgBands.append(self.sen2ImgB05_10m)
-            inImgBands.append(self.sen2ImgB06_10m)
-            inImgBands.append(self.sen2ImgB07_10m)
-            inImgBands.append(self.sen2ImgB08)
-            inImgBands.append(self.sen2ImgB8A_10m)
-            inImgBands.append(self.sen2ImgB11_10m)
-            inImgBands.append(self.sen2ImgB12_10m)
+            img_band02 = self.sen2ImgB02_20m
+            img_band03 = self.sen2ImgB03_20m
+            img_band04 = self.sen2ImgB04_20m
+            img_band05 = self.sen2ImgB05
+            img_band06 = self.sen2ImgB06
+            img_band07 = self.sen2ImgB07
+            img_band08 = self.sen2ImgB08_20m
+            img_band08A = self.sen2ImgB8A
+            img_band11 = self.sen2ImgB11
+            img_band12 = self.sen2ImgB12
+
+        img_band02_tmp = None
+        img_band03_tmp = None
+        img_band04_tmp = None
+        img_band05_tmp = None
+        img_band06_tmp = None
+        img_band07_tmp = None
+        img_band08_tmp = None
+        img_band08A_tmp = None
+        img_band11_tmp = None
+        img_band12_tmp = None
+
+        if abs(self.ratiometric_offs_B1) > 0:
+            basename = os.path.splitext(os.path.basename(img_band02))[0]
+            img_band02_tmp = os.path.join(outputPath, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B1)
+            rsgislib.imagecalc.imageMath(img_band02, img_band02_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            img_band02 = img_band02_tmp
+
+        if abs(self.ratiometric_offs_B2) > 0:
+            basename = os.path.splitext(os.path.basename(img_band03))[0]
+            img_band03_tmp = os.path.join(outputPath, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B2)
+            rsgislib.imagecalc.imageMath(img_band03, img_band03_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            img_band03 = img_band03_tmp
+
+        if abs(self.ratiometric_offs_B3) > 0:
+            basename = os.path.splitext(os.path.basename(img_band04))[0]
+            img_band04_tmp = os.path.join(outputPath, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B3)
+            rsgislib.imagecalc.imageMath(img_band04, img_band04_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            img_band04 = img_band04_tmp
+
+        if abs(self.ratiometric_offs_B4) > 0:
+            basename = os.path.splitext(os.path.basename(img_band05))[0]
+            img_band05_tmp = os.path.join(outputPath, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B4)
+            rsgislib.imagecalc.imageMath(img_band05, img_band05_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            img_band05 = img_band05_tmp
+
+        if abs(self.ratiometric_offs_B5) > 0:
+            basename = os.path.splitext(os.path.basename(img_band06))[0]
+            img_band06_tmp = os.path.join(outputPath, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B5)
+            rsgislib.imagecalc.imageMath(img_band06, img_band06_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            img_band06 = img_band06_tmp
+
+        if abs(self.ratiometric_offs_B6) > 0:
+            basename = os.path.splitext(os.path.basename(img_band07))[0]
+            img_band07_tmp = os.path.join(outputPath, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B6)
+            rsgislib.imagecalc.imageMath(img_band07, img_band07_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            img_band07 = img_band07_tmp
+
+        if abs(self.ratiometric_offs_B7) > 0:
+            basename = os.path.splitext(os.path.basename(img_band08))[0]
+            img_band08_tmp = os.path.join(outputPath, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B7)
+            rsgislib.imagecalc.imageMath(img_band08, img_band08_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            img_band08 = img_band08_tmp
+
+        if abs(self.ratiometric_offs_B8) > 0:
+            basename = os.path.splitext(os.path.basename(img_band08A))[0]
+            img_band08A_tmp = os.path.join(outputPath, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B8)
+            rsgislib.imagecalc.imageMath(img_band08A, img_band08A_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            img_band08A = img_band08A_tmp
+
+        if abs(self.ratiometric_offs_B11) > 0:
+            basename = os.path.splitext(os.path.basename(img_band11))[0]
+            img_band11_tmp = os.path.join(outputPath, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B11)
+            rsgislib.imagecalc.imageMath(img_band11, img_band11_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            img_band11 = img_band11_tmp
+
+        if abs(self.ratiometric_offs_B12) > 0:
+            basename = os.path.splitext(os.path.basename(img_band12))[0]
+            img_band12_tmp = os.path.join(outputPath, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B12)
+            rsgislib.imagecalc.imageMath(img_band12, img_band12_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            img_band12 = img_band12_tmp
+
+        inImgBands = list()
+        inImgBands.append(img_band02)
+        inImgBands.append(img_band03)
+        inImgBands.append(img_band04)
+        inImgBands.append(img_band05)
+        inImgBands.append(img_band06)
+        inImgBands.append(img_band07)
+        inImgBands.append(img_band08)
+        inImgBands.append(img_band08A)
+        inImgBands.append(img_band11)
+        inImgBands.append(img_band12)
 
         solarIrrVals = list()
         IrrVal = collections.namedtuple('SolarIrradiance', ['irradiance'])
@@ -1172,6 +1313,37 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         solarIrrVals.append(IrrVal(irradiance=self.esun_B12))
 
         rsgislib.imagecalibration.toaRefl2Radiance(inImgBands, outputReflImage, outFormat, rsgislib.TYPE_32FLOAT, self.quantificationVal, self.earthSunDist_U, self.solarZenith, solarIrrVals)
+
+        if (img_band02_tmp is not None) and os.path.exists(img_band02_tmp):
+            os.remove(img_band02_tmp)
+
+        if (img_band03_tmp is not None) and os.path.exists(img_band03_tmp):
+            os.remove(img_band03_tmp)
+
+        if (img_band04_tmp is not None) and os.path.exists(img_band04_tmp):
+            os.remove(img_band04_tmp)
+
+        if (img_band05_tmp is not None) and os.path.exists(img_band05_tmp):
+            os.remove(img_band05_tmp)
+
+        if (img_band06_tmp is not None) and os.path.exists(img_band06_tmp):
+            os.remove(img_band06_tmp)
+
+        if (img_band07_tmp is not None) and os.path.exists(img_band07_tmp):
+            os.remove(img_band07_tmp)
+
+        if (img_band08_tmp is not None) and os.path.exists(img_band08_tmp):
+            os.remove(img_band08_tmp)
+
+        if (img_band08A_tmp is not None) and os.path.exists(img_band08A_tmp):
+            os.remove(img_band08A_tmp)
+
+        if (img_band11_tmp is not None) and os.path.exists(img_band11_tmp):
+            os.remove(img_band11_tmp)
+
+        if (img_band12_tmp is not None) and os.path.exists(img_band12_tmp):
+            os.remove(img_band12_tmp)
+
         return outputReflImage, outputThermalImage
 
     def convertThermalToBrightness(self, inputRadImage, outputPath, outputName, outFormat, scaleFactor):
