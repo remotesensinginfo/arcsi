@@ -1386,6 +1386,27 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
         sen2ImgB10_tmp = os.path.join(tmpBaseDIR, tmpBaseName+'_B10.kea')
         rsgislib.imageutils.resampleImage2Match(inputReflImage, self.sen2ImgB10, sen2ImgB10_tmp, 'KEA', 'nearestneighbour', rsgislib.TYPE_16UINT, multicore=False)
 
+        if abs(self.ratiometric_offs_B0) > 0:
+            basename = os.path.splitext(os.path.basename(sen2ImgB01_tmp))[0]
+            sen2ImgB01_tmp2 = os.path.join(tmpBaseDIR, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B0)
+            rsgislib.imagecalc.imageMath(sen2ImgB01_tmp, sen2ImgB01_tmp2, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            sen2ImgB01_tmp = sen2ImgB01_tmp2
+
+        if abs(self.ratiometric_offs_B9) > 0:
+            basename = os.path.splitext(os.path.basename(sen2ImgB09_tmp))[0]
+            sen2ImgB09_tmp2 = os.path.join(tmpBaseDIR, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B9)
+            rsgislib.imagecalc.imageMath(sen2ImgB09_tmp, sen2ImgB09_tmp2, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            sen2ImgB09_tmp = sen2ImgB09_tmp2
+
+        if abs(self.ratiometric_offs_B10) > 0:
+            basename = os.path.splitext(os.path.basename(sen2ImgB10_tmp))[0]
+            sen2ImgB10_tmp2 = os.path.join(tmpBaseDIR, "{}_tmpoffapply.kea".format(basename))
+            exp = "b1 + {}".format(self.ratiometric_offs_B10)
+            rsgislib.imagecalc.imageMath(sen2ImgB10_tmp, sen2ImgB10_tmp2, exp, "KEA", rsgislib.TYPE_32FLOAT)
+            sen2ImgB10_tmp = sen2ImgB10_tmp2
+
         tmpTOAImg = os.path.join(tmpBaseDIR, tmpBaseName+'_pyfmasktmpTOA.kea')
         if self.imgIntScaleFactor != 10000:
             vrtImgB1B9B10 = os.path.join(tmpBaseDIR, tmpBaseName+'_b01b09b10_60mBands.vrt')
