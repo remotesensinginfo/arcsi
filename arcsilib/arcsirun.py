@@ -300,42 +300,45 @@ def prepParametersObj(inputHeader, inputImage, cloudMaskUsrImg, sensorStr, inWKT
 
     # Step 3: If aerosol and atmosphere images are specified then sample them to find
     #         the aerosol and atmosphere generic model to use for conversion to SREF
-    if paramsObj.aeroProfileOptionImg is not None:
-        print("Get aero profile from image...")
-        aeroProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(paramsObj.aeroProfileOptionImg, 1, 1, None, paramsObj.sensorClass.lonTL, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.latBR, paramsObj.sensorClass.latTL)[0])
+    if paramsObj.aeroProfileOption is None:
+        if paramsObj.aeroProfileOptionImg is not None:
+            print("Get aero profile from image...")
+            aeroProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(paramsObj.aeroProfileOptionImg, 1, 1, None, paramsObj.sensorClass.lonTL, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.latBR, paramsObj.sensorClass.latTL)[0])
 
-        if aeroProfileMode is 1:
-            paramsObj.aeroProfileOption = "Maritime"
-        elif aeroProfileMode is 2:
-            paramsObj.aeroProfileOption = "Continental"
-        else:
-            raise ARCSIException("The aerosol profile from the input image was not recognised.")
-        print("Aerosol Profile = ", paramsObj.aeroProfileOption)
-        print("")
-    if paramsObj.atmosProfileOptionImg is not None:
-        print("Get atmos profile from image...")
-        atmosProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(paramsObj.atmosProfileOptionImg, 1, 1, None, paramsObj.sensorClass.lonTL, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.latBR, paramsObj.sensorClass.latTL)[0])
-        summerWinter = arcsiUtils.isSummerOrWinter(paramsObj.sensorClass.latCentre, paramsObj.sensorClass.lonCentre, paramsObj.sensorClass.acquisitionTime )
-        if atmosProfileMode is 1:
-            paramsObj.atmosProfileOption = "Tropical"
-        elif atmosProfileMode is 2:
-            if summerWinter is 1:
-                paramsObj.atmosProfileOption = "MidlatitudeSummer"
-            elif summerWinter is 2:
-                paramsObj.atmosProfileOption = "MidlatitudeWinter"
+            if aeroProfileMode is 1:
+                paramsObj.aeroProfileOption = "Maritime"
+            elif aeroProfileMode is 2:
+                paramsObj.aeroProfileOption = "Continental"
             else:
-                raise ARCSIException("Not recognised as being summer or winter.")
-        elif atmosProfileMode is 3:
-            if summerWinter is 1:
-                paramsObj.atmosProfileOption = "SubarcticSummer"
-            elif summerWinter is 2:
-                paramsObj.atmosProfileOption = "SubarcticWinter"
+                raise ARCSIException("The aerosol profile from the input image was not recognised.")
+    print("Aerosol Profile = ", paramsObj.aeroProfileOption)
+    print("")
+
+    if paramsObj.atmosProfileOption is None:
+        if paramsObj.atmosProfileOptionImg is not None:
+            print("Get atmos profile from image...")
+            atmosProfileMode = int(rsgislib.imagecalc.getImageBandModeInEnv(paramsObj.atmosProfileOptionImg, 1, 1, None, paramsObj.sensorClass.lonTL, paramsObj.sensorClass.lonBR, paramsObj.sensorClass.latBR, paramsObj.sensorClass.latTL)[0])
+            summerWinter = arcsiUtils.isSummerOrWinter(paramsObj.sensorClass.latCentre, paramsObj.sensorClass.lonCentre, paramsObj.sensorClass.acquisitionTime )
+            if atmosProfileMode is 1:
+                paramsObj.atmosProfileOption = "Tropical"
+            elif atmosProfileMode is 2:
+                if summerWinter is 1:
+                    paramsObj.atmosProfileOption = "MidlatitudeSummer"
+                elif summerWinter is 2:
+                    paramsObj.atmosProfileOption = "MidlatitudeWinter"
+                else:
+                    raise ARCSIException("Not recognised as being summer or winter.")
+            elif atmosProfileMode is 3:
+                if summerWinter is 1:
+                    paramsObj.atmosProfileOption = "SubarcticSummer"
+                elif summerWinter is 2:
+                    paramsObj.atmosProfileOption = "SubarcticWinter"
+                else:
+                    raise ARCSIException("Not recognised as being summer or winter.")
             else:
-                raise ARCSIException("Not recognised as being summer or winter.")
-        else:
-            raise ARCSIException("The atmosphere profile from the input image was not recognised.")
-        print("Atmosphere Profile = ", paramsObj.atmosProfileOption)
-        print("")
+                raise ARCSIException("The atmosphere profile from the input image was not recognised.")
+    print("Atmosphere Profile = ", paramsObj.atmosProfileOption)
+    print("")
 
     # Step 3: Get Output Image Base Name.
     if (paramsObj.outBaseName is None) or (paramsObj.outBaseName == ""):
