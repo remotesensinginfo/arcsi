@@ -960,7 +960,8 @@ class ARCSISentinel2Sensor (ARCSIAbstractSensor):
             orbNumStr = '00'+orbNumStr
         if len(orbNumStr) == 2:
             orbNumStr = '0'+orbNumStr
-        outname = outname + '_' + self.uniqueTileID + '_ORB' + orbNumStr + '_' + self.projNameStr
+        gen_time_str = self.generationTime.strftime("%Y%m%d%H%M%S")
+        outname = outname + '_' + self.uniqueTileID + '_ORB' + orbNumStr + '_' + gen_time_str + '_' + self.projNameStr
         return outname
 
     def expectedImageDataPresent(self):
