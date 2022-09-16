@@ -39,116 +39,198 @@ and create a list of image download commands.
 #
 ############################################################################
 
-# Import updated print function into python 2.7
-from __future__ import print_function
-# Import updated division operator into python 2.7
-from __future__ import division
-# Import the python os.path module
-import os.path
-# Import the python sys module
 import sys
-# Import the python Argument parser
 import argparse
-# Import python time module
-import time
-# Import python sqlite3 module
 import sqlite3
-# Import the arcsi version number
 from arcsilib import ARCSI_VERSION
-# Import the ARCSI exception class
 from arcsilib.arcsiexception import ARCSIException
-# Import rsgislib module
 import rsgislib
 
-def genLandsatDownloadList(dbFile, lsPath, lsRow, outFile, outpath, sensorID=None, spacecraftID=None, collection=None, cloudCover=None, startDate=None, endDate=None, limit=None, multiDwn=False, lstCmds=False):
+
+def genLandsatDownloadList(
+    dbFile,
+    lsPath,
+    lsRow,
+    outFile,
+    outpath,
+    sensorID=None,
+    spacecraftID=None,
+    collection=None,
+    cloudCover=None,
+    startDate=None,
+    endDate=None,
+    limit=None,
+    multiDwn=False,
+    lstCmds=False,
+):
     """
     Using sqlite database query and create a list of files to download
     """
     try:
         ggLandsatDBConn = sqlite3.connect(dbFile)
         ggLandsatDBCursor = ggLandsatDBConn.cursor()
-        
+
         queryVar = [lsPath, lsRow]
-        query = 'SELECT BASE_URL FROM LANDSAT WHERE WRS_PATH = ? AND WRS_ROW = ?'
-        
+        query = "SELECT BASE_URL FROM LANDSAT WHERE WRS_PATH = ? AND WRS_ROW = ?"
+
         if not sensorID is None:
-            query = query + ' AND SENSOR_ID = ?'
+            query = query + " AND SENSOR_ID = ?"
             queryVar.append(sensorID)
 
         if not spacecraftID is None:
-            query = query + ' AND SPACECRAFT_ID = ?'
+            query = query + " AND SPACECRAFT_ID = ?"
             queryVar.append(spacecraftID)
 
         if not collection is None:
-            if collection == 'PRE':
-                collection = 'N/A'
-            query = query + ' AND COLLECTION_CATEGORY = ?'
+            if collection == "PRE":
+                collection = "N/A"
+            query = query + " AND COLLECTION_CATEGORY = ?"
             queryVar.append(collection)
 
         if not cloudCover is None:
-            query = query + ' AND CLOUD_COVER < ?'
+            query = query + " AND CLOUD_COVER < ?"
             queryVar.append(cloudCover)
-            
+
         if not startDate is None:
-            query = query + ' AND date(SENSING_TIME) > date(?)'
+            query = query + " AND date(SENSING_TIME) > date(?)"
             queryVar.append(startDate)
-            
+
         if not endDate is None:
-            query = query + ' AND date(SENSING_TIME) < date(?)'
+            query = query + " AND date(SENSING_TIME) < date(?)"
             queryVar.append(endDate)
 
         if not limit is None:
-            query = query + ' ORDER BY CLOUD_COVER ASC LIMIT {}'.format(limit)
-        
-        multiStr = ''
+            query = query + " ORDER BY CLOUD_COVER ASC LIMIT {}".format(limit)
+
+        multiStr = ""
         if multiDwn:
-            multiStr = '-m'
+            multiStr = "-m"
 
         cmdLst = []
-        for row in ggLandsatDBCursor.execute(query,  queryVar):
+        for row in ggLandsatDBCursor.execute(query, queryVar):
             if lstCmds:
-                cmdLst.append("gsutil {} cp -r {} {} ".format(multiStr, row[0], outpath))
+                cmdLst.append(
+                    "gsutil {} cp -r {} {} ".format(multiStr, row[0], outpath)
+                )
             else:
                 cmdLst.append(row[0])
-        
-        rsgisUtils = rsgislib.RSGISPyUtils()
-        rsgisUtils.writeList2File(cmdLst, outFile)
-        
+
+        rsgislib.tools.utils.write_list_to_file(cmdLst, outFile)
+
     except ARCSIException as e:
         print("Error: {}".format(e), file=sys.stderr)
     except Exception as e:
         print("Error: {}".format(e), file=sys.stderr)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     """
     The command line user interface to ARCSI generate Landsat file download list.
     """
-    parser = argparse.ArgumentParser(prog='arcsigenlandsatdownlst.py',
-                                    description='''ARSCI command to query 
-                                                   database of Landsat imagery''',
-                                    epilog='''A tool to query the sqlite database
+    parser = argparse.ArgumentParser(
+        prog="arcsigenlandsatdownlst.py",
+        description="""ARSCI command to query 
+                                                   database of Landsat imagery""",
+        epilog="""A tool to query the sqlite database
                                               with the Google Landsat imagery
-                                              to create a list of URLs to download.''')
+                                              to create a list of URLs to download.""",
+    )
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
+    parser.add_argument(
+        "-v", "--version", action="version", version="%(prog)s version " + ARCSI_VERSION
+    )
     # Define the argument for specifying the input directory to be processed.
-    parser.add_argument("-f", "--dbfile", type=str, required=True, help='''Path to the database file.''')
-    parser.add_argument("-p", "--path", type=str, required=True, help='''Landsat path.''')
-    parser.add_argument("-r", "--row", type=str, required=True, help='''Landsat row.''')
-    parser.add_argument("-o", "--output", type=str, required=True, help='''Output file with a list of files to download.''')
-    parser.add_argument("--outpath", type=str, required=True, help='''Output path for the landsat files to download to on your system.''')
-    parser.add_argument("--sensor", type=str, choices=['OLI_TIRS', 'ETM', 'TM', 'MSS', 'MSS'], help='''Specify the landsat sensor you are interested''')
-    parser.add_argument("--spacecraft", type=str, choices=['LANDSAT_8', 'LANDSAT_7', 'LANDSAT_5', 'LANDSAT_4', 'LANDSAT_3', 'LANDSAT_2', 'LANDSAT_1'], help='''Specify the landsat spacecraft you are interested''')
-    parser.add_argument("--collection", type=str, choices=['T1', 'T2', 'RT', 'PRE'], help='''Specify the landsat collection you are interested. For more information see https://landsat.usgs.gov/landsat-collections''')
-    parser.add_argument("--cloudcover", type=float, help='''Specify an upper limit for acceptable cloud cover.''')
-    parser.add_argument("--startdate", type=str, help='''Specify a start date (YYYY-MM-DD).''')
-    parser.add_argument("--enddate", type=str, help='''Specify a end date (YYYY-MM-DD).''')
-    parser.add_argument("--limit", type=int, help='''Specify a limit for the number of scenes returned - scenes are sorted by cloud cover''')
-    parser.add_argument("--multi", action='store_true', default=False, help='''Adds -m option to the gsutil download command.''')
-    parser.add_argument("--lstcmds", action='store_true', default=False, help='''List download commands rather than just list of URLs''')
+    parser.add_argument(
+        "-f", "--dbfile", type=str, required=True, help="""Path to the database file."""
+    )
+    parser.add_argument(
+        "-p", "--path", type=str, required=True, help="""Landsat path."""
+    )
+    parser.add_argument("-r", "--row", type=str, required=True, help="""Landsat row.""")
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="""Output file with a list of files to download.""",
+    )
+    parser.add_argument(
+        "--outpath",
+        type=str,
+        required=True,
+        help="""Output path for the landsat files to download to on your system.""",
+    )
+    parser.add_argument(
+        "--sensor",
+        type=str,
+        choices=["OLI_TIRS", "ETM", "TM", "MSS", "MSS"],
+        help="""Specify the landsat sensor you are interested""",
+    )
+    parser.add_argument(
+        "--spacecraft",
+        type=str,
+        choices=[
+            "LANDSAT_8",
+            "LANDSAT_7",
+            "LANDSAT_5",
+            "LANDSAT_4",
+            "LANDSAT_3",
+            "LANDSAT_2",
+            "LANDSAT_1",
+        ],
+        help="""Specify the landsat spacecraft you are interested""",
+    )
+    parser.add_argument(
+        "--collection",
+        type=str,
+        choices=["T1", "T2", "RT", "PRE"],
+        help="""Specify the landsat collection you are interested. For more information see https://landsat.usgs.gov/landsat-collections""",
+    )
+    parser.add_argument(
+        "--cloudcover",
+        type=float,
+        help="""Specify an upper limit for acceptable cloud cover.""",
+    )
+    parser.add_argument(
+        "--startdate", type=str, help="""Specify a start date (YYYY-MM-DD)."""
+    )
+    parser.add_argument(
+        "--enddate", type=str, help="""Specify a end date (YYYY-MM-DD)."""
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        help="""Specify a limit for the number of scenes returned - scenes are sorted by cloud cover""",
+    )
+    parser.add_argument(
+        "--multi",
+        action="store_true",
+        default=False,
+        help="""Adds -m option to the gsutil download command.""",
+    )
+    parser.add_argument(
+        "--lstcmds",
+        action="store_true",
+        default=False,
+        help="""List download commands rather than just list of URLs""",
+    )
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
-    genLandsatDownloadList(args.dbfile, args.path, args.row, args.output, args.outpath, args.sensor, args.spacecraft, args.collection, args.cloudcover, args.startdate, args.enddate, args.limit, args.multi, args.lstcmds)
-
+    genLandsatDownloadList(
+        args.dbfile,
+        args.path,
+        args.row,
+        args.output,
+        args.outpath,
+        args.sensor,
+        args.spacecraft,
+        args.collection,
+        args.cloudcover,
+        args.startdate,
+        args.enddate,
+        args.limit,
+        args.multi,
+        args.lstcmds,
+    )

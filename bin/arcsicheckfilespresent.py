@@ -39,33 +39,17 @@ present following data extraction.
 #
 ############################################################################
 
-# Import updated print function into python 2.7
-from __future__ import print_function
-# Import updated division operator into python 2.7
-from __future__ import division
-# Import the python os.path module
-import os.path
-# Import the python sys module
-import sys
-# Import the python glob module
-import glob
-# Import the python Argument parser
-import argparse
-# Import the arcsi version number
-from arcsilib import ARCSI_VERSION
-# Import os.walk to navigate directory structure.
 import os
-# Import the ARCSI sensor factory class
+import glob
+import argparse
+from arcsilib import ARCSI_VERSION
 from arcsilib.arcsiutils import ARCSISensorFactory
-# Import the list of sensors arcsi supports
 from arcsilib import ARCSI_SENSORS_LIST
-# Import shutil module
 import shutil
-# Import the list of archive file extensions arcsi supports
 from arcsilib import ARCSI_ARCHIVE_EXE_LIST
 
-class ARCSICheckFilesPresent (object):
 
+class ARCSICheckFilesPresent(object):
     def getListOfFiles(self, searchDIR, headerEnding):
         outFiles = []
         for dirName, subdirList, fileList in os.walk(searchDIR):
@@ -84,7 +68,7 @@ class ARCSICheckFilesPresent (object):
 
     def findAssociatedArchive(self, inputDIR, refDIR, archList):
         refDIR = refDIR.replace(inputDIR, "")
-        if (refDIR[0] == '/') or (refDIR[0] == '\\'):
+        if (refDIR[0] == "/") or (refDIR[0] == "\\"):
             refDIR = refDIR[1:]
         outArch = None
         for arch in archList:
@@ -93,14 +77,16 @@ class ARCSICheckFilesPresent (object):
                 break
         return outArch
 
-    def checkExtractedFiles(self, inputDIR, outputFile, headerEnding, sensorStr, archivesDIR):
+    def checkExtractedFiles(
+        self, inputDIR, outputFile, headerEnding, sensorStr, archivesDIR
+    ):
         inputDIR = os.path.abspath(inputDIR)
         archivesDIR = os.path.abspath(archivesDIR)
         archList = self.getListOfArchives(archivesDIR)
         dirList = glob.glob(os.path.join(inputDIR, "*"))
 
         sensorFact = ARCSISensorFactory()
-        outFileList = open(outputFile, 'w')
+        outFileList = open(outputFile, "w")
         foundErr = False
         for dir in dirList:
             foundErr = False
@@ -111,52 +97,89 @@ class ARCSICheckFilesPresent (object):
                     print("Error: No header present")
                     foundErr = True
                 elif len(hdrList) > 1:
-                    print("Error: Multiple header files present - don't know what to do with that!")
+                    print(
+                        "Error: Multiple header files present - don't know what to do with that!"
+                    )
                     foundErr = True
                 else:
-                    sensorClass = sensorFact.getSensorClassFromName(sensorStr, False, None)
+                    sensorClass = sensorFact.getSensorClassFromName(
+                        sensorStr, False, None
+                    )
                     sensorClass.extractHeaderParameters(hdrList[0], "")
                     if not sensorClass.expectedImageDataPresent():
-                        print("Error: Images specified in input header file are not present")
+                        print(
+                            "Error: Images specified in input header file are not present"
+                        )
                         foundErr = True
                 if foundErr:
                     arch = self.findAssociatedArchive(inputDIR, dir, archList)
-                    outFileList.write(arch + '\n')
+                    outFileList.write(arch + "\n")
                     shutil.rmtree(dir)
 
         outFileList.flush()
         outFileList.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     """
     The command line user interface to ARCSI.
     """
-    parser = argparse.ArgumentParser(prog='arcsicheckfilespresent.py',
-                                    description='''ARCSI command to check that all expected files are
+    parser = argparse.ArgumentParser(
+        prog="arcsicheckfilespresent.py",
+        description="""ARCSI command to check that all expected files are
                                                    present following data extraction (expecting arcsiextractdata.py
-                                                   to have been used to extract data into folder structure).''')
+                                                   to have been used to extract data into folder structure).""",
+    )
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
+    parser.add_argument(
+        "-v", "--version", action="version", version="%(prog)s version " + ARCSI_VERSION
+    )
 
-    parser.add_argument("-i", "--input", type=str, required=True,
-                        help='''Input directory containing the folders for the extracted data''')
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        required=True,
+        help="""Input directory containing the folders for the extracted data""",
+    )
 
-    parser.add_argument("-o", "--output", type=str, required=True,
-                        help='''Output text file listing the archives which have problems''')
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="""Output text file listing the archives which have problems""",
+    )
 
-    parser.add_argument("-e", "--header", type=str, required=True,
-                        help='''The extension / unquie file ending for the input header files.''')
+    parser.add_argument(
+        "-e",
+        "--header",
+        type=str,
+        required=True,
+        help="""The extension / unquie file ending for the input header files.""",
+    )
 
-    parser.add_argument("-s", "--sensor", required=True, choices=ARCSI_SENSORS_LIST,
-                        help='''Specify the sensor being processed.''')
+    parser.add_argument(
+        "-s",
+        "--sensor",
+        required=True,
+        choices=ARCSI_SENSORS_LIST,
+        help="""Specify the sensor being processed.""",
+    )
 
-    parser.add_argument("-a", "--archives", type=str, required=True,
-                        help='''Input directory containing the original archives''')
+    parser.add_argument(
+        "-a",
+        "--archives",
+        type=str,
+        required=True,
+        help="""Input directory containing the original archives""",
+    )
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
     arcsiObj = ARCSICheckFilesPresent()
 
-    arcsiObj.checkExtractedFiles(args.input, args.output, args.header, args.sensor, args.archives)
-
+    arcsiObj.checkExtractedFiles(
+        args.input, args.output, args.header, args.sensor, args.archives
+    )

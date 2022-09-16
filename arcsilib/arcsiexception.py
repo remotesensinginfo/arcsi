@@ -35,8 +35,8 @@ Module that contains the ARCSIException class.
 #
 ############################################################################
 
-class ARCSIException(Exception):
 
+class ARCSIException(Exception):
     def __init__(self, value):
         """
         Init for the ARCSIException class
@@ -48,6 +48,3 @@ class ARCSIException(Exception):
         Return a string representation of the exception
         """
         return repr(self.value)
-
-
-
