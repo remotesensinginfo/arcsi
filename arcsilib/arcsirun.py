@@ -239,7 +239,7 @@ def prepParametersObj(
     paramsObj.tmpPath = tmpPath
     paramsObj.outFilePath = outFilePath
     paramsObj.outFormat = outFormat
-    paramsObj.outFormatExt = rsgislib.imageutils.get_file_img_extension(outFormat)
+    paramsObj.outFormatExt = ".{}".format(rsgislib.imageutils.get_file_img_extension(outFormat))
     paramsObj.calcStatsPy = calcStatsPy
     paramsObj.outBaseName = outBaseName
     paramsObj.cloudMaskUsrImg = cloudMaskUsrImg
@@ -331,9 +331,9 @@ def prepParametersObj(
                 )[0]
             )
 
-            if aeroProfileMode is 1:
+            if aeroProfileMode == 1:
                 paramsObj.aeroProfileOption = "Maritime"
-            elif aeroProfileMode is 2:
+            elif aeroProfileMode == 2:
                 paramsObj.aeroProfileOption = "Continental"
             else:
                 raise ARCSIException(
@@ -360,19 +360,19 @@ def prepParametersObj(
             summerWinter = rsgislib.tools.utils.is_summer_winter(
                 paramsObj.sensorClass.latCentre, paramsObj.sensorClass.acquisitionTime
             )
-            if atmosProfileMode is 1:
+            if atmosProfileMode == 1:
                 paramsObj.atmosProfileOption = "Tropical"
-            elif atmosProfileMode is 2:
-                if summerWinter is 1:
+            elif atmosProfileMode == 2:
+                if summerWinter == 1:
                     paramsObj.atmosProfileOption = "MidlatitudeSummer"
-                elif summerWinter is 2:
+                elif summerWinter == 2:
                     paramsObj.atmosProfileOption = "MidlatitudeWinter"
                 else:
                     raise ARCSIException("Not recognised as being summer or winter.")
-            elif atmosProfileMode is 3:
-                if summerWinter is 1:
+            elif atmosProfileMode == 3:
+                if summerWinter == 1:
                     paramsObj.atmosProfileOption = "SubarcticSummer"
-                elif summerWinter is 2:
+                elif summerWinter == 2:
                     paramsObj.atmosProfileOption = "SubarcticWinter"
                 else:
                     raise ARCSIException("Not recognised as being summer or winter.")

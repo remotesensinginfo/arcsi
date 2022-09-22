@@ -242,7 +242,7 @@ class ARCSILandsat1MSSSensor(ARCSIAbstractSensor):
                     "Expecting Landsat to be projected in UTM or PolarStereographic (PS) with datum=WGS84 and ellipsoid=WGS84."
                 )
 
-            if self.inWKT is "":
+            if self.inWKT == "":
                 self.inWKT = inProj.ExportToWkt()
 
             # Check image is square!

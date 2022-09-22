@@ -1905,7 +1905,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             self.epsgCode = rsgislib.tools.utils.str_to_int(epsgCodeStr.split(":")[1])
             inProj = osr.SpatialReference()
             inProj.ImportFromEPSG(self.epsgCode)
-            if self.inWKT is "":
+            if self.inWKT == "":
                 self.inWKT = inProj.ExportToWkt()
 
             self.projNameStr = ""

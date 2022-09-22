@@ -363,7 +363,7 @@ class ARCSIAbstractSensor(object):
         locDict["Geographical"] = locGeogDict
 
         locProjDict = dict()
-        if not validMaskImage is "":
+        if validMaskImage != "":
             if not footprintCalc:
                 rsgislib.rastergis.clumps_spatial_extent(
                     clumps_img=validMaskImage,

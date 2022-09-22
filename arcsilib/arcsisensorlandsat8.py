@@ -169,7 +169,7 @@ class ARCSILandsat8Sensor(ARCSIAbstractSensor):
         Understands and parses the Landsat MTL header files
         """
         try:
-            if not self.userSpInputImage is None:
+            if self.userSpInputImage is not None:
                 raise ARCSIException(
                     "Landsat sensor cannot accept a user specified image file - only the images in the header file will be used."
                 )
@@ -305,7 +305,7 @@ class ARCSILandsat8Sensor(ARCSIAbstractSensor):
                     "Expecting Landsat to be projected in UTM or PolarStereographic (PS) with datum=WGS84 and ellipsoid=WGS84."
                 )
 
-            if self.inWKT is "":
+            if self.inWKT == "":
                 self.inWKT = inProj.ExportToWkt()
 
             # Check image is square!
@@ -342,9 +342,14 @@ class ARCSILandsat8Sensor(ARCSIAbstractSensor):
             self.band9File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_9"])
             self.band10File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_10"])
             self.band11File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_11"])
-            self.bandQAFile = os.path.join(
-                filesDIR, headerParams["FILE_NAME_BAND_QUALITY"]
-            )
+            if "FILE_NAME_BAND_QUALITY" in headerParams:
+                self.bandQAFile = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_BAND_QUALITY"]
+                )
+            else:
+                self.bandQAFile = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_QUALITY_L1_PIXEL"]
+                    )
 
             self.b1RadMulti = rsgislib.tools.utils.str_to_float(
                 headerParams["RADIANCE_MULT_BAND_1"]
@@ -578,11 +583,16 @@ class ARCSILandsat8Sensor(ARCSIAbstractSensor):
             # Read MTL header into python dict for python-fmask
             self.fmaskMTLInfo = fmask.config.readMTLFile(inputHeader)
 
-            fileDateStr = headerParams["FILE_DATE"].strip()
+            if "FILE_DATE" in headerParams:
+                fileDateStr = headerParams["FILE_DATE"].strip()
+            else:
+                fileDateStr = headerParams["DATE_PRODUCT_GENERATED"].strip()
             fileDateStr = fileDateStr.replace("Z", "")
             self.fileDateObj = datetime.datetime.strptime(
                 fileDateStr, "%Y-%m-%dT%H:%M:%S"
             )
+
+
 
         except Exception as e:
             raise e

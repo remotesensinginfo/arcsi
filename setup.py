@@ -36,11 +36,11 @@ from distutils.core import setup
 import os
 
 setup(name='ARCSI',
-    version='3.9.3',
+    version='3.4.0',
     description='Atmospheric and Radiometric Correction of Satellite Imagery',
     author='Pete Bunting and Dan Clewley',
     author_email='pfb@aber.ac.uk, daniel.clewley@gmail.com',
-    scripts=['bin/arcsi.py', 'bin/arcsimpi.py', 'bin/arcsisolarirradiance.py', 'bin/arcsispecresponsefuncs.py', 'bin/arcsiextractdata.py', 'bin/arcsibuildcmdslist.py', 'bin/arcsisortlandsat.py', 'bin/arcsiextractroistats.py', 'bin/arcsiplotextractedstats.py', 'bin/arcsibuildextractfilecmds.py', 'bin/arcsibuildfilenameslu.py', 'bin/arcsifindnotprocessed.py', 'bin/arcsiremoveduplicates.py', 'bin/arcsicheckfilespresent.py', 'bin/arcsiarchivesnotextracted.py', 'bin/arcsicreatepy6scall.py', 'bin/arcsisplitsen2granules.py', 'bin/arcsisetupsen2db.py', 'bin/arcsigensen2downlst.py', 'bin/arcsisetuplandsatdb.py', 'bin/arcsigenlandsatdownlst.py', 'bin/arcsidwnldgoog.py', 'bin/arcsibuildmultifilelists.py', 'bin/arcsichecksen2ver.py', 'bin/arcsidwndem.py', 'bin/arcsifindlsscn.py'],
+    scripts=['bin/arcsi.py', 'bin/arcsimpi.py', 'bin/arcsiextractdata.py', 'bin/arcsibuildcmdslist.py', 'bin/arcsisortlandsat.py', 'bin/arcsibuildextractfilecmds.py', 'bin/arcsibuildfilenameslu.py', 'bin/arcsifindnotprocessed.py', 'bin/arcsiremoveduplicates.py', 'bin/arcsicheckfilespresent.py', 'bin/arcsiarchivesnotextracted.py', 'bin/arcsisetupsen2db.py', 'bin/arcsigensen2downlst.py', 'bin/arcsisetuplandsatdb.py', 'bin/arcsigenlandsatdownlst.py', 'bin/arcsidwnldgoog.py', 'bin/arcsibuildmultifilelists.py', 'bin/arcsifindlsscn.py'],
     packages=['arcsilib', 'arcsilib/s2cloudless'],
     package_dir={'arcsilib': 'arcsilib', 'arcsilib/s2cloudless': 'arcsilib/s2cloudless'},
     data_files=[(os.path.join('share','arcsi'),
@@ -53,9 +53,7 @@ setup(name='ARCSI',
                  'Intended Audience :: Remote Sensing Scientists',
                  'Intended Audience :: Atmospheric Scientists',
                  'Operating System :: OS Independent',
-                 'Programming Language :: Python :: 2',
-                 'Programming Language :: Python :: 2.7',
-                 'Programming Language :: Python :: 3',
-                 'Programming Language :: Python :: 3.6',
                  'Programming Language :: Python :: 3.7'
-                 'Programming Language :: Python :: 3.8'])
+                 'Programming Language :: Python :: 3.8'
+                 'Programming Language :: Python :: 3.9'
+                 'Programming Language :: Python :: 3.10'])
