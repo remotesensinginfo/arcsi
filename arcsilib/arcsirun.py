@@ -306,6 +306,14 @@ def prepParametersObj(
     )
     print("")
 
+    # Create a custom tmp directory for the scene.
+    if (paramsObj.tmpPath is not None) and (paramsObj.tmpPath != ""):
+        uidStr = rsgislib.tools.utils.uid_generator()
+        scnTmpPath = os.path.join(paramsObj.tmpPath, "{}_{}".format(paramsObj.sensorClass.generateOutputBaseName(), uidStr))
+        if os.path.exists(scnTmpPath):
+            os.mkdir(scnTmpPath)
+        paramsObj.tmpPath = scnTmpPath
+
     if not paramsObj.sensorClass.expectedImageDataPresent():
         raise ARCSIException(
             "Not all the expected input images are present as listed in the header file."

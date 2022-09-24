@@ -136,8 +136,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
             "--sensorlist",
             action="store_true",
             default=False,
-            help="""List the sensors which are supported
-                                    and the require names.""",
+            help="""List the sensors which are supported and the require names.""",
         )
         # Define the argument for specifying the file path of the output images.
         parser.add_argument(
@@ -149,7 +148,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
             "--tmpath",
             type=str,
             help="""Specify a tempory path for files to be written to temporarly 
-                                    during processing if required (DDVAOT, DOS and CLOUDS).""",
+                    during processing if required (DDVAOT, DOS and CLOUDS).""",
         )
         # Define the argument which specifies the products which are to be generated.
         parser.add_argument(
