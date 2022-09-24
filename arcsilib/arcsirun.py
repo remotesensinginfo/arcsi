@@ -40,6 +40,7 @@ import subprocess
 import os
 import copy
 import glob
+import shutil
 import arcsilib
 from arcsilib.arcsiexception import ARCSIException
 import arcsilib.arcsiutils
@@ -310,7 +311,7 @@ def prepParametersObj(
     if (paramsObj.tmpPath is not None) and (paramsObj.tmpPath != ""):
         uidStr = rsgislib.tools.utils.uid_generator()
         scnTmpPath = os.path.join(paramsObj.tmpPath, "{}_{}".format(paramsObj.sensorClass.generateOutputBaseName(), uidStr))
-        if os.path.exists(scnTmpPath):
+        if not os.path.exists(scnTmpPath):
             os.mkdir(scnTmpPath)
         paramsObj.tmpPath = scnTmpPath
 
@@ -2388,6 +2389,9 @@ def runARCSI(
         paramsObj.sensorClass.cleanFollowProcessing(
             paramsObj.outFilePath, paramsObj.fileEnding2Keep
         )
+        if not debugMode:
+            if (paramsObj.tmpPath is not None) and (paramsObj.tmpPath != ""):
+                shutil.rmtree(paramsObj.tmpPath)
 
     except ARCSIException as e:
         print("Input Header: '" + inputHeader + "'", file=sys.stderr)

@@ -702,7 +702,7 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
         scaleFactor,
         cloud_msk_methods=None,
     ):
-        raise ARCSIException("Cloud Masking Not Implemented for LS5 MSS.")
+        raise ARCSIException("Cloud Masking Not Implemented for LS MSS.")
 
     def createCloudMaskDataArray(self, inImgDataArr):
         # Calc Whiteness
