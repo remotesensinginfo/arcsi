@@ -69,6 +69,8 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
     def __init__(self, debugMode, inputImage):
         ARCSIAbstractSensor.__init__(self, debugMode, inputImage)
         self.sensor = "LS_MSS"
+        self.collection_num = 0
+
         self.band1File = ""
         self.band2File = ""
         self.band3File = ""
@@ -162,6 +164,13 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
 
             self.sensorID = headerParams["SENSOR_ID"]
             self.spacecraftID = headerParams["SPACECRAFT_ID"]
+
+            if headerParams["COLLECTION_NUMBER"] == "01":
+                self.collection_num = 1
+            elif headerParams["COLLECTION_NUMBER"] == "02":
+                self.collection_num = 2
+            else:
+                raise ARCSIException("Can only process collection 1 and 2 data: {}".format(headerParams["COLLECTION_NUMBER"]))
 
             # Get row/path
             try:

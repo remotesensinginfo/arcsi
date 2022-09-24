@@ -74,6 +74,8 @@ class ARCSILandsatOLISensor(ARCSIAbstractSensor):
     def __init__(self, debugMode, inputImage):
         ARCSIAbstractSensor.__init__(self, debugMode, inputImage)
         self.sensor = "LS_OLI"
+        self.collection_num = 0
+
         self.band1File = ""
         self.band2File = ""
         self.band3File = ""
@@ -209,6 +211,13 @@ class ARCSILandsatOLISensor(ARCSIAbstractSensor):
 
             self.sensorID = headerParams["SENSOR_ID"]
             self.spacecraftID = headerParams["SPACECRAFT_ID"]
+
+            if headerParams["COLLECTION_NUMBER"] == "01":
+                self.collection_num = 1
+            elif headerParams["COLLECTION_NUMBER"] == "02":
+                self.collection_num = 2
+            else:
+                raise ARCSIException("Can only process collection 1 and 2 data: {}".format(headerParams["COLLECTION_NUMBER"]))
 
             # Get row/path
             self.row = int(headerParams["WRS_ROW"])
@@ -1258,14 +1267,27 @@ class ARCSILandsatOLISensor(ARCSIAbstractSensor):
                         multicore=False,
                     )
 
-                exp = (
-                    "(b1==2800)||(b1==2804)||(b1==2808)||(b1==2812)||(b1==6896)||(b1==6900)||(b1==6904)||(b1==6908)?1:"
-                    "(b1==2976)||(b1==2980)||(b1==2984)||(b1==2988)||(b1==3008)||(b1==3012)||(b1==3016)||(b1==3020)||"
-                    "(b1==7072)||(b1==7076)||(b1==7080)||(b1==7084)||(b1==7104)||(b1==7108)||(b1==7112)||(b1==7116)?2:0"
-                )
-                rsgislib.imagecalc.image_math(
-                    bqa_img_file, outputImage, exp, outFormat, rsgislib.TYPE_8UINT
-                )
+                if self.collection_num == 1:
+                    exp = (
+                        "(b1==2800)||(b1==2804)||(b1==2808)||(b1==2812)||(b1==6896)||(b1==6900)||(b1==6904)||(b1==6908)?1:"
+                        "(b1==2976)||(b1==2980)||(b1==2984)||(b1==2988)||(b1==3008)||(b1==3012)||(b1==3016)||(b1==3020)||"
+                        "(b1==7072)||(b1==7076)||(b1==7080)||(b1==7084)||(b1==7104)||(b1==7108)||(b1==7112)||(b1==7116)?2:0"
+                    )
+                    rsgislib.imagecalc.image_math(
+                        bqa_img_file, outputImage, exp, outFormat, rsgislib.TYPE_8UINT
+                        )
+                elif self.collection_num == 2:
+                    import rsgislib.imagecalibration.sensorlvl2data
+                    c2_bqa_ind_img_file = os.path.join(tmpBaseDIR, tmpBaseName + "c2_qa_ind_bands.kea")
+                    rsgislib.imagecalibration.sensorlvl2data.parse_landsat_c2_qa_pixel_img(
+                        bqa_img_file, c2_bqa_ind_img_file, gdalformat = "KEA")
+                    band_defns = list()
+                    band_defns.append(rsgislib.imagecalc.BandDefn('DilatedCloud', c2_bqa_ind_img_file, 2))
+                    band_defns.append(rsgislib.imagecalc.BandDefn('Cloud', c2_bqa_ind_img_file, 4))
+                    band_defns.append(rsgislib.imagecalc.BandDefn('CloudShadow', c2_bqa_ind_img_file, 5))
+                    rsgislib.imagecalc.band_math(outputImage, '(DilatedCloud == 1)||(Cloud == 1)?1:(CloudShadow == 1)?2:0', 'KEA', rsgislib.TYPE_8UINT, band_defns)
+                else:
+                    raise ARCSIException("Can only read Collection 1 and 2 cloud masks.")
 
             else:
                 raise ARCSIException(
