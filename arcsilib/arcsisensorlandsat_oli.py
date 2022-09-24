@@ -197,6 +197,11 @@ class ARCSILandsatOLISensor(ARCSIAbstractSensor):
                 or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT8")
             ) and (headerParams["SENSOR_ID"].upper() == "OLI_TIRS"):
                 self.sensor = "LS8"
+            elif (
+                (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT_9")
+                or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT9")
+            ) and (headerParams["SENSOR_ID"].upper() == "OLI_TIRS"):
+                self.sensor = "LS9"
             else:
                 raise ARCSIException(
                     "Do no recognise the spacecraft and sensor or combination."

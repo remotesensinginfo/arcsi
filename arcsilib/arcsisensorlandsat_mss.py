@@ -135,6 +135,26 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
                 or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT5")
             ) and (headerParams["SENSOR_ID"].upper() == "MSS"):
                 self.sensor = "LS5MSS"
+            elif (
+                (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT_4")
+                or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT4")
+            ) and (headerParams["SENSOR_ID"].upper() == "MSS"):
+                self.sensor = "LS4MSS"
+            elif (
+                (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT_3")
+                or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT3")
+            ) and (headerParams["SENSOR_ID"].upper() == "MSS"):
+                self.sensor = "LS3MSS"
+            elif (
+                (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT_2")
+                or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT2")
+            ) and (headerParams["SENSOR_ID"].upper() == "MSS"):
+                self.sensor = "LS2MSS"
+            elif (
+                (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT_1")
+                or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT1")
+            ) and (headerParams["SENSOR_ID"].upper() == "MSS"):
+                self.sensor = "LS1MSS"
             else:
                 raise ARCSIException(
                     "Do no recognise the spacecraft and sensor or combination."
@@ -272,59 +292,59 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
 
             filesDIR = os.path.dirname(inputHeader)
 
-            self.band1File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_1"])
-            self.band2File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_2"])
-            self.band3File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_3"])
-            self.band4File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_4"])
+            self.band1File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_4"])
+            self.band2File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_5"])
+            self.band3File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_6"])
+            self.band4File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_7"])
 
             self.b1CalMin = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MIN_BAND_1"], 1.0
-            )
-            self.b1CalMax = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MAX_BAND_1"], 255.0
-            )
-            self.b2CalMin = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MIN_BAND_2"], 1.0
-            )
-            self.b2CalMax = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MAX_BAND_2"], 255.0
-            )
-            self.b3CalMin = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MIN_BAND_3"], 1.0
-            )
-            self.b3CalMax = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MAX_BAND_3"], 255.0
-            )
-            self.b4CalMin = rsgislib.tools.utils.str_to_float(
                 headerParams["QUANTIZE_CAL_MIN_BAND_4"], 1.0
             )
-            self.b4CalMax = rsgislib.tools.utils.str_to_float(
+            self.b1CalMax = rsgislib.tools.utils.str_to_float(
                 headerParams["QUANTIZE_CAL_MAX_BAND_4"], 255.0
+            )
+            self.b2CalMin = rsgislib.tools.utils.str_to_float(
+                headerParams["QUANTIZE_CAL_MIN_BAND_5"], 1.0
+            )
+            self.b2CalMax = rsgislib.tools.utils.str_to_float(
+                headerParams["QUANTIZE_CAL_MAX_BAND_5"], 255.0
+            )
+            self.b3CalMin = rsgislib.tools.utils.str_to_float(
+                headerParams["QUANTIZE_CAL_MIN_BAND_6"], 1.0
+            )
+            self.b3CalMax = rsgislib.tools.utils.str_to_float(
+                headerParams["QUANTIZE_CAL_MAX_BAND_6"], 255.0
+            )
+            self.b4CalMin = rsgislib.tools.utils.str_to_float(
+                headerParams["QUANTIZE_CAL_MIN_BAND_7"], 1.0
+            )
+            self.b4CalMax = rsgislib.tools.utils.str_to_float(
+                headerParams["QUANTIZE_CAL_MAX_BAND_7"], 255.0
             )
 
             self.b1MinRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MINIMUM_BAND_1"], 2.500
+                headerParams["RADIANCE_MINIMUM_BAND_4"], 2.500
             )
             self.b1MaxRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MAXIMUM_BAND_1"], 220.800
+                headerParams["RADIANCE_MAXIMUM_BAND_4"], 220.800
             )
             self.b2MinRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MINIMUM_BAND_2"], 2.700
+                headerParams["RADIANCE_MINIMUM_BAND_5"], 2.700
             )
             self.b2MaxRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MAXIMUM_BAND_2"], 163.600
+                headerParams["RADIANCE_MAXIMUM_BAND_5"], 163.600
             )
             self.b3MinRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MINIMUM_BAND_3"], 4.700
+                headerParams["RADIANCE_MINIMUM_BAND_6"], 4.700
             )
             self.b3MaxRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MAXIMUM_BAND_3"], 140.300
+                headerParams["RADIANCE_MAXIMUM_BAND_6"], 140.300
             )
             self.b4MinRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MINIMUM_BAND_4"], 2.900
+                headerParams["RADIANCE_MINIMUM_BAND_7"], 2.900
             )
             self.b4MaxRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MAXIMUM_BAND_4"], 117.500
+                headerParams["RADIANCE_MAXIMUM_BAND_7"], 117.500
             )
 
             if "CLOUD_COVER" in headerParams:
@@ -344,7 +364,10 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
                     headerParams["GRID_CELL_SIZE_REFLECTIVE"], 60.0
                 )
 
-            fileDateStr = headerParams["FILE_DATE"].strip()
+            if "FILE_DATE" in headerParams:
+                fileDateStr = headerParams["FILE_DATE"].strip()
+            else:
+                fileDateStr = headerParams["DATE_PRODUCT_GENERATED"].strip()
             fileDateStr = fileDateStr.replace("Z", "")
             self.fileDateObj = datetime.datetime.strptime(
                 fileDateStr, "%Y-%m-%dT%H:%M:%S"

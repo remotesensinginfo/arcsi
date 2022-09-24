@@ -157,6 +157,11 @@ class ARCSILandsatTMSensor(ARCSIAbstractSensor):
                 or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT5")
             ) and (headerParams["SENSOR_ID"].upper() == "TM"):
                 self.sensor = "LS5TM"
+            elif (
+                (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT_4")
+                or (headerParams["SPACECRAFT_ID"].upper() == "LANDSAT4")
+            ) and (headerParams["SENSOR_ID"].upper() == "TM"):
+                self.sensor = "LS4TM"
             else:
                 raise ARCSIException(
                     "Do no recognise the spacecraft and sensor or combination."
@@ -420,7 +425,10 @@ class ARCSILandsatTMSensor(ARCSIAbstractSensor):
                     headerParams["GRID_CELL_SIZE_THERMAL"], 30.0
                 )
 
-            fileDateStr = headerParams["FILE_DATE"].strip()
+            if "FILE_DATE" in headerParams:
+                fileDateStr = headerParams["FILE_DATE"].strip()
+            else:
+                fileDateStr = headerParams["DATE_PRODUCT_GENERATED"].strip()
             fileDateStr = fileDateStr.replace("Z", "")
             self.fileDateObj = datetime.datetime.strptime(
                 fileDateStr, "%Y-%m-%dT%H:%M:%S"
