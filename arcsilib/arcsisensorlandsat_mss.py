@@ -1,5 +1,5 @@
 """
-Module that contains the ARCSILandsat5MSSSensor class.
+Module that contains the ARCSILandsatMSSSensor class.
 """
 ############################################################################
 #  arcsisensorlandsat.py
@@ -60,7 +60,7 @@ import numpy
 import json
 
 
-class ARCSILandsat5MSSSensor(ARCSIAbstractSensor):
+class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
     """
     A class which represents the landsat 5 MSS sensor to read
     header parameters and apply data processing operations.
@@ -68,7 +68,7 @@ class ARCSILandsat5MSSSensor(ARCSIAbstractSensor):
 
     def __init__(self, debugMode, inputImage):
         ARCSIAbstractSensor.__init__(self, debugMode, inputImage)
-        self.sensor = "LS5MSS"
+        self.sensor = "LS_MSS"
         self.band1File = ""
         self.band2File = ""
         self.band3File = ""

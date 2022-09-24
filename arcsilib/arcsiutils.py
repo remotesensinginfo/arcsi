@@ -304,42 +304,22 @@ class ARCSILandsatMetaUtils(object):
 class ARCSISensorFactory(object):
     def getSensorClassFromName(self, sensor, debugMode, inputImage):
         sensorClass = None
-        if sensor == "ls7":
-            from arcsilib.arcsisensorlandsat7 import ARCSILandsat7Sensor
+        if sensor == "lsetm":
+            from arcsilib.arcsisensorlandsat_etm import ARCSILandsatETMSensor
 
-            sensorClass = ARCSILandsat7Sensor(debugMode, inputImage)
-        elif sensor == "ls5tm":
-            from arcsilib.arcsisensorlandsat5tm import ARCSILandsat5TMSensor
+            sensorClass = ARCSILandsatETMSensor(debugMode, inputImage)
+        elif sensor == "lstm":
+            from arcsilib.arcsisensorlandsat_tm import ARCSILandsatTMSensor
 
-            sensorClass = ARCSILandsat5TMSensor(debugMode, inputImage)
-        elif sensor == "ls4tm":
-            from arcsilib.arcsisensorlandsat4tm import ARCSILandsat4TMSensor
+            sensorClass = ARCSILandsatTMSensor(debugMode, inputImage)
+        elif sensor == "lsmss":
+            from arcsilib.arcsisensorlandsat_mss import ARCSILandsatMSSSensor
 
-            sensorClass = ARCSILandsat4TMSensor(debugMode, inputImage)
-        elif sensor == "ls5mss":
-            from arcsilib.arcsisensorlandsat5mss import ARCSILandsat5MSSSensor
+            sensorClass = ARCSILandsatMSSSensor(debugMode, inputImage)
+        elif sensor == "lsoli":
+            from arcsilib.arcsisensorlandsat_oli import ARCSILandsatOLISensor
 
-            sensorClass = ARCSILandsat5MSSSensor(debugMode, inputImage)
-        elif sensor == "ls4mss":
-            from arcsilib.arcsisensorlandsat4mss import ARCSILandsat4MSSSensor
-
-            sensorClass = ARCSILandsat4MSSSensor(debugMode, inputImage)
-        elif sensor == "ls3":
-            from arcsilib.arcsisensorlandsat3mss import ARCSILandsat3MSSSensor
-
-            sensorClass = ARCSILandsat3MSSSensor(debugMode, inputImage)
-        elif sensor == "ls2":
-            from arcsilib.arcsisensorlandsat2mss import ARCSILandsat2MSSSensor
-
-            sensorClass = ARCSILandsat2MSSSensor(debugMode, inputImage)
-        elif sensor == "ls1":
-            from arcsilib.arcsisensorlandsat1mss import ARCSILandsat1MSSSensor
-
-            sensorClass = ARCSILandsat1MSSSensor(debugMode, inputImage)
-        elif sensor == "ls8":
-            from arcsilib.arcsisensorlandsat8 import ARCSILandsat8Sensor
-
-            sensorClass = ARCSILandsat8Sensor(debugMode, inputImage)
+            sensorClass = ARCSILandsatOLISensor(debugMode, inputImage)
         elif sensor == "sen2":
             from arcsilib.arcsisensorsentinel2 import ARCSISentinel2Sensor
 

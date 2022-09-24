@@ -28,15 +28,10 @@ ARCSI_SUPPORT_EMAIL = "rsgislib-support@googlegroups.com"
 ARCSI_WEBSITE = "http://www.rsgislib.org/arcsi"
 
 ARCSI_SENSORS_LIST = [
-    "ls1",
-    "ls2",
-    "ls3",
-    "ls4mss",
-    "ls4tm",
-    "ls5mss",
-    "ls5tm",
-    "ls7",
-    "ls8",
+    "lsmss",
+    "lstm",
+    "lsetm",
+    "lsoli",
     "sen2"
 ]
 ARCSI_PRODUCTS_LIST = [
