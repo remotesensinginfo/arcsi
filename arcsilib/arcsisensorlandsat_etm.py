@@ -326,14 +326,17 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
             self.band5File = os.path.join(filesDIR, metaFilenames[4])
             self.band7File = os.path.join(filesDIR, metaFilenames[6])
             self.bandPanFile = os.path.join(filesDIR, metaFilenames[7])
-            try:
+
+            if "FILE_NAME_BAND_QUALITY" in headerParams:
                 self.bandQAFile = os.path.join(
                     filesDIR, headerParams["FILE_NAME_BAND_QUALITY"]
-                )
-            except KeyError:
-                print(
-                    "Warning - the quality band is not available. Are you using collection 1 data?"
-                )
+                    )
+            elif "FILE_NAME_QUALITY_L1_PIXEL" in headerParams:
+                self.bandQAFile = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_QUALITY_L1_PIXEL"]
+                    )
+            else:
+                print("Warning - the quality band is not available. Are you using collection 1 or 2 data?")
                 self.bandQAFile = ""
 
             try:
@@ -1114,8 +1117,8 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
         scaleFactor,
         cloud_msk_methods=None,
     ):
+        import rsgislib.imageutils
         try:
-
             outputImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
             tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)

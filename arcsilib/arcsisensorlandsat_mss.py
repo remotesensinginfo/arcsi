@@ -306,6 +306,18 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
             self.band3File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_6"])
             self.band4File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_7"])
 
+            if "FILE_NAME_BAND_QUALITY" in headerParams:
+                self.bandQAFile = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_BAND_QUALITY"]
+                    )
+            elif "FILE_NAME_QUALITY_L1_PIXEL" in headerParams:
+                self.bandQAFile = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_QUALITY_L1_PIXEL"]
+                    )
+            else:
+                print("Warning - the quality band is not available. Are you using collection 1 or 2 data?")
+                self.bandQAFile = ""
+
             self.b1CalMin = rsgislib.tools.utils.str_to_float(
                 headerParams["QUANTIZE_CAL_MIN_BAND_4"], 1.0
             )

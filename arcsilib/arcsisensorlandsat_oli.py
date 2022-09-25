@@ -356,14 +356,18 @@ class ARCSILandsatOLISensor(ARCSIAbstractSensor):
             self.band9File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_9"])
             self.band10File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_10"])
             self.band11File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_11"])
+
             if "FILE_NAME_BAND_QUALITY" in headerParams:
                 self.bandQAFile = os.path.join(
                     filesDIR, headerParams["FILE_NAME_BAND_QUALITY"]
-                )
-            else:
+                    )
+            elif "FILE_NAME_QUALITY_L1_PIXEL" in headerParams:
                 self.bandQAFile = os.path.join(
                     filesDIR, headerParams["FILE_NAME_QUALITY_L1_PIXEL"]
                     )
+            else:
+                print("Warning - the quality band is not available. Are you using collection 1 or 2 data?")
+                self.bandQAFile = ""
 
             self.b1RadMulti = rsgislib.tools.utils.str_to_float(
                 headerParams["RADIANCE_MULT_BAND_1"]
@@ -1085,11 +1089,10 @@ class ARCSILandsatOLISensor(ARCSIAbstractSensor):
         scaleFactor,
         cloud_msk_methods=None,
     ):
+        import rsgislib.imageutils
         try:
-
             outputImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
-            imgExtension = rsgislib.imageutils.get_file_img_extension(outFormat)
             tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
 
             tmpDIRExisted = True
