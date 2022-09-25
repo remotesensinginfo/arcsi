@@ -171,7 +171,7 @@ class ARCSIParamsObj(object):
         aotLUT = False
         fileEnding2Keep = None
         cloud_methods = None
-
+        flat_out_dir = False
 
 def prepParametersObj(
     inputHeader,
@@ -229,6 +229,7 @@ def prepParametersObj(
     resample2LowResImg,
     fileEnding2Keep,
     cloud_methods,
+    flat_out_dir,
 ):
     """ """
     paramsObj = ARCSIParamsObj()
@@ -288,6 +289,7 @@ def prepParametersObj(
     paramsObj.resample2LowResImg = resample2LowResImg
     paramsObj.fileEnding2Keep = fileEnding2Keep
     paramsObj.cloud_methods = cloud_methods
+    paramsObj.flat_out_dir = flat_out_dir
 
     # Read WKT file if provided.
     paramsObj.wktStr = None
@@ -306,6 +308,12 @@ def prepParametersObj(
         paramsObj.inputHeader, paramsObj.wktStr
     )
     print("")
+
+    if not paramsObj.flat_out_dir:
+        scnOutPath = os.path.join(paramsObj.outFilePath, "{}".format(paramsObj.sensorClass.generateOutputBaseName()))
+        if not os.path.exists(scnOutPath):
+            os.mkdir(scnOutPath)
+        paramsObj.outFilePath = scnOutPath
 
     # Create a custom tmp directory for the scene.
     if (paramsObj.tmpPath is not None) and (paramsObj.tmpPath != ""):
@@ -2221,6 +2229,7 @@ def runARCSI(
     resample2LowResImg,
     fileEnding2Keep,
     cloud_methods,
+    flat_out_dir,
 ):
     """
     A function contains the main flow of the software
@@ -2284,6 +2293,7 @@ def runARCSI(
             resample2LowResImg,
             fileEnding2Keep,
             cloud_methods,
+            flat_out_dir,
         )
 
         # Check Input image(s) is valid before proceeding.
@@ -2628,6 +2638,7 @@ def runARCSIMulti(
     ncores,
     fileEnding2Keep,
     cloud_methods,
+    flat_out_dir,
 ):
     """
     A function contains the main flow of the software
@@ -2701,6 +2712,7 @@ def runARCSIMulti(
                 resample2LowResImg,
                 fileEnding2Keep,
                 cloud_methods,
+                flat_out_dir,
             )
             paramsLst.append(paramsObj)
             if first:

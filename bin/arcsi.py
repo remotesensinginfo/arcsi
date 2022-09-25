@@ -579,6 +579,14 @@ don't currently support the sensor you require.""",
         help="""Provide a list of file endings which are to be kept following the completion of the processing.""",
     )
 
+    parser.add_argument(
+        "--flatoutdir",
+        action="store_true",
+        default=False,
+        help="""Do not create output directory for this image, 
+                just output into the specified output directory""",
+        )
+
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
@@ -914,6 +922,7 @@ don't currently support the sensor you require.""",
                 args.ncores,
                 args.keepfileends,
                 args.cloudmethods,
+                args.flatoutdir
             )
         else:
             arcsilib.arcsirun.runARCSI(
@@ -972,6 +981,7 @@ don't currently support the sensor you require.""",
                 args.resample2lowres,
                 args.keepfileends,
                 args.cloudmethods,
+                args.flatoutdir,
             )
 
         runTimer.end(
