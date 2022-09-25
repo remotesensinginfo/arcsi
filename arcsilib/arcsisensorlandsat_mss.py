@@ -297,14 +297,118 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
                 inProj, self.xCentre, self.yCentre
             )
 
-            # print("Lat: " + str(self.latCentre) + " Long: " + str(self.lonCentre))
-
             filesDIR = os.path.dirname(inputHeader)
 
-            self.band1File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_4"])
-            self.band2File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_5"])
-            self.band3File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_6"])
-            self.band4File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_7"])
+            if "FILE_NAME_BAND_7" in headerParams:
+                self.band1File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_4"])
+                self.band2File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_5"])
+                self.band3File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_6"])
+                self.band4File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_7"])
+
+                self.b1CalMin = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MIN_BAND_4"], 1.0
+                    )
+                self.b1CalMax = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MAX_BAND_4"], 255.0
+                    )
+                self.b2CalMin = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MIN_BAND_5"], 1.0
+                    )
+                self.b2CalMax = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MAX_BAND_5"], 255.0
+                    )
+                self.b3CalMin = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MIN_BAND_6"], 1.0
+                    )
+                self.b3CalMax = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MAX_BAND_6"], 255.0
+                    )
+                self.b4CalMin = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MIN_BAND_7"], 1.0
+                    )
+                self.b4CalMax = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MAX_BAND_7"], 255.0
+                    )
+
+                self.b1MinRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MINIMUM_BAND_4"], 2.500
+                    )
+                self.b1MaxRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MAXIMUM_BAND_4"], 220.800
+                    )
+                self.b2MinRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MINIMUM_BAND_5"], 2.700
+                    )
+                self.b2MaxRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MAXIMUM_BAND_5"], 163.600
+                    )
+                self.b3MinRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MINIMUM_BAND_6"], 4.700
+                    )
+                self.b3MaxRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MAXIMUM_BAND_6"], 140.300
+                    )
+                self.b4MinRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MINIMUM_BAND_7"], 2.900
+                    )
+                self.b4MaxRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MAXIMUM_BAND_7"], 117.500
+                    )
+            else:
+                self.band1File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_1"])
+                self.band2File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_2"])
+                self.band3File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_3"])
+                self.band4File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_4"])
+
+                self.b1CalMin = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MIN_BAND_1"], 1.0
+                    )
+                self.b1CalMax = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MAX_BAND_1"], 255.0
+                    )
+                self.b2CalMin = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MIN_BAND_2"], 1.0
+                    )
+                self.b2CalMax = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MAX_BAND_2"], 255.0
+                    )
+                self.b3CalMin = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MIN_BAND_3"], 1.0
+                    )
+                self.b3CalMax = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MAX_BAND_3"], 255.0
+                    )
+                self.b4CalMin = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MIN_BAND_4"], 1.0
+                    )
+                self.b4CalMax = rsgislib.tools.utils.str_to_float(
+                    headerParams["QUANTIZE_CAL_MAX_BAND_4"], 255.0
+                    )
+
+                self.b1MinRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MINIMUM_BAND_1"], 2.500
+                    )
+                self.b1MaxRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MAXIMUM_BAND_1"], 220.800
+                    )
+                self.b2MinRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MINIMUM_BAND_2"], 2.700
+                    )
+                self.b2MaxRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MAXIMUM_BAND_2"], 163.600
+                    )
+                self.b3MinRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MINIMUM_BAND_3"], 4.700
+                    )
+                self.b3MaxRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MAXIMUM_BAND_3"], 140.300
+                    )
+                self.b4MinRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MINIMUM_BAND_4"], 2.900
+                    )
+                self.b4MaxRad = rsgislib.tools.utils.str_to_float(
+                    headerParams["RADIANCE_MAXIMUM_BAND_4"], 117.500
+                    )
 
             if "FILE_NAME_BAND_QUALITY" in headerParams:
                 self.bandQAFile = os.path.join(
@@ -317,56 +421,6 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
             else:
                 print("Warning - the quality band is not available. Are you using collection 1 or 2 data?")
                 self.bandQAFile = ""
-
-            self.b1CalMin = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MIN_BAND_4"], 1.0
-            )
-            self.b1CalMax = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MAX_BAND_4"], 255.0
-            )
-            self.b2CalMin = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MIN_BAND_5"], 1.0
-            )
-            self.b2CalMax = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MAX_BAND_5"], 255.0
-            )
-            self.b3CalMin = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MIN_BAND_6"], 1.0
-            )
-            self.b3CalMax = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MAX_BAND_6"], 255.0
-            )
-            self.b4CalMin = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MIN_BAND_7"], 1.0
-            )
-            self.b4CalMax = rsgislib.tools.utils.str_to_float(
-                headerParams["QUANTIZE_CAL_MAX_BAND_7"], 255.0
-            )
-
-            self.b1MinRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MINIMUM_BAND_4"], 2.500
-            )
-            self.b1MaxRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MAXIMUM_BAND_4"], 220.800
-            )
-            self.b2MinRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MINIMUM_BAND_5"], 2.700
-            )
-            self.b2MaxRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MAXIMUM_BAND_5"], 163.600
-            )
-            self.b3MinRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MINIMUM_BAND_6"], 4.700
-            )
-            self.b3MaxRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MAXIMUM_BAND_6"], 140.300
-            )
-            self.b4MinRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MINIMUM_BAND_7"], 2.900
-            )
-            self.b4MaxRad = rsgislib.tools.utils.str_to_float(
-                headerParams["RADIANCE_MAXIMUM_BAND_7"], 117.500
-            )
 
             if "CLOUD_COVER" in headerParams:
                 self.cloudCover = rsgislib.tools.utils.str_to_float(
