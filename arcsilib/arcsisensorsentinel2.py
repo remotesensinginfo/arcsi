@@ -4048,8 +4048,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         return outDist
 
     def findDDVTargets(self, inputTOAImage, outputPath, outputName, outFormat, tmpPath):
-        print("Not implemented\n")
-        sys.exit()
+        raise ARCSIException("Not Implemented")
 
     def estimateImageToAODUsingDDV(
         self,
@@ -4067,8 +4066,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         aotValMin,
         aotValMax,
     ):
-        print("Not implemented\n")
-        sys.exit()
+        raise ARCSIException("Not Implemented")
 
     def estimateImageToAODUsingDOS(
         self,

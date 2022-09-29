@@ -983,7 +983,7 @@ class ARCSIAbstractSensor(object):
             tmpBaseName = os.path.splitext(outputName)[0]
             imgExtension = rsgislib.imageutils.get_file_img_extension(outFormat)
             outputTmpFile = os.path.join(
-                tmpPath, tmpBaseName + "_toposhadow_tmp" + imgExtension
+                tmpPath, tmpBaseName + "_toposhadow_tmp." + imgExtension
             )
 
             demDataset = gdal.Open(inputDEMImage, gdal.GA_ReadOnly)
@@ -1061,7 +1061,6 @@ class ARCSIAbstractSensor(object):
         try:
             outputImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
-            imgExtension = rsgislib.imageutils.get_file_img_extension(outFormat)
             tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
 
             tmpDIRExisted = True
@@ -1273,28 +1272,28 @@ class ARCSIAbstractSensor(object):
 
             # Derive layers from DEM
             incidAngleImg = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_incidangle" + imgExtension
+                tmpBaseDIR, tmpBaseName + "_incidangle." + imgExtension
             )
             rsgislib.elevation.local_incidence_angle(
                 inputDEMFile, incidAngleImg, solarAz, solarZen, outFormat
             )
 
             existAngleImg = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_existangle" + imgExtension
+                tmpBaseDIR, tmpBaseName + "_existangle." + imgExtension
             )
             rsgislib.elevation.local_existance_angle(
                 inputDEMFile, existAngleImg, viewAz, viewZen, outFormat
             )
 
-            slopeImg = os.path.join(tmpBaseDIR, tmpBaseName + "_slope" + imgExtension)
+            slopeImg = os.path.join(tmpBaseDIR, tmpBaseName + "_slope." + imgExtension)
             rsgislib.elevation.slope(inputDEMFile, slopeImg, "degrees", outFormat)
 
             # Derive the valid area mask
             validMaskSREF = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_validMask" + imgExtension
+                tmpBaseDIR, tmpBaseName + "_validMask." + imgExtension
             )
             validMaskSREFWhole = os.path.join(
-                tmpBaseDIR, tmpWholeBaseName + "_validMask" + imgExtension
+                tmpBaseDIR, tmpWholeBaseName + "_validMask." + imgExtension
             )
             if inputSREFWholeImage is not None:
                 rsgislib.imageutils.gen_valid_mask(
@@ -1306,10 +1305,10 @@ class ARCSIAbstractSensor(object):
 
             # Calculate the solar irradiance
             solarIrradianceImg = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_solarirr" + imgExtension
+                tmpBaseDIR, tmpBaseName + "_solarirr." + imgExtension
             )
             solarIrradianceWholeImg = os.path.join(
-                tmpBaseDIR, tmpWholeBaseName + "_solarirr" + imgExtension
+                tmpBaseDIR, tmpWholeBaseName + "_solarirr." + imgExtension
             )
             if aotLUT:
                 raise ARCSIException(
@@ -1530,22 +1529,22 @@ class ARCSIAbstractSensor(object):
             bandDarkTargetOffsetImages = list()
             imgExtension = rsgislib.imageutils.get_file_img_extension(outFormat)
             tmpDarkPxlsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkpxls" + imgExtension
+                tmpPath, tmpBaseName + "_darkpxls." + imgExtension
             )
             tmpDarkPxlsClumpsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkclumps" + imgExtension
+                tmpPath, tmpBaseName + "_darkclumps." + imgExtension
             )
             tmpDarkPxlsClumpsRMSmallImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension
+                tmpPath, tmpBaseName + "_darkclumpsrmsmall." + imgExtension
             )
             tmpDarkObjsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkobjs" + imgExtension
+                tmpPath, tmpBaseName + "_darkobjs." + imgExtension
             )
 
             for band in range(numBands):
                 offsetImage = os.path.join(
                     tmpPath,
-                    tmpBaseName + "_darktargetoffs_b" + str(band + 1) + imgExtension,
+                    f"{tmpBaseName}_darktargetoffs_b{band + 1}.{imgExtension}",
                 )
                 self.calcDarkTargetOffsetsForBand(
                     inputTOAImage,
@@ -1563,7 +1562,7 @@ class ARCSIAbstractSensor(object):
                 bandDarkTargetOffsetImages.append(offsetImage)
 
             outputImage = os.path.join(
-                outputPath, tmpBaseName + "_dosuboffs" + imgExtension
+                outputPath, tmpBaseName + "_dosuboffs." + imgExtension
             )
             print(outputImage)
             rsgislib.imageutils.stack_img_bands(
@@ -1608,20 +1607,20 @@ class ARCSIAbstractSensor(object):
 
             imgExtension = rsgislib.imageutils.get_file_img_extension(outFormat)
             tmpDarkPxlsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkpxls" + imgExtension
+                tmpPath, tmpBaseName + "_darkpxls." + imgExtension
             )
             tmpDarkPxlsClumpsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkclumps" + imgExtension
+                tmpPath, tmpBaseName + "_darkclumps." + imgExtension
             )
             tmpDarkPxlsClumpsRMSmallImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension
+                tmpPath, tmpBaseName + "_darkclumpsrmsmall." + imgExtension
             )
             tmpDarkObjsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkobjs" + imgExtension
+                tmpPath, tmpBaseName + "_darkobjs." + imgExtension
             )
 
             offsetImage = os.path.join(
-                outputPath, tmpBaseName + "_darktargetoffs_b" + str(band) + imgExtension
+                outputPath, f"{tmpBaseName}_darktargetoffs_b{band}.{imgExtension}"
             )
             self.calcDarkTargetOffsetsForBand(
                 inputTOAImage,
@@ -1637,7 +1636,7 @@ class ARCSIAbstractSensor(object):
                 tmpDarkObjsImg,
             )
 
-            outputName = tmpBaseName + "DOS" + bandName + imgExtension
+            outputName = f"{tmpBaseName}DOS{bandName}.{imgExtension}"
             outputImage = os.path.join(outputPath, outputName)
             print(outputImage)
 
@@ -1684,19 +1683,19 @@ class ARCSIAbstractSensor(object):
             bandDarkTargetOffsetImages = list()
             imgExtension = rsgislib.imageutils.get_file_img_extension(outFormat)
             tmpDarkTargetAllImage = os.path.join(
-                tmpPath, tmpBaseName + "_darkpxls_allbands" + imgExtension
+                tmpPath, tmpBaseName + "_darkpxls_allbands." + imgExtension
             )
             tmpDarkPxlsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkpxls" + imgExtension
+                tmpPath, tmpBaseName + "_darkpxls." + imgExtension
             )
             tmpDarkPxlsClumpsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkclumps" + imgExtension
+                tmpPath, tmpBaseName + "_darkclumps." + imgExtension
             )
             tmpDarkPxlsClumpsRMSmallImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension
+                tmpPath, tmpBaseName + "_darkclumpsrmsmall." + imgExtension
             )
             tmpDarkObjsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkobjs" + imgExtension
+                tmpPath, tmpBaseName + "_darkobjs." + imgExtension
             )
 
             binWidth = 1
@@ -1764,7 +1763,7 @@ class ARCSIAbstractSensor(object):
             print("Interpolating the offset image...")
 
             offsetImage = os.path.join(
-                tmpPath, tmpBaseName + "_darktargetoffs_b" + str(band) + imgExtension
+                tmpPath, f"{tmpBaseName}_darktargetoffs_b{band}.{imgExtension}"
             )
 
             ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
@@ -1791,7 +1790,7 @@ class ARCSIAbstractSensor(object):
                 0.0,
             )
 
-            outputName = tmpBaseName + "DOS" + bandName + imgExtension
+            outputName = f"{tmpBaseName}DOS{bandName}.{imgExtension}"
             outputImage = os.path.join(outputPath, outputName)
             print(outputImage)
 
@@ -1900,19 +1899,19 @@ class ARCSIAbstractSensor(object):
             bandDarkTargetOffsetImages = list()
             imgExtension = rsgislib.imageutils.get_file_img_extension(outFormat)
             tmpDarkTargetAllImage = os.path.join(
-                tmpPath, tmpBaseName + "_darkpxls_allbands" + imgExtension
+                tmpPath, tmpBaseName + "_darkpxls_allbands." + imgExtension
             )
             tmpDarkPxlsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkpxls" + imgExtension
+                tmpPath, tmpBaseName + "_darkpxls." + imgExtension
             )
             tmpDarkPxlsClumpsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkclumps" + imgExtension
+                tmpPath, tmpBaseName + "_darkclumps." + imgExtension
             )
             tmpDarkPxlsClumpsRMSmallImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkclumpsrmsmall" + imgExtension
+                tmpPath, tmpBaseName + "_darkclumpsrmsmall." + imgExtension
             )
             tmpDarkObjsImg = os.path.join(
-                tmpPath, tmpBaseName + "_darkobjs" + imgExtension
+                tmpPath, tmpBaseName + "_darkobjs." + imgExtension
             )
 
             self.findDOSLocalDarkTargets(
@@ -1986,7 +1985,7 @@ class ARCSIAbstractSensor(object):
 
                 offsetImage = os.path.join(
                     tmpPath,
-                    tmpBaseName + "_darktargetoffs_b" + str(band + 1) + imgExtension,
+                    f"{tmpBaseName}_darktargetoffs_b{band + 1}.{imgExtension}",
                 )
 
                 ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
@@ -2016,7 +2015,7 @@ class ARCSIAbstractSensor(object):
                 bandDarkTargetOffsetImages.append(offsetImage)
 
             outputImage = os.path.join(
-                outputPath, tmpBaseName + "_dosuboffs" + imgExtension
+                outputPath, tmpBaseName + "_dosuboffs." + imgExtension
             )
             print(outputImage)
             rsgislib.imageutils.stack_img_bands(
@@ -2198,11 +2197,12 @@ class ARCSIAbstractSensor(object):
             # Using a simple DOS find RAD and SREF a value from within the image.
             radVal = 0.0
             srefVal = 0.0
+            imgExtension = rsgislib.imageutils.get_file_img_extension(outFormat)
 
             dosBandFileName = (
                 outputName
-                + "_simbanddos"
-                + rsgislib.imageutils.get_file_img_extension(outFormat)
+                + "_simbanddos."
+                + imgExtension
             )
             dosBandFile, bandOff = self.convertImageBandToReflectanceSimpleDarkSubtract(
                 toaImage, tmpPath, dosBandFileName, outFormat, dosOutRefl, imgBand
@@ -2211,8 +2211,8 @@ class ARCSIAbstractSensor(object):
             darkROIMask = os.path.join(
                 tmpPath,
                 outputName
-                + "_darkROIMask"
-                + rsgislib.imageutils.get_file_img_extension(outFormat),
+                + "_darkROIMask."
+                + imgExtension,
             )
             expression = "((b1 != 0) && (b1 < " + str(dosOutRefl + 5) + "))?1.0:0.0"
             bandDefns = []
@@ -2224,8 +2224,8 @@ class ARCSIAbstractSensor(object):
             darkROIMaskClumps = os.path.join(
                 tmpPath,
                 outputName
-                + "_darkROIMaskClumps"
-                + rsgislib.imageutils.get_file_img_extension(outFormat),
+                + "_darkROIMaskClumps."
+                + imgExtension,
             )
             rsgislib.segmentation.clump(
                 darkROIMask, darkROIMaskClumps, outFormat, False, 0.0
@@ -2235,8 +2235,8 @@ class ARCSIAbstractSensor(object):
             darkROIMaskClumpsRMSmall = os.path.join(
                 tmpPath,
                 outputName
-                + "_darkROIMaskClumpsRMSmall"
-                + rsgislib.imageutils.get_file_img_extension(outFormat),
+                + "_darkROIMaskClumpsRMSmall."
+                + imgExtension,
             )
             rsgislib.segmentation.rm_small_clumps(
                 darkROIMaskClumps, darkROIMaskClumpsRMSmall, 5, outFormat
@@ -2244,8 +2244,8 @@ class ARCSIAbstractSensor(object):
             darkROIMaskClumpsFinal = os.path.join(
                 tmpPath,
                 outputName
-                + "_darkROIMaskClumpsFinal"
-                + rsgislib.imageutils.get_file_img_extension(outFormat),
+                + "_darkROIMaskClumpsFinal."
+                + imgExtension,
             )
             rsgislib.segmentation.relabel_clumps(
                 darkROIMaskClumpsRMSmall, darkROIMaskClumpsFinal, outFormat, False
