@@ -156,42 +156,48 @@ class ARCSIBuildCommands(object):
                 filePrefix4 = basefilename[:4]
 
                 if filePrefix3 == "LM1" or filePrefix4 == "LM01":
-                    sensorOUT = "ls1"
+                    sensorOUT = "lsmss"
                 elif filePrefix3 == "LM2" or filePrefix4 == "LM02":
-                    sensorOUT = "ls2"
+                    sensorOUT = "lsmss"
                 elif filePrefix3 == "LM3" or filePrefix4 == "LM03":
-                    sensorOUT = "ls3"
+                    sensorOUT = "lsmss"
                 elif filePrefix3 == "LM4" or filePrefix4 == "LM04":
-                    sensorOUT = "ls4mss"
+                    sensorOUT = "lsmss"
                 elif filePrefix3 == "LM5" or filePrefix4 == "LM05":
-                    sensorOUT = "ls5mss"
+                    sensorOUT = "lsmss"
                 elif (
                     filePrefix3 == "LT4"
                     or filePrefix4 == "LS04"
                     or filePrefix4 == "LE04"
                     or filePrefix4 == "LT04"
                 ):
-                    sensorOUT = "ls4tm"
+                    sensorOUT = "lstm"
                 elif (
                     filePrefix3 == "LT5"
                     or filePrefix4 == "LS05"
                     or filePrefix4 == "LE05"
                     or filePrefix4 == "LT05"
                 ):
-                    sensorOUT = "ls5tm"
+                    sensorOUT = "lstm"
                 elif (
                     filePrefix3 == "LE7"
                     or filePrefix4 == "LS07"
                     or filePrefix4 == "LE07"
                     or filePrefix4 == "LT07"
                 ):
-                    sensorOUT = "ls7"
+                    sensorOUT = "lsetm"
                 elif (
                     filePrefix3 == "LC8"
                     or filePrefix4 == "LS08"
                     or filePrefix4 == "LC08"
                 ):
-                    sensorOUT = "ls8"
+                    sensorOUT = "lsoli"
+                elif (
+                    filePrefix3 == "LC9"
+                    or filePrefix4 == "LS09"
+                    or filePrefix4 == "LC09"
+                ):
+                    sensorOUT = "lsoli"
                 else:
                     raise ARCSIException(
                         'Sensor was not recognised for file: "' + hFile + '"'
