@@ -26,7 +26,7 @@ Module that contains the ARSCI command to set up database of Landsat imagery.
 #
 #
 # Purpose:  A script to set up a sqlite database with Landsat
-#           imagery from Google with links to download the scenes  
+#           imagery from Google with links to download the scenes
 #           from the Google bucket.
 #
 # Author: Pete Bunting
@@ -39,53 +39,37 @@ Module that contains the ARSCI command to set up database of Landsat imagery.
 #
 ############################################################################
 
-# Import updated print function into python 2.7
-from __future__ import print_function
-# Import updated division operator into python 2.7
-from __future__ import division
-# Import the python os.path module
-import os.path
-# Import the python sys module
+import os
 import sys
-# Import the python glob module
-import glob
-# Import the python Argument parser
 import argparse
-# Import the python curl option 
 import pycurl
-# Import the tempfile python module
 import tempfile
-# Import python time module
 import time
-# Import python shutil module
-import shutil
-# Import python gzip module
 import gzip
-# Import python sqlite3 module
 import sqlite3
-# Import the arcsi version number
 from arcsilib import ARCSI_VERSION
-# Import the ARCSI utilities class
-from arcsilib.arcsiutils import ARCSIUtils
-# Import the ARCSI exception class
 from arcsilib.arcsiexception import ARCSIException
+
 
 def downloadProgress(download_t, download_d, upload_t, upload_d):
     try:
-        frac = float(download_d)/float(download_t)
+        frac = float(download_d) / float(download_t)
     except:
         frac = 0
-    sys.stdout.write("\r%s %3i%%" % ("Download:", frac*100)  )
+    sys.stdout.write("\r%s %3i%%" % ("Download:", frac * 100))
+
 
 def setupLandsatDB(dbFile):
     try:
-        with tempfile.TemporaryDirectory() as tmpdirname:        
-            landsatIdxURL = 'https://storage.googleapis.com/gcp-public-data-landsat/index.csv.gz'
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            landsatIdxURL = (
+                "https://storage.googleapis.com/gcp-public-data-landsat/index.csv.gz"
+            )
 
-            ggCSVLandsatFileGZ = os.path.join(tmpdirname, 'index.csv.gz')
-            
+            ggCSVLandsatFileGZ = os.path.join(tmpdirname, "index.csv.gz")
+
             fp = open(ggCSVLandsatFileGZ, "wb")
-            
+
             curl = pycurl.Curl()
             curl.setopt(pycurl.URL, landsatIdxURL)
             curl.setopt(pycurl.FOLLOWLOCATION, True)
@@ -103,19 +87,24 @@ def setupLandsatDB(dbFile):
                 print("Start time: " + time.strftime("%c"))
                 curl.perform()
                 print("\nTotal-time: " + str(curl.getinfo(curl.TOTAL_TIME)))
-                print("Download speed: %.2f bytes/second" % (curl.getinfo(curl.SPEED_DOWNLOAD)))
+                print(
+                    "Download speed: %.2f bytes/second"
+                    % (curl.getinfo(curl.SPEED_DOWNLOAD))
+                )
                 print("Document size: %d bytes" % (curl.getinfo(curl.SIZE_DOWNLOAD)))
             except:
                 raise ARCSIException("Failed to download file from Google.")
             curl.close()
             fp.close()
             sys.stdout.flush()
-            
-            print("Create and load data into a sqlite db:")   
+
+            print("Create and load data into a sqlite db:")
             ggLandsatDBConn = sqlite3.connect(dbFile)
-            ggLandsatDBConn.execute('''CREATE TABLE landsat (COUNT PRIMARY KEY, SCENE_ID text, PRODUCT_ID text, SPACECRAFT_ID text, SENSOR_ID text, DATE_ACQUIRED text, COLLECTION_NUMBER text, COLLECTION_CATEGORY text, SENSING_TIME text, DATA_TYPE text, WRS_PATH INT8, WRS_ROW INT8, CLOUD_COVER real, NORTH_LAT real, SOUTH_LAT real, WEST_LON real, EAST_LON real, BASE_URL text)''')
-            
-            with gzip.open(ggCSVLandsatFileGZ,'r') as ggCSVLandsatFile:
+            ggLandsatDBConn.execute(
+                """CREATE TABLE landsat (COUNT PRIMARY KEY, SCENE_ID text, PRODUCT_ID text, SPACECRAFT_ID text, SENSOR_ID text, DATE_ACQUIRED text, COLLECTION_NUMBER text, COLLECTION_CATEGORY text, SENSING_TIME text, DATA_TYPE text, WRS_PATH INT8, WRS_ROW INT8, CLOUD_COVER real, NORTH_LAT real, SOUTH_LAT real, WEST_LON real, EAST_LON real, BASE_URL text)"""
+            )
+
+            with gzip.open(ggCSVLandsatFileGZ, "r") as ggCSVLandsatFile:
                 commitCounter = 0
                 keyCount = 0
                 committed = False
@@ -126,9 +115,47 @@ def setupLandsatDB(dbFile):
                     else:
                         committed = False
                         line = line.decode().strip()
-                        lineComps = line.split(',')
-                        sqlcmd = "INSERT INTO landsat (COUNT, SCENE_ID, PRODUCT_ID, SPACECRAFT_ID, SENSOR_ID, DATE_ACQUIRED, COLLECTION_NUMBER, COLLECTION_CATEGORY, SENSING_TIME, DATA_TYPE, WRS_PATH, WRS_ROW, CLOUD_COVER, NORTH_LAT, SOUTH_LAT, WEST_LON, EAST_LON, BASE_URL) VALUES ("+str(keyCount)+", '"+lineComps[0]+"', '"+lineComps[1]+"', '"+lineComps[2]+"', '"+lineComps[3]+"', '"+lineComps[4]+"', '"+lineComps[5]+"', '"+lineComps[6]+"', '"+lineComps[7]+"', '"+lineComps[8]+"', "+lineComps[9]+", "+lineComps[10]+", "+lineComps[11]+", "+lineComps[12]+", "+lineComps[13]+", "+lineComps[14]+", "+lineComps[15]+", '"+lineComps[17]+"')"
-                        #print(sqlcmd)
+                        lineComps = line.split(",")
+                        sqlcmd = (
+                            "INSERT INTO landsat (COUNT, SCENE_ID, PRODUCT_ID, SPACECRAFT_ID, SENSOR_ID, DATE_ACQUIRED, COLLECTION_NUMBER, COLLECTION_CATEGORY, SENSING_TIME, DATA_TYPE, WRS_PATH, WRS_ROW, CLOUD_COVER, NORTH_LAT, SOUTH_LAT, WEST_LON, EAST_LON, BASE_URL) VALUES ("
+                            + str(keyCount)
+                            + ", '"
+                            + lineComps[0]
+                            + "', '"
+                            + lineComps[1]
+                            + "', '"
+                            + lineComps[2]
+                            + "', '"
+                            + lineComps[3]
+                            + "', '"
+                            + lineComps[4]
+                            + "', '"
+                            + lineComps[5]
+                            + "', '"
+                            + lineComps[6]
+                            + "', '"
+                            + lineComps[7]
+                            + "', '"
+                            + lineComps[8]
+                            + "', "
+                            + lineComps[9]
+                            + ", "
+                            + lineComps[10]
+                            + ", "
+                            + lineComps[11]
+                            + ", "
+                            + lineComps[12]
+                            + ", "
+                            + lineComps[13]
+                            + ", "
+                            + lineComps[14]
+                            + ", "
+                            + lineComps[15]
+                            + ", '"
+                            + lineComps[17]
+                            + "')"
+                        )
+                        # print(sqlcmd)
                         ggLandsatDBConn.execute(sqlcmd)
                         keyCount = keyCount + 1
                         if commitCounter == 10000:
@@ -146,27 +173,30 @@ def setupLandsatDB(dbFile):
     except ARCSIException as e:
         print("Error: {}".format(e), file=sys.stderr)
     except Exception as e:
-        print("Error: {}".format(e), file=sys.stderr)            
+        print("Error: {}".format(e), file=sys.stderr)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     The command line user interface to ARCSI setup Landsat DB.
     """
-    parser = argparse.ArgumentParser(prog='arcsisetuplandsatdb.py',
-                                    description='''ARSCI command to set up 
-                                                   database of Landsat imagery''',
-                                    epilog='''A tool to set up a sqlite database
+    parser = argparse.ArgumentParser(
+        prog="arcsisetuplandsatdb.py",
+        description="""ARSCI command to set up 
+                                                   database of Landsat imagery""",
+        epilog="""A tool to set up a sqlite database
                                               with the Google Landsat imagery
-                                              list.''')
+                                              list.""",
+    )
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
+    parser.add_argument(
+        "-v", "--version", action="version", version="%(prog)s version " + ARCSI_VERSION
+    )
     # Define the argument for specifying the input directory to be processed.
-    parser.add_argument("-f", "--dbfile", type=str, required=True,
-                        help='''Path to the database file.''')
+    parser.add_argument(
+        "-f", "--dbfile", type=str, required=True, help="""Path to the database file."""
+    )
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
     setupLandsatDB(args.dbfile)
-
-

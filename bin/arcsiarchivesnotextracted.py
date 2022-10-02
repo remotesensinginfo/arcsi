@@ -39,23 +39,14 @@ present following data extraction.
 #
 ############################################################################
 
-# Import updated print function into python 2.7
-from __future__ import print_function
-# Import updated division operator into python 2.7
-from __future__ import division
-# Import the python os.path module
-import os.path
-# Import the python glob module
+import os
 import glob
-# Import the python Argument parser
 import argparse
-# Import the arcsi version number
 from arcsilib import ARCSI_VERSION
-# Import the list of archive file extensions arcsi supports
 from arcsilib import ARCSI_ARCHIVE_EXE_LIST
 
-class ARCSIFindArchivesNotExtract (object):
 
+class ARCSIFindArchivesNotExtract(object):
     def getListOfArchives(self, dirPath):
         archPaths = []
         for exe in ARCSI_ARCHIVE_EXE_LIST:
@@ -67,7 +58,7 @@ class ARCSIFindArchivesNotExtract (object):
         inputDIR = os.path.abspath(inputDIR)
         archivesDIR = os.path.abspath(archivesDIR)
         archList = self.getListOfArchives(archivesDIR)
-        outFileList = open(outputFile, 'w')
+        outFileList = open(outputFile, "w")
         for arch in archList:
             print("Checking: " + arch)
             dirName = os.path.basename(arch).split(".")[0]
@@ -81,25 +72,45 @@ class ARCSIFindArchivesNotExtract (object):
         outFileList.flush()
         outFileList.close()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     """
     The command line user interface to ARCSI.
     """
-    parser = argparse.ArgumentParser(prog='arcsiarchivesnotextracted.py',
-                                    description='''ARCSI command to check that all expected files are
+    parser = argparse.ArgumentParser(
+        prog="arcsiarchivesnotextracted.py",
+        description="""ARCSI command to check that all expected files are
                                                    present following data extraction (expecting arcsiextractdata.py
-                                                   to have been used to extract data into folder structure).''')
+                                                   to have been used to extract data into folder structure).""",
+    )
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
+    parser.add_argument(
+        "-v", "--version", action="version", version="%(prog)s version " + ARCSI_VERSION
+    )
 
-    parser.add_argument("-i", "--input", type=str, required=True,
-                        help='''Input directory containing the folders for the extracted data''')
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        required=True,
+        help="""Input directory containing the folders for the extracted data""",
+    )
 
-    parser.add_argument("-o", "--output", type=str, required=True,
-                        help='''Output text file listing the archives which have problems''')
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="""Output text file listing the archives which have problems""",
+    )
 
-    parser.add_argument("-a", "--archives", type=str, required=True,
-                        help='''Input directory containing the original archives''')
+    parser.add_argument(
+        "-a",
+        "--archives",
+        type=str,
+        required=True,
+        help="""Input directory containing the original archives""",
+    )
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -107,4 +118,3 @@ if __name__ == '__main__':
     arcsiObj = ARCSIFindArchivesNotExtract()
 
     arcsiObj.checkExtractedFiles(args.input, args.output, args.archives)
-

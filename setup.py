@@ -32,30 +32,31 @@ $ python setup.py install
 # History:
 # Version 1.0 - Created.
 
-from distutils.core import setup
 import os
+from setuptools import setup
+import glob
 
-setup(name='ARCSI',
-    version='3.9.3',
+import arcsilib
+
+setup(name='arcsi',
+    version=arcsilib.ARCSI_VERSION,
     description='Atmospheric and Radiometric Correction of Satellite Imagery',
     author='Pete Bunting and Dan Clewley',
     author_email='pfb@aber.ac.uk, daniel.clewley@gmail.com',
-    scripts=['bin/arcsi.py', 'bin/arcsimpi.py', 'bin/arcsisolarirradiance.py', 'bin/arcsispecresponsefuncs.py', 'bin/arcsiextractdata.py', 'bin/arcsibuildcmdslist.py', 'bin/arcsisortlandsat.py', 'bin/arcsiextractroistats.py', 'bin/arcsiplotextractedstats.py', 'bin/arcsibuildextractfilecmds.py', 'bin/arcsibuildfilenameslu.py', 'bin/arcsifindnotprocessed.py', 'bin/arcsiremoveduplicates.py', 'bin/arcsicheckfilespresent.py', 'bin/arcsiarchivesnotextracted.py', 'bin/arcsicreatepy6scall.py', 'bin/arcsisplitsen2granules.py', 'bin/arcsisetupsen2db.py', 'bin/arcsigensen2downlst.py', 'bin/arcsisetuplandsatdb.py', 'bin/arcsigenlandsatdownlst.py', 'bin/arcsidwnldgoog.py', 'bin/arcsibuildmultifilelists.py', 'bin/arcsichecksen2ver.py', 'bin/arcsidwndem.py', 'bin/arcsifindlsscn.py'],
+    scripts=glob.glob("bin/*.py"),
     packages=['arcsilib', 'arcsilib/s2cloudless'],
-    package_dir={'arcsilib': 'arcsilib', 'arcsilib/s2cloudless': 'arcsilib/s2cloudless'},
+    #package_dir={'arcsilib': 'arcsilib', 'arcsilib/s2cloudless': 'arcsilib/s2cloudless'},
     data_files=[(os.path.join('share','arcsi'),
                 [os.path.join('data','WorldAerosolParams.kea'),
                  os.path.join('data','WorldAtmosphereParams.kea'),
                  os.path.join('data','pixel_s2_cloud_detector_lightGBM_v0.1.txt')])],
     license='LICENSE.txt',
-    url='https://bitbucket.org/petebunting/arcsi',
+    url='https://github.com/remotesensinginfo/arcsi',
     classifiers=['Intended Audience :: Developers',
                  'Intended Audience :: Remote Sensing Scientists',
                  'Intended Audience :: Atmospheric Scientists',
                  'Operating System :: OS Independent',
-                 'Programming Language :: Python :: 2',
-                 'Programming Language :: Python :: 2.7',
-                 'Programming Language :: Python :: 3',
-                 'Programming Language :: Python :: 3.6',
                  'Programming Language :: Python :: 3.7'
-                 'Programming Language :: Python :: 3.8'])
+                 'Programming Language :: Python :: 3.8'
+                 'Programming Language :: Python :: 3.9'
+                 'Programming Language :: Python :: 3.10'])

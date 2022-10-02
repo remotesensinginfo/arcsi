@@ -39,35 +39,27 @@ Module that contains the ARSCI command to extract data from archives.
 #
 ############################################################################
 
-# Import updated print function into python 2.7
-from __future__ import print_function
-# Import updated division operator into python 2.7
-from __future__ import division
-# Import the python os.path module
-import os.path
-# Import the python sys module
+import os
 import sys
-# Import the python glob module
 import glob
-# Import the python Argument parser
 import argparse
-# Import the arcsi version number
 from arcsilib import ARCSI_VERSION
-# Import the ARCSI utilities class
-from arcsilib.arcsiutils import ARCSIUtils
+import rsgislib.tools.utils
 
-class ARCSIExtractData (object):
 
+class ARCSIExtractData(object):
     def untargzFiles(self, filelist, outDIR, noFolders):
-        tarcommand = 'tar -xvzf '
-        command = ''
+        tarcommand = "tar -xvzf "
+        command = ""
         try:
             processingDIR = ""
             for filename in filelist:
                 if noFolders:
                     processingDIR = outDIR
                 else:
-                    processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+                    processingDIR = os.path.join(
+                        outDIR, os.path.basename(filename).split(".")[0]
+                    )
                 if not os.path.exists(processingDIR):
                     os.makedirs(processingDIR)
                 os.chdir(processingDIR)
@@ -76,17 +68,19 @@ class ARCSIExtractData (object):
                 command = tarcommand + '"' + filename + '"'
                 os.system(command)
         except Exception as e:
-            print('IOError Occurred: ' + str(e))
+            print("IOError Occurred: " + str(e))
 
     def untargzFile(self, filename, outDIR, noFolders):
-        tarcommand = 'tar -xvzf '
-        command = ''
+        tarcommand = "tar -xvzf "
+        command = ""
         try:
             processingDIR = ""
             if noFolders:
                 processingDIR = outDIR
             else:
-                processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+                processingDIR = os.path.join(
+                    outDIR, os.path.basename(filename).split(".")[0]
+                )
             if not os.path.exists(processingDIR):
                 os.makedirs(processingDIR)
             os.chdir(processingDIR)
@@ -96,18 +90,20 @@ class ARCSIExtractData (object):
             os.system(command)
 
         except Exception as e:
-            print('IOError Occurred: ' + str(e))
+            print("IOError Occurred: " + str(e))
 
     def untarFiles(self, filelist, outDIR, noFolders):
-        tarcommand = 'tar -xvf '
-        command = ''
+        tarcommand = "tar -xvf "
+        command = ""
         try:
             processingDIR = ""
             for filename in filelist:
                 if noFolders:
                     processingDIR = outDIR
                 else:
-                    processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+                    processingDIR = os.path.join(
+                        outDIR, os.path.basename(filename).split(".")[0]
+                    )
                 if not os.path.exists(processingDIR):
                     os.makedirs(processingDIR)
                 os.chdir(processingDIR)
@@ -115,17 +111,19 @@ class ARCSIExtractData (object):
                 command = tarcommand + '"' + filename + '"'
                 os.system(command)
         except Exception as e:
-            print('IOError Occurred: ' + str(e))
+            print("IOError Occurred: " + str(e))
 
     def untarFile(self, filename, outDIR, noFolders):
-        tarcommand = 'tar -xvf '
-        command = ''
+        tarcommand = "tar -xvf "
+        command = ""
         try:
             processingDIR = ""
             if noFolders:
                 processingDIR = outDIR
             else:
-                processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+                processingDIR = os.path.join(
+                    outDIR, os.path.basename(filename).split(".")[0]
+                )
             if not os.path.exists(processingDIR):
                 os.makedirs(processingDIR)
             os.chdir(processingDIR)
@@ -133,18 +131,20 @@ class ARCSIExtractData (object):
             command = tarcommand + '"' + filename + '"'
             os.system(command)
         except Exception as e:
-            print('IOError Occurred: ' + str(e))
+            print("IOError Occurred: " + str(e))
 
     def unZipFiles(self, filelist, outDIR, noFolders):
-        zipcommand = 'unzip '
-        command = ''
+        zipcommand = "unzip "
+        command = ""
         try:
             processingDIR = ""
             for filename in filelist:
                 if noFolders:
                     processingDIR = outDIR
                 else:
-                    processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+                    processingDIR = os.path.join(
+                        outDIR, os.path.basename(filename).split(".")[0]
+                    )
                 if not os.path.exists(processingDIR):
                     os.makedirs(processingDIR)
                 os.chdir(processingDIR)
@@ -152,17 +152,19 @@ class ARCSIExtractData (object):
                 command = zipcommand + '"' + filename + '"'
                 os.system(command)
         except Exception as e:
-            print('IOError Occurred: ' + str(e))
+            print("IOError Occurred: " + str(e))
 
     def unZipFile(self, filename, outDIR, noFolders):
-        zipcommand = 'unzip '
-        command = ''
+        zipcommand = "unzip "
+        command = ""
         try:
             processingDIR = ""
             if noFolders:
                 processingDIR = outDIR
             else:
-                processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+                processingDIR = os.path.join(
+                    outDIR, os.path.basename(filename).split(".")[0]
+                )
             if not os.path.exists(processingDIR):
                 os.makedirs(processingDIR)
             os.chdir(processingDIR)
@@ -170,18 +172,20 @@ class ARCSIExtractData (object):
             command = zipcommand + '"' + filename + '"'
             os.system(command)
         except Exception as e:
-            print('IOError Occurred: ' + str(e))
+            print("IOError Occurred: " + str(e))
 
     def untarbzFiles(self, filelist, outDIR, noFolders):
-        tarcommand = 'tar -xvjf '
-        command = ''
+        tarcommand = "tar -xvjf "
+        command = ""
         try:
             processingDIR = ""
             for filename in filelist:
                 if noFolders:
                     processingDIR = outDIR
                 else:
-                    processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+                    processingDIR = os.path.join(
+                        outDIR, os.path.basename(filename).split(".")[0]
+                    )
                 if not os.path.exists(processingDIR):
                     os.makedirs(processingDIR)
                 os.chdir(processingDIR)
@@ -190,17 +194,19 @@ class ARCSIExtractData (object):
                 command = tarcommand + '"' + filename + '"'
                 os.system(command)
         except Exception as e:
-            print('IOError Occurred: ' + str(e))
+            print("IOError Occurred: " + str(e))
 
     def untarbzFile(self, filename, outDIR, noFolders):
-        tarcommand = 'tar -xvjf '
-        command = ''
+        tarcommand = "tar -xvjf "
+        command = ""
         try:
             processingDIR = ""
             if noFolders:
                 processingDIR = outDIR
             else:
-                processingDIR = os.path.join(outDIR, os.path.basename(filename).split(".")[0])
+                processingDIR = os.path.join(
+                    outDIR, os.path.basename(filename).split(".")[0]
+                )
             if not os.path.exists(processingDIR):
                 os.makedirs(processingDIR)
             os.chdir(processingDIR)
@@ -210,7 +216,7 @@ class ARCSIExtractData (object):
             os.system(command)
 
         except Exception as e:
-            print('IOError Occurred: ' + str(e))
+            print("IOError Occurred: " + str(e))
 
     def run4DIR(self, inputDIR, outputDIR, noFolders):
         inputDIR = os.path.abspath(inputDIR)
@@ -254,60 +260,87 @@ class ARCSIExtractData (object):
 
         fileExt = os.path.basename(inputFile).split(".", 1)[-1].lower()
 
-        if (fileExt == 'tar.gz') or (fileExt == 'tgz'):
+        if (fileExt == "tar.gz") or (fileExt == "tgz"):
             self.untargzFile(inputFile, outputDIR, noFolders)
 
-        if fileExt == 'tar':
+        if fileExt == "tar":
             self.untarFile(inputFile, outputDIR, noFolders)
 
-        if fileExt == 'zip':
+        if fileExt == "zip":
             self.unZipFile(inputFile, outputDIR, noFolders)
 
-        if fileExt == 'tar.bz':
+        if fileExt == "tar.bz":
             self.untarbzFile(inputFile, outputDIR, noFolders)
 
-        if fileExt == 'tar.bz2':
+        if fileExt == "tar.bz2":
             self.untarbzFile(inputFile, outputDIR, noFolders)
 
     def run4List(self, inputListFile, outputDIR, noFolders):
-        arcsiUtils = ARCSIUtils()
-        archsList = arcsiUtils.readTextFile2List(inputListFile)
+
+        archsList = rsgislib.tools.utils.read_text_file_no_new_lines2List(inputListFile)
         for archFile in archsList:
             self.run4File(archFile, outputDIR, noFolders)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     The command line user interface to ARCSI Data Extraction Tool.
     """
-    parser = argparse.ArgumentParser(prog='arcsiextractdata.py',
-                                    description='''ARCSI command extract data
-                                                   from tar or tar.gz archives.''',
-                                    epilog='''A tools to extract data
+    parser = argparse.ArgumentParser(
+        prog="arcsiextractdata.py",
+        description="""ARCSI command extract data
+                                                   from tar or tar.gz archives.""",
+        epilog="""A tools to extract data
                                               from tar or tar.gz archives into
-                                              individual directories per image''')
+                                              individual directories per image""",
+    )
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
+    parser.add_argument(
+        "-v", "--version", action="version", version="%(prog)s version " + ARCSI_VERSION
+    )
     # Define the argument for specifying the input directory to be processed.
-    parser.add_argument("-i", "--input", type=str,
-                        help='''Input directory contains archives (tar, tar.gz, tar.bz, tar.bz2 and/or zip).''')
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        help="""Input directory contains archives (tar, tar.gz, tar.bz, tar.bz2 and/or zip).""",
+    )
     # Define the argument for specifying the input file to be processed
-    parser.add_argument("-f", "--file", type=str,
-                        help='''Input file contains archive (tar, tar.gz, tar.bz, tar.bz2 and/or zip).''')
+    parser.add_argument(
+        "-f",
+        "--file",
+        type=str,
+        help="""Input file contains archive (tar, tar.gz, tar.bz, tar.bz2 and/or zip).""",
+    )
     # Define the argument for specifying a list of input files to be processed
-    parser.add_argument("-l", "--list", type=str,
-                        help='''Input file contains archive (tar, tar.gz, tar.bz, tar.bz2 and/or zip).''')
+    parser.add_argument(
+        "-l",
+        "--list",
+        type=str,
+        help="""Input file contains archive (tar, tar.gz, tar.bz, tar.bz2 and/or zip).""",
+    )
     # Define the argument for specifying the output directory.
-    parser.add_argument("-o", "--output", type=str, required=True,
-                        help='''The output directory to which all output files are to be written.''')
-    parser.add_argument("--nofolders", action='store_true', default=False,
-                        help='''Specifies individual folders should not be
-                                created for each archive which is being extracted.''')
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="""The output directory to which all output files are to be written.""",
+    )
+    parser.add_argument(
+        "--nofolders",
+        action="store_true",
+        default=False,
+        help="""Specifies individual folders should not be
+                                created for each archive which is being extracted.""",
+    )
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
     if (args.input == None) & (args.file == None) & (args.list == None):
-        print("Error: An input directory, list as a text file or single archive file must be specified.")
+        print(
+            "Error: An input directory, list as a text file or single archive file must be specified."
+        )
         sys.exit()
 
     arcsiObj = ARCSIExtractData()
@@ -320,5 +353,3 @@ if __name__ == '__main__':
 
     if args.list is not None:
         arcsiObj.run4List(args.list, args.output, args.nofolders)
-
-

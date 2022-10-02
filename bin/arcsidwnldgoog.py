@@ -37,63 +37,29 @@ Module that contains the ARSCI command to download imagery using gsutils
 #
 ############################################################################
 
-# Import updated print function into python 2.7
-from __future__ import print_function
-# Import updated division operator into python 2.7
-from __future__ import division
-# Import the python os.path module
-import os.path
-# Import the python Argument parser
+import os
 import argparse
-# Import python subprocess module
 import subprocess
-# Import the sys module
 import sys
+import rsgislib.tools.utils
 
-def readTextFile2List(file):
-    """
-    Read a text file into a list where each line 
-    is an element in the list.
-    """
-    outList = []
-    try:
-        dataFile = open(file, 'r')
-        for line in dataFile:
-            line = line.strip()
-            if line != "":
-                outList.append(line)
-        dataFile.close()
-    except Exception as e:
-        raise e
-    return outList
 
-def writeList2File(dataList, outFile):
-    """
-    Write a list a text file, one line per item.
-    """
-    try:
-        f = open(outFile, 'w')
-        for item in dataList:
-           f.write(str(item)+'\n')
-        f.flush()
-        f.close()
-    except Exception as e:
-        raise e
+def runGoogleImgDwbld(
+    inFileDwnLst, outDIR, outFailLst=None, multiDwn=False, overwrite=False
+):
 
-def runGoogleImgDwbld(inFileDwnLst, outDIR, outFailLst=None, multiDwn=False, overwrite=False):
-
-    fileLst = readTextFile2List(inFileDwnLst)
+    fileLst = rsgislib.tools.utils.read_text_file_to_list(inFileDwnLst)
     failsLst = []
 
-    multiStr = ''
+    multiStr = ""
     if multiDwn:
-        multiStr = '-m'
+        multiStr = "-m"
 
     for file in fileLst:
         outFileName = os.path.basename(file)
         print("Processing " + outFileName)
         if overwrite or (not os.path.exists(os.path.join(outDIR, outFileName))):
-            cmd = "gsutil "+multiStr+" cp -r " + file + " " + outDIR
+            cmd = "gsutil " + multiStr + " cp -r " + file + " " + outDIR
             try:
                 subprocess.call(cmd, shell=True)
             except OSError as e:
@@ -106,25 +72,52 @@ def runGoogleImgDwbld(inFileDwnLst, outDIR, outFailLst=None, multiDwn=False, ove
             print("\tAlready Downloaded...")
 
         if not outFailLst is None:
-            writeList2File(failsLst, outFailLst)
+            rsgislib.tools.utils.write_list_to_file(failsLst, outFailLst)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     The command line user interface to ARCSI to download a list of files from google.
     """
-    parser = argparse.ArgumentParser(prog='arcsidwnldgoog.py',
-                                    description='''ARSCI command to download imagery from Google bucket''',
-                                    epilog='''A tool to download imagery from a Google Bucket.''')
+    parser = argparse.ArgumentParser(
+        prog="arcsidwnldgoog.py",
+        description="""ARSCI command to download imagery from Google bucket""",
+        epilog="""A tool to download imagery from a Google Bucket.""",
+    )
 
-    parser.add_argument("-i", "--input", type=str, required=True, help='''Input file which lists gs:// paths to be downloaded.''')
-    parser.add_argument("-o", "--outpath", type=str, required=True, help='''Output directory path where downloads to be downloaded to on your system.''')
-    parser.add_argument("--fails", type=str, help='''Output file which lists any downloads which fail.''')
-    parser.add_argument("--multi", action='store_true', default=False, help='''Adds -m option to the gsutil download command.''')
-    parser.add_argument("--overwrite", action='store_true', default=False, help='''Redownloads and overwrites existing images, otherwise files which exist are not redownloaded.''')
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        required=True,
+        help="""Input file which lists gs:// paths to be downloaded.""",
+    )
+    parser.add_argument(
+        "-o",
+        "--outpath",
+        type=str,
+        required=True,
+        help="""Output directory path where downloads to be downloaded to on your system.""",
+    )
+    parser.add_argument(
+        "--fails",
+        type=str,
+        help="""Output file which lists any downloads which fail.""",
+    )
+    parser.add_argument(
+        "--multi",
+        action="store_true",
+        default=False,
+        help="""Adds -m option to the gsutil download command.""",
+    )
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        default=False,
+        help="""Redownloads and overwrites existing images, otherwise files which exist are not redownloaded.""",
+    )
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
     runGoogleImgDwbld(args.input, args.outpath, args.fails, args.multi, args.overwrite)
-

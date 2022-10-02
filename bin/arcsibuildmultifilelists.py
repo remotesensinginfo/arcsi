@@ -39,36 +39,16 @@ for arcsi.py --multi.
 #
 ############################################################################
 
-# Import updated print function into python 2.7
-from __future__ import print_function
-# Import updated division operator into python 2.7
-from __future__ import division
-# Import the python os.path module
-import os.path
-# Import the python sys module
-import sys
-# Import the python glob module
-import glob
-#  import the fnmatch module
-import fnmatch
-# Import the python Argument parser
-import argparse
-# Import the arcsi version number
-from arcsilib import ARCSI_VERSION
-# Import os.walk to navigate directory structure.
 import os
-# Import the ARCSI utilities class
-from arcsilib.arcsiutils import ARCSIUtils
-# Import the ARCSI sensor factory class
+import fnmatch
+import argparse
+from arcsilib import ARCSI_VERSION
+import os
 from arcsilib.arcsiutils import ARCSISensorFactory
-# Import the ARCSI exception class
-from arcsilib.arcsiexception import ARCSIException
-# Import the list of sensors arcsi supports
 from arcsilib import ARCSI_SENSORS_LIST
 
 
-class ARCSIBuildMultiFileList (object):
-
+class ARCSIBuildMultiFileList(object):
     def getListOfFiles(self, searchDIR, searchStr, depth):
         inDIRCount = searchDIR.count(os.path.sep)
         outFiles = []
@@ -77,20 +57,21 @@ class ARCSIBuildMultiFileList (object):
                 fname = str(fname)
                 if fnmatch.fnmatch(fname, searchStr):
                     outFiles.append(os.path.abspath(os.path.join(dirName, fname)))
-            dirLevel = dirName.count(os.path.sep)-inDIRCount
+            dirLevel = dirName.count(os.path.sep) - inDIRCount
             if dirLevel >= depth:
                 subdirList[:] = []
         return outFiles
 
     def buildCmds(self, inputPath, outputFile, headerSearchStr, searchDepth, sensor):
-        """
-        """
+        """ """
         inputPath = os.path.abspath(inputPath)
         outputFile = os.path.abspath(outputFile)
 
         headersFilesList = []
-        if headerSearchStr.count('*') == 0:
-            raise Exception("The search string you have provided does not have any '*' - which is needed for searching.")
+        if headerSearchStr.count("*") == 0:
+            raise Exception(
+                "The search string you have provided does not have any '*' - which is needed for searching."
+            )
         headersFilesList = self.getListOfFiles(inputPath, headerSearchStr, searchDepth)
 
         sensorFact = ARCSISensorFactory()
@@ -101,47 +82,81 @@ class ARCSIBuildMultiFileList (object):
         for hdrFile in headersFilesList:
             print(hdrFile)
             sensorClass.extractHeaderParameters(hdrFile, None)
-            if sensor == 'sen2':
-                scnStr = sensorClass.spacecraftName.replace('-', '') + '_' + sensorClass.acquisitionTime.strftime("%Y%m%d")
+            if sensor == "sen2":
+                scnStr = (
+                    sensorClass.spacecraftName.replace("-", "")
+                    + "_"
+                    + sensorClass.acquisitionTime.strftime("%Y%m%d")
+                )
             else:
-                scnStr = sensor + '_' + sensorClass.acquisitionTime.strftime("%Y%m%d")
+                scnStr = sensor + "_" + sensorClass.acquisitionTime.strftime("%Y%m%d")
             if scnStr not in hdfFileLUT:
                 hdfFileLUT[scnStr] = []
             hdfFileLUT[scnStr].append(hdrFile)
 
-        arcsiUtils = ARCSIUtils()
         for scnStr in hdfFileLUT:
-            arcsiUtils.writeList2File(hdfFileLUT[scnStr], outputFile+scnStr+".txt")
+            rsgislib.tools.utils.write_list_to_file(
+                hdfFileLUT[scnStr], outputFile + scnStr + ".txt"
+            )
         print("Completed.")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     The command line user interface to ARCSI Data Extraction Tool.
     """
-    parser = argparse.ArgumentParser(prog='arcsibuildmultifilelists.py',
-                                    description='''ARCSI command to build arcsi.py commands
-                                                for a set of input images using the same options.''',
-                                    epilog='''A tools to build arcsi.py commands
+    parser = argparse.ArgumentParser(
+        prog="arcsibuildmultifilelists.py",
+        description="""ARCSI command to build arcsi.py commands
+                                                for a set of input images using the same options.""",
+        epilog="""A tools to build arcsi.py commands
                                            for a set of input images using
-                                           the same options''')
+                                           the same options""",
+    )
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
+    parser.add_argument(
+        "-v", "--version", action="version", version="%(prog)s version " + ARCSI_VERSION
+    )
 
-    parser.add_argument("-i", "--input", type=str, required=True,
-                        help='''Input directory containing the data to be processed or text file listing paths to header files (don't set --header if text file)''')
+    parser.add_argument(
+        "-i",
+        "--input",
+        type=str,
+        required=True,
+        help="""Input directory containing the data to be processed or text file listing paths to header files (don't set --header if text file)""",
+    )
 
-    parser.add_argument("-e", "--header", type=str, required=True,
-                        help='''A \'UNIX\' search string for identifying the image headers. Note, multiple \'*\' can be used for the search string. If no \'*\' is provided then ''')
+    parser.add_argument(
+        "-e",
+        "--header",
+        type=str,
+        required=True,
+        help="""A \'UNIX\' search string for identifying the image headers. Note, multiple \'*\' can be used for the search string. If no \'*\' is provided then """,
+    )
 
-    parser.add_argument("-d", "--depth", type=int, required=True,
-                        help='''The depth within the directory tree from the input path which should be searched for image header files.''')
+    parser.add_argument(
+        "-d",
+        "--depth",
+        type=int,
+        required=True,
+        help="""The depth within the directory tree from the input path which should be searched for image header files.""",
+    )
 
-    parser.add_argument("-s", "--sensor", required=True, choices=ARCSI_SENSORS_LIST,
-                        help='''Specify the sensor being processed.''')
+    parser.add_argument(
+        "-s",
+        "--sensor",
+        required=True,
+        choices=ARCSI_SENSORS_LIST,
+        help="""Specify the sensor being processed.""",
+    )
 
-    parser.add_argument("-o", "--output", type=str, required=True,
-                        help='''Output base file path/name.''')
+    parser.add_argument(
+        "-o",
+        "--output",
+        type=str,
+        required=True,
+        help="""Output base file path/name.""",
+    )
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()

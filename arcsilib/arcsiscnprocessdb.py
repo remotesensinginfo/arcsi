@@ -1,4 +1,5 @@
 import sqlalchemy
+import sqlalchemy.orm
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.engine import Engine
 from sqlalchemy import event
@@ -36,7 +37,6 @@ def set_sqlite_pragma(dbapi_connection, connection_record):
 
 
 class RecordScn2Process(object):
-
     def __init__(self, sqlite_db_file):
         """
         Constructor for the class.
@@ -49,14 +49,16 @@ class RecordScn2Process(object):
 
     def init_db(self):
         """
-        A function which must be called before use if a database file does not already exist. Note.
-        if the database does exist then it will be deleted and recreated and any data with the existing
-        database will be lost.
+        A function which must be called before use if a database file does not already
+        exist. Note. if the database does exist then it will be deleted and recreated
+         and any data with the existing database will be lost.
 
         """
         try:
             logger.debug("Creating Database Engine and Session.")
-            db_engine = sqlalchemy.create_engine(self.sqlite_db_conn, pool_pre_ping=True)
+            db_engine = sqlalchemy.create_engine(
+                self.sqlite_db_conn, pool_pre_ping=True
+            )
             Base.metadata.drop_all(db_engine)
             logger.debug("Creating Database.")
             Base.metadata.bind = db_engine
@@ -66,7 +68,11 @@ class RecordScn2Process(object):
             ses.close()
             logger.debug("Created Database Engine and Session.")
         except:
-            raise Exception("The SQLite database file cannot be opened: '{}'".format(self.sqlite_db_conn))
+            raise Exception(
+                "The SQLite database file cannot be opened: '{}'".format(
+                    self.sqlite_db_conn
+                )
+            )
 
     def add_scns(self, scns_lst):
         """
@@ -88,9 +94,18 @@ class RecordScn2Process(object):
 
         scn_lst = []
         for scn in scns_lst:
-            scn_lst.append(ARCSIScnProcess(product_id=scn['product_id'], sensor=scn['sensor'], scn_url=scn['scn_url'], geo_str_id=scn['geo_str_id']))
+            scn_lst.append(
+                ARCSIScnProcess(
+                    product_id=scn["product_id"],
+                    sensor=scn["sensor"],
+                    scn_url=scn["scn_url"],
+                    geo_str_id=scn["geo_str_id"],
+                )
+            )
 
-        logger.debug("There are {} scenes to be written to the database.".format(len(scn_lst)))
+        logger.debug(
+            "There are {} scenes to be written to the database.".format(len(scn_lst))
+        )
         if len(scn_lst) > 0:
             ses.add_all(scn_lst)
             ses.commit()
@@ -114,8 +129,14 @@ class RecordScn2Process(object):
         logger.debug("Created Database Engine and Session.")
 
         logger.debug("Perform query to find scene.")
-        query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.product_id == product_id,
-                                                         ARCSIScnProcess.sensor == sensor).one_or_none()
+        query_result = (
+            ses.query(ARCSIScnProcess)
+            .filter(
+                ARCSIScnProcess.product_id == product_id,
+                ARCSIScnProcess.sensor == sensor,
+            )
+            .one_or_none()
+        )
         ses.close()
         logger.debug("Closed the database session.")
         found_prod_id = True
@@ -141,7 +162,11 @@ class RecordScn2Process(object):
         logger.debug("Created Database Engine and Session.")
 
         logger.debug("Perform query to find scene.")
-        n_scns = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.geo_str_id == geo_str_id).count()
+        n_scns = (
+            ses.query(ARCSIScnProcess)
+            .filter(ARCSIScnProcess.geo_str_id == geo_str_id)
+            .count()
+        )
         ses.close()
         logger.debug("Closed the database session.")
         return n_scns
@@ -165,7 +190,11 @@ class RecordScn2Process(object):
         logger.debug("Created Database Engine and Session.")
 
         logger.debug("Perform query to find scene.")
-        query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.geo_str_id == geo_str_id).all()
+        query_result = (
+            ses.query(ARCSIScnProcess)
+            .filter(ARCSIScnProcess.geo_str_id == geo_str_id)
+            .all()
+        )
         scns = list()
         for scn in query_result:
             scns.append(scn)
@@ -190,8 +219,14 @@ class RecordScn2Process(object):
         logger.debug("Created Database Engine and Session.")
 
         logger.debug("Perform query to find scene.")
-        query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.product_id == product_id,
-                                                         ARCSIScnProcess.sensor == sensor).one_or_none()
+        query_result = (
+            ses.query(ARCSIScnProcess)
+            .filter(
+                ARCSIScnProcess.product_id == product_id,
+                ARCSIScnProcess.sensor == sensor,
+            )
+            .one_or_none()
+        )
         if query_result is not None:
             query_result.download = True
             query_result.download_path = download_path
@@ -218,10 +253,20 @@ class RecordScn2Process(object):
 
         logger.debug("Perform query to find scene.")
         if geo_str_id is None:
-            query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.download == False).all()
+            query_result = (
+                ses.query(ARCSIScnProcess)
+                .filter(ARCSIScnProcess.download == False)
+                .all()
+            )
         else:
-            query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.geo_str_id == geo_str_id,
-                                                             ARCSIScnProcess.download == False).all()
+            query_result = (
+                ses.query(ARCSIScnProcess)
+                .filter(
+                    ARCSIScnProcess.geo_str_id == geo_str_id,
+                    ARCSIScnProcess.download == False,
+                )
+                .all()
+            )
         scns = list()
         for scn in query_result:
             scns.append(scn)
@@ -246,8 +291,14 @@ class RecordScn2Process(object):
         logger.debug("Created Database Engine and Session.")
 
         logger.debug("Perform query to find scene.")
-        query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.product_id == product_id,
-                                                         ARCSIScnProcess.sensor == sensor).one_or_none()
+        query_result = (
+            ses.query(ARCSIScnProcess)
+            .filter(
+                ARCSIScnProcess.product_id == product_id,
+                ARCSIScnProcess.sensor == sensor,
+            )
+            .one_or_none()
+        )
         ses.close()
         logger.debug("Closed the database session.")
         downloaded = False
@@ -272,8 +323,14 @@ class RecordScn2Process(object):
         logger.debug("Created Database Engine and Session.")
 
         logger.debug("Perform query to find scene.")
-        query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.product_id == product_id,
-                                                         ARCSIScnProcess.sensor == sensor).one_or_none()
+        query_result = (
+            ses.query(ARCSIScnProcess)
+            .filter(
+                ARCSIScnProcess.product_id == product_id,
+                ARCSIScnProcess.sensor == sensor,
+            )
+            .one_or_none()
+        )
         if query_result is not None:
             query_result.ard = True
             query_result.ard_path = ard_path
@@ -300,12 +357,21 @@ class RecordScn2Process(object):
 
         logger.debug("Perform query to find scene.")
         if geo_str_id is None:
-            query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.download == True,
-                                                             ARCSIScnProcess.ard == False).all()
+            query_result = (
+                ses.query(ARCSIScnProcess)
+                .filter(ARCSIScnProcess.download == True, ARCSIScnProcess.ard == False)
+                .all()
+            )
         else:
-            query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.geo_str_id == geo_str_id,
-                                                             ARCSIScnProcess.download == True,
-                                                             ARCSIScnProcess.ard == False).all()
+            query_result = (
+                ses.query(ARCSIScnProcess)
+                .filter(
+                    ARCSIScnProcess.geo_str_id == geo_str_id,
+                    ARCSIScnProcess.download == True,
+                    ARCSIScnProcess.ard == False,
+                )
+                .all()
+            )
         scns = list()
         for scn in query_result:
             scns.append(scn)
@@ -332,12 +398,21 @@ class RecordScn2Process(object):
 
         logger.debug("Perform query to find scene.")
         if geo_str_id is None:
-            query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.download == True,
-                                                             ARCSIScnProcess.ard == True).all()
+            query_result = (
+                ses.query(ARCSIScnProcess)
+                .filter(ARCSIScnProcess.download == True, ARCSIScnProcess.ard == True)
+                .all()
+            )
         else:
-            query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.geo_str_id == geo_str_id,
-                                                             ARCSIScnProcess.download == True,
-                                                             ARCSIScnProcess.ard == True).all()
+            query_result = (
+                ses.query(ARCSIScnProcess)
+                .filter(
+                    ARCSIScnProcess.geo_str_id == geo_str_id,
+                    ARCSIScnProcess.download == True,
+                    ARCSIScnProcess.ard == True,
+                )
+                .all()
+            )
         scns = list()
         for scn in query_result:
             scns.append(scn)
@@ -362,8 +437,14 @@ class RecordScn2Process(object):
         logger.debug("Created Database Engine and Session.")
 
         logger.debug("Perform query to find scene.")
-        query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.product_id == product_id,
-                                                         ARCSIScnProcess.sensor == sensor).one_or_none()
+        query_result = (
+            ses.query(ARCSIScnProcess)
+            .filter(
+                ARCSIScnProcess.product_id == product_id,
+                ARCSIScnProcess.sensor == sensor,
+            )
+            .one_or_none()
+        )
         ses.close()
         logger.debug("Closed the database session.")
         arded = False
@@ -392,15 +473,29 @@ class RecordScn2Process(object):
         logger.debug("Created Database Engine and Session.")
 
         logger.debug("Perform query to find scene.")
-        query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.product_id == product_id,
-                                                         ARCSIScnProcess.sensor == sensor).one_or_none()
+        query_result = (
+            ses.query(ARCSIScnProcess)
+            .filter(
+                ARCSIScnProcess.product_id == product_id,
+                ARCSIScnProcess.sensor == sensor,
+            )
+            .one_or_none()
+        )
         if query_result is not None:
             logger.debug("Resetting ARD and Download fields for {}.".format(product_id))
             query_result.ard = False
-            if delpath and query_result.ard_path is not None and os.path.exists(query_result.ard_path):
+            if (
+                delpath
+                and query_result.ard_path is not None
+                and os.path.exists(query_result.ard_path)
+            ):
                 shutil.rmtree(query_result.ard_path)
             query_result.ard_path = None
-            if delpath and query_result.download_path is not None and os.path.exists(query_result.download_path):
+            if (
+                delpath
+                and query_result.download_path is not None
+                and os.path.exists(query_result.download_path)
+            ):
                 shutil.rmtree(query_result.download_path)
             query_result.download = False
             query_result.download_path = None
@@ -428,12 +523,22 @@ class RecordScn2Process(object):
         logger.debug("Created Database Engine and Session.")
 
         logger.debug("Perform query to find scene.")
-        query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.product_id == product_id,
-                                                         ARCSIScnProcess.sensor == sensor).one_or_none()
+        query_result = (
+            ses.query(ARCSIScnProcess)
+            .filter(
+                ARCSIScnProcess.product_id == product_id,
+                ARCSIScnProcess.sensor == sensor,
+            )
+            .one_or_none()
+        )
         if query_result is not None:
             logger.debug("Resetting ARD fields for {}.".format(product_id))
             query_result.ard = False
-            if delpath and query_result.ard_path is not None and os.path.exists(query_result.ard_path):
+            if (
+                delpath
+                and query_result.ard_path is not None
+                and os.path.exists(query_result.ard_path)
+            ):
                 shutil.rmtree(query_result.ard_path)
             query_result.ard_path = None
             ses.commit()
@@ -460,12 +565,22 @@ class RecordScn2Process(object):
         logger.debug("Created Database Engine and Session.")
 
         logger.debug("Perform query to find scene.")
-        query_result = ses.query(ARCSIScnProcess).filter(ARCSIScnProcess.product_id == product_id,
-                                                         ARCSIScnProcess.sensor == sensor).one_or_none()
+        query_result = (
+            ses.query(ARCSIScnProcess)
+            .filter(
+                ARCSIScnProcess.product_id == product_id,
+                ARCSIScnProcess.sensor == sensor,
+            )
+            .one_or_none()
+        )
         if query_result is not None:
             logger.debug("Resetting Download fields for {}.".format(product_id))
             query_result.download = False
-            if delpath and query_result.download_path is not None and os.path.exists(query_result.download_path):
+            if (
+                delpath
+                and query_result.download_path is not None
+                and os.path.exists(query_result.download_path)
+            ):
                 shutil.rmtree(query_result.download_path)
             query_result.download_path = None
             ses.commit()
@@ -474,7 +589,3 @@ class RecordScn2Process(object):
             logger.info("Failed to reset {} was not found.".format(product_id))
         ses.close()
         logger.debug("Closed the database session.")
-
-
-
-

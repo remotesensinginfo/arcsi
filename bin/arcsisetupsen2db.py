@@ -26,7 +26,7 @@ Module that contains the ARSCI command to set up database of Sentinel-2 imagery.
 #
 #
 # Purpose:  A script to set up a sqlite database with Sentinel-2
-#           imagery from Google with links to download the scenes  
+#           imagery from Google with links to download the scenes
 #           from the Google bucket.
 #
 # Author: Pete Bunting
@@ -39,53 +39,38 @@ Module that contains the ARSCI command to set up database of Sentinel-2 imagery.
 #
 ############################################################################
 
-# Import updated print function into python 2.7
-from __future__ import print_function
-# Import updated division operator into python 2.7
-from __future__ import division
-# Import the python os.path module
-import os.path
-# Import the python sys module
+
+import os
 import sys
-# Import the python glob module
-import glob
-# Import the python Argument parser
 import argparse
-# Import the python curl option 
 import pycurl
-# Import the tempfile python module
 import tempfile
-# Import python time module
 import time
-# Import python shutil module
-import shutil
-# Import python gzip module
 import gzip
-# Import python sqlite3 module
 import sqlite3
-# Import the arcsi version number
 from arcsilib import ARCSI_VERSION
-# Import the ARCSI utilities class
-from arcsilib.arcsiutils import ARCSIUtils
-# Import the ARCSI exception class
 from arcsilib.arcsiexception import ARCSIException
+
 
 def downloadProgress(download_t, download_d, upload_t, upload_d):
     try:
-        frac = float(download_d)/float(download_t)
+        frac = float(download_d) / float(download_t)
     except:
         frac = 0
-    sys.stdout.write("\r%s %3i%%" % ("Download:", frac*100)  )
+    sys.stdout.write("\r%s %3i%%" % ("Download:", frac * 100))
+
 
 def setupSen2DB(dbFile):
     try:
-        with tempfile.TemporaryDirectory() as tmpdirname:        
-            sen2URL = 'https://storage.googleapis.com/gcp-public-data-sentinel-2/index.csv.gz'
-    
-            ggCSVSen2FileGZ = os.path.join(tmpdirname, 'index.csv.gz')
-            
+        with tempfile.TemporaryDirectory() as tmpdirname:
+            sen2URL = (
+                "https://storage.googleapis.com/gcp-public-data-sentinel-2/index.csv.gz"
+            )
+
+            ggCSVSen2FileGZ = os.path.join(tmpdirname, "index.csv.gz")
+
             fp = open(ggCSVSen2FileGZ, "wb")
-            
+
             curl = pycurl.Curl()
             curl.setopt(pycurl.URL, sen2URL)
             curl.setopt(pycurl.FOLLOWLOCATION, True)
@@ -103,19 +88,24 @@ def setupSen2DB(dbFile):
                 print("Start time: " + time.strftime("%c"))
                 curl.perform()
                 print("\nTotal-time: " + str(curl.getinfo(curl.TOTAL_TIME)))
-                print("Download speed: %.2f bytes/second" % (curl.getinfo(curl.SPEED_DOWNLOAD)))
+                print(
+                    "Download speed: %.2f bytes/second"
+                    % (curl.getinfo(curl.SPEED_DOWNLOAD))
+                )
                 print("Document size: %d bytes" % (curl.getinfo(curl.SIZE_DOWNLOAD)))
             except:
                 raise ARCSIException("Failed to download file from Google.")
             curl.close()
             fp.close()
             sys.stdout.flush()
-            
-            print("Create and load data into a sqlite db:")   
+
+            print("Create and load data into a sqlite db:")
             ggSen2DBConn = sqlite3.connect(dbFile)
-            ggSen2DBConn.execute('''CREATE TABLE sen2 (COUNT PRIMARY KEY, GRANULE_ID text, PRODUCT_ID text, DATATAKE_IDENTIFIER text, MGRS_TILE text, SENSING_TIME text, TOTAL_SIZE real, CLOUD_COVER real, GEOMETRIC_QUALITY_FLAG int1, GENERATION_TIME text, NORTH_LAT real, SOUTH_LAT real, WEST_LON real, EAST_LON real, BASE_URL text)''')
-            
-            with gzip.open(ggCSVSen2FileGZ,'r') as ggCSVSen2File:
+            ggSen2DBConn.execute(
+                """CREATE TABLE sen2 (COUNT PRIMARY KEY, GRANULE_ID text, PRODUCT_ID text, DATATAKE_IDENTIFIER text, MGRS_TILE text, SENSING_TIME text, TOTAL_SIZE real, CLOUD_COVER real, GEOMETRIC_QUALITY_FLAG int1, GENERATION_TIME text, NORTH_LAT real, SOUTH_LAT real, WEST_LON real, EAST_LON real, BASE_URL text)"""
+            )
+
+            with gzip.open(ggCSVSen2FileGZ, "r") as ggCSVSen2File:
                 commitCounter = 0
                 keyCount = 0
                 committed = False
@@ -126,16 +116,48 @@ def setupSen2DB(dbFile):
                     else:
                         committed = False
                         line = line.decode().strip()
-                        lineComps = line.split(',')
-                        #print('Got:', lineComps[7])
-                        if lineComps[7].strip() == 'PASSED':
-                            lineComps[7] = '1'
-                        elif lineComps[7].strip() == 'FAILED':
-                            lineComps[7] = '0'
+                        lineComps = line.split(",")
+                        # print('Got:', lineComps[7])
+                        if lineComps[7].strip() == "PASSED":
+                            lineComps[7] = "1"
+                        elif lineComps[7].strip() == "FAILED":
+                            lineComps[7] = "0"
                         else:
-                            lineComps[7] = '0'
-                        sqlcmd = "INSERT INTO sen2 (COUNT, GRANULE_ID, PRODUCT_ID, DATATAKE_IDENTIFIER, MGRS_TILE, SENSING_TIME, TOTAL_SIZE, CLOUD_COVER, GEOMETRIC_QUALITY_FLAG, GENERATION_TIME, NORTH_LAT, SOUTH_LAT, WEST_LON, EAST_LON, BASE_URL) VALUES ("+str(keyCount)+", '"+lineComps[0]+"', '"+lineComps[1]+"', '"+lineComps[2]+"', '"+lineComps[3]+"', '"+lineComps[4]+"', '"+lineComps[5]+"', "+lineComps[6]+", "+lineComps[7]+", '"+lineComps[8]+"', "+lineComps[9]+", "+lineComps[10]+", "+lineComps[11]+", "+lineComps[12]+", '"+lineComps[13]+"')"
-                        #print(sqlcmd)
+                            lineComps[7] = "0"
+                        sqlcmd = (
+                            "INSERT INTO sen2 (COUNT, GRANULE_ID, PRODUCT_ID, DATATAKE_IDENTIFIER, MGRS_TILE, SENSING_TIME, TOTAL_SIZE, CLOUD_COVER, GEOMETRIC_QUALITY_FLAG, GENERATION_TIME, NORTH_LAT, SOUTH_LAT, WEST_LON, EAST_LON, BASE_URL) VALUES ("
+                            + str(keyCount)
+                            + ", '"
+                            + lineComps[0]
+                            + "', '"
+                            + lineComps[1]
+                            + "', '"
+                            + lineComps[2]
+                            + "', '"
+                            + lineComps[3]
+                            + "', '"
+                            + lineComps[4]
+                            + "', '"
+                            + lineComps[5]
+                            + "', "
+                            + lineComps[6]
+                            + ", "
+                            + lineComps[7]
+                            + ", '"
+                            + lineComps[8]
+                            + "', "
+                            + lineComps[9]
+                            + ", "
+                            + lineComps[10]
+                            + ", "
+                            + lineComps[11]
+                            + ", "
+                            + lineComps[12]
+                            + ", '"
+                            + lineComps[13]
+                            + "')"
+                        )
+                        # print(sqlcmd)
                         ggSen2DBConn.execute(sqlcmd)
                         keyCount = keyCount + 1
                         if commitCounter == 10000:
@@ -153,27 +175,30 @@ def setupSen2DB(dbFile):
     except ARCSIException as e:
         print("Error: {}".format(e), file=sys.stderr)
     except Exception as e:
-        print("Error: {}".format(e), file=sys.stderr)            
+        print("Error: {}".format(e), file=sys.stderr)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     """
     The command line user interface to ARCSI setup Sentinel-2 DB.
     """
-    parser = argparse.ArgumentParser(prog='arcsisetupsen2db.py',
-                                    description='''ARSCI command to set up 
-                                                   database of Sentinel-2 imagery''',
-                                    epilog='''A tool to set up a sqlite database
+    parser = argparse.ArgumentParser(
+        prog="arcsisetupsen2db.py",
+        description="""ARSCI command to set up 
+                                                   database of Sentinel-2 imagery""",
+        epilog="""A tool to set up a sqlite database
                                               with the Google Sentinel-2 imagery
-                                              list.''')
+                                              list.""",
+    )
     # Request the version number.
-    parser.add_argument('-v', '--version', action='version', version='%(prog)s version ' + ARCSI_VERSION)
+    parser.add_argument(
+        "-v", "--version", action="version", version="%(prog)s version " + ARCSI_VERSION
+    )
     # Define the argument for specifying the input directory to be processed.
-    parser.add_argument("-f", "--dbfile", type=str, required=True,
-                        help='''Path to the database file.''')
+    parser.add_argument(
+        "-f", "--dbfile", type=str, required=True, help="""Path to the database file."""
+    )
     # Call the parser to parse the arguments.
     args = parser.parse_args()
 
     setupSen2DB(args.dbfile)
-
-
