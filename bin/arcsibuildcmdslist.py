@@ -49,7 +49,7 @@ from arcsilib import ARCSI_GDALFORMATS_LIST
 from arcsilib import ARCSI_PRODUCTS_LIST
 from arcsilib import ARCSI_CLOUD_METHODS_LIST
 from arcsilib.arcsiexception import ARCSIException
-
+import rsgislib.tools.utils
 
 class ARCSIBuildCommands(object):
     def getListOfFiles(self, searchDIR, searchStr, depth):
@@ -203,7 +203,11 @@ class ARCSIBuildCommands(object):
                         'Sensor was not recognised for file: "' + hFile + '"'
                     )
 
-            cmd = "arcsi.py -s " + sensorOUT + " -p " + prodsStr + ' -i "' + hFile + '"'
+            prodsStrSen = prodsStr
+            if (sensorOUT == "lsmss") and ("CLOUDS" in prodsStr):
+                prodsStrSen = prodsStrSen.replace("CLOUDS", "")
+
+            cmd = "arcsi.py -s " + sensorOUT + " -p " + prodsStrSen + ' -i "' + hFile + '"'
             if outpath is not None:
                 cmd = cmd + ' --outpath "' + os.path.abspath(outpath) + '"'
             if stats:
@@ -272,14 +276,8 @@ class ARCSIBuildCommands(object):
                 cmd = cmd + " --checkouts "
             if fullimgouts:
                 cmd = cmd + " --fullimgouts "
-            if cloudmethods is not None:
+            if (cloudmethods is not None) and (sensorOUT != "lsmss"):
                 cmd = cmd + " --cloudmethods " + str(cloudmethods)
-            if classmlclouds:
-                cmd = cmd + " --classmlclouds "
-                if not cloudtrainclouds == None:
-                    cmd = cmd + ' --cloudtrainclouds "' + str(cloudtrainclouds) + '"'
-                if not cloudtrainother == None:
-                    cmd = cmd + ' --cloudtrainother "' + str(cloudtrainother) + '"'
             if resample2lowres:
                 cmd = cmd + " --resample2lowres "
             if keepfileends is not None:
