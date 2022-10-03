@@ -7,8 +7,8 @@ See other source files for details
 from distutils.version import LooseVersion
 import os
 
-ARCSI_VERSION_MAJOR = 3
-ARCSI_VERSION_MINOR = 4
+ARCSI_VERSION_MAJOR = 4
+ARCSI_VERSION_MINOR = 0
 ARCSI_VERSION_PATCH = 0
 
 ARCSI_VERSION = f"{ARCSI_VERSION_MAJOR}.{ARCSI_VERSION_MINOR}.{ARCSI_VERSION_PATCH}"
