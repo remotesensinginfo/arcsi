@@ -25,6 +25,10 @@ To run ARCSI you need up to date versions of:
 * Py6S
 * 6S
 
+## How to use ##
+
+Information is provided on the website (https://www.remotesensing.info/arcsi/) including some tutorials.
+
 ## Need support? ##
 
 If you need support using ARCSI or think you've found a bug please email us on rsgislib-support@googlegroups.com.
