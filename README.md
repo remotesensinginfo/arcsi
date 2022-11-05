@@ -27,7 +27,7 @@ To run ARCSI you need up to date versions of:
 
 ## How to use ##
 
-Information is provided on the website (https://www.remotesensing.info/arcsi/) including some tutorials.
+Information is provided on the website (http://remotesensing.info/arcsi/) including some tutorials.
 
 ## Need support? ##
 
