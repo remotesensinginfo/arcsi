@@ -19,10 +19,12 @@ However, we would recommend you create a new conda environment, which you do wit
 
 ::
 
-    conda create -n arcsienv python=3.5
+    conda create -n arcsienv python=3.10
     source activate arcsienv
     conda install -c conda-forge arcsi
 
+
+Note. the latest version is 4.0.X and this is required to work with the latest version of RSGISLib (version 5.X).
 
 Supported Sensors
 -----------------
@@ -30,12 +32,7 @@ Supported Sensors
 Currently we support:
 
 * Sentinel-2
-* Landsat 4, 5, 7, 8 (TM, ETM+, OLI)
-* Landsat MSS 1, 2, 3, 4, 5
-* Rapideye
-* WorldView 2 and 3
-* Pleiades
-* SPOT 5, 6 and 7
+* Landsat 4, 5, 7, 8, 9 (TM, ETM+, OLI) - Collection 1 or 2.
 
 
 Getting Started
@@ -45,8 +42,9 @@ To get started the basic command is:
 
 ::
 
-    arcsi.py -s ls5tm -p CLOUDS DOSAOTSGL STDSREF SATURATE TOPOSHADOW FOOTPRINT METADATA \
-    -o ./Outputs/ --stats --format KEA --tmpath ./tmp --dem ./UKSRTM_90m.kea \
+    arcsi.py -s lstm -p CLOUDS DOSAOTSGL STDSREF SATURATE TOPOSHADOW FOOTPRINT METADATA \
+    -o ./Outputs/ --stats --format KEA --tmpath ./tmp  \
+    --dem ./UKSRTM_90m.kea --cloudmethods LSMSK \
     --k  clouds.kea meta.json sat.kea toposhad.kea valid.kea stdsref.kea \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
@@ -58,7 +56,7 @@ The following command is the same but for Sentinel-2:
  
     arcsi.py -s sen2 --stats --format KEA \
     -p CLOUDS DOSAOTSGL STDSREF SATURATE TOPOSHADOW FOOTPRINT METADATA SHARP \
-    -o ./Outputs  --dem ./UKSRTM_90m.kea --tmpath ./tmp  \
+    -o ./Outputs  --dem ./UKSRTM_90m.kea --tmpath ./tmp  --cloudmethods S2LESSFMSK \
     --k  clouds.kea meta.json sat.kea toposhad.kea valid.kea stdsref.kea \
     -i S2A_MSIL1C_20170617T113321_N0205_R080_T30UVD_20170617T113319.SAFE/MTD_MSIL1C.xml
 
@@ -71,6 +69,7 @@ Information
    :maxdepth: 2
 
    about
+   background
    tutorials
    cmdtools
 

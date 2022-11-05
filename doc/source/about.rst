@@ -4,7 +4,7 @@
 About
 =======
 
-ARCSI was first create in 2013 through a project funded by the Norwegian Space Agency to support the generation of analysis ready data (ARD) in support of UN REDD+ activities. Initally, ARCSI supported all the Landsat sensors and Rapideye. Functionality has since expanded and improved to support a wider range of sensors and provided a better quality ARD product. As with many thing, progress never stops are there are always improvements which can be made in the quality of the ARD product and building in support for more sensors. 
+ARCSI was first create in 2013 through a project funded by the Norwegian Space Agency to support the generation of analysis ready data (ARD) in support of UN REDD+ activities. Initially, ARCSI supported all the Landsat sensors and Rapideye, that was expanded in to many sensors in v3.X. In version 4.X the number of sensors was reduced to Landsat and Sentinel-2 to improve the maintainability going forward.
 
 	
 Frequently Asked Questions
@@ -12,7 +12,7 @@ Frequently Asked Questions
 
 **What does ARCSI do?**
 
-The aim of ARCSI is to provide as automatic as possible method of generating Analysis Ready Data (ARD).
+The aim of ARCSI is to provide as automatic as possible method of generating atmospherically correct optical satellite imagery.
 
 **Is this free software?**
 
@@ -36,13 +36,13 @@ We can also provide other custom training cources as and when there is need and 
 
 **How do I go about getting functionality added to ARCSI?**
 
-For general suggestions submit a ticket on our `issues <https://bitbucket.org/petebunting/arcsi/issues?status=new&status=open>`_ page on Bitbucket or post a suggestion to the Google groups mailing list. 
+For general suggestions submit a ticket on our `issues <https://github.com/remotesensinginfo/arcsi/issues>`_ page on GitHub or post a suggestion to the Google groups mailing list.
 
 If you are preparing a research proposal or have a commercial project where you are likely use ARCSI please contact us for collaborative opportunities or consultancy work to add new functions to ARCSI, improve existing features.
 
 **Who funds ARCSI?**
 
-As stated above ARCSI was first created through a grant from the Norwegian Space Agency. However, there is no on-going funding behind ARCSI other than our grant income but the Welsh Government and UK DEFRA having provided grants through which the functionality of ARCSI has been significantly developed. Therefore, the rate of development for ARCSI is variable and driven by our project needs and funding availablity.
+As stated above ARCSI was first created through a grant from the Norwegian Space Agency. However, there is no on-going funding behind ARCSI other than our grant income but the Welsh Government and UK DEFRA having provided grants through which the functionality of ARCSI have been further developed. Therefore, the rate of development for ARCSI is variable and driven by our project needs and funding availability.
 
 
 * :ref:`genindex`

@@ -46,6 +46,7 @@ from arcsilib import ARCSI_VERSION
 import os
 from arcsilib.arcsiutils import ARCSISensorFactory
 from arcsilib import ARCSI_SENSORS_LIST
+import rsgislib.tools.utils
 
 
 class ARCSIBuildMultiFileList(object):

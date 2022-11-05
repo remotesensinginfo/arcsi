@@ -46,7 +46,7 @@ import sys
 import argparse
 from arcsilib import ARCSI_VERSION
 from arcsilib import ARCSI_ARCHIVE_EXE_LIST
-
+import rsgislib.tools.utils
 
 class ARCSIBuildExtractDataCmds(object):
     def runGenCommandsDIR(self, inputDIR, outputFile, outDIR, nofolders):

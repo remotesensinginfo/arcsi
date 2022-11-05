@@ -20,11 +20,19 @@ This is the main command that may well be the only command you use within ARCSI.
 
 ::
 
-    arcsi.py -s ls5tm -p CLOUDS DOSAOTSGL STDSREF SATURATE TOPOSHADOW FOOTPRINT METADATA \
-    -o ./Outputs/ --stats --format KEA --tmpath ./tmp --dem ./UKSRTM_90m.kea \
+    arcsi.py -s lstm -p CLOUDS DOSAOTSGL STDSREF SATURATE TOPOSHADOW FOOTPRINT METADATA \
+    -o ./Outputs/ --stats --format KEA --tmpath ./tmp  \
+    --dem ./UKSRTM_90m.kea --cloudmethods LSMSK \
     --k  clouds.kea meta.json sat.kea toposhad.kea valid.kea stdsref.kea \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
+The sensors available are:
+
+ * lsmss Landsat MSS 1, 2, 3, 4 and 5
+ * lstm - Landsat TM 4 and 5
+ * lsetm - Landsat ETM+ 7
+ * lsoli - Landsat OLI 8 and 9
+ * sen2 - Sentinel-2
 
 arcsimpi.py
 ~~~~~~~~~~~	
@@ -40,7 +48,7 @@ These commands allow you to automate the processing of downloading your EO data,
 
 arcsisetuplandsatdb.py
 ~~~~~~~~~~~~~~~~~~~~~~
-This command creates a local copy of the Google database of landsat acquasitions as a SQLite database. 
+This command creates a local copy of the Google database of landsat acquisitions as a SQLite database.
 
 ::
 
@@ -50,7 +58,7 @@ This command creates a local copy of the Google database of landsat acquasitions
 arcsisetupsen2db.py
 ~~~~~~~~~~~~~~~~~~~~
 
-This command creates a local copy of the Google database of Sentinel-2 acquasitions as a SQLite database. 
+This command creates a local copy of the Google database of Sentinel-2 acquisitions as a SQLite database.
 
 ::
 
@@ -106,8 +114,8 @@ This command allows you to build the arcsi.py commands for a large number of inp
 
 ::
 
-    arcsibuildcmdslist.py -s ls5tm -f KEA --stats -p CLOUDS DOSAOTSGL STDSREF \
-    --outpath ./Outputs --dem ../UKSRTM_90m.kea \
+    arcsibuildcmdslist.py -s lstm -f KEA --stats -p CLOUDS DOSAOTSGL STDSREF \
+    --outpath ./Outputs --dem ../UKSRTM_90m.kea --cloudmethods LSMSK \
     --keepfileends stdsref.kea clouds.kea \
     --tmpath ./tmp -i ./Inputs -e "*MTL.txt" -o LSARCSICmds.sh
 
@@ -120,23 +128,6 @@ arcsibuildfilenameslu.py
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ARCSI creates a standard unique name for each sensor using the meta-data for that image. However, if you have batch processed a large number of scenes then knowledge of which input dataset results in a particular output file might be lost. This command can build a look up table with this information.
-
-
-Sentinel-2
------------
-
-These commands provide specific functionality for the Sentinel-2 sensor.
-
-arcsichecksen2ver.py
-~~~~~~~~~~~~~~~~~~~~~~
-
-This command can be used to check that multiple versions of the same granule have been downloaded. ESA do reprocess some data on ocassion and Google keep all versions so you can end up with more than one copy of the same image on your system. This can cause a lot of problems using processing where file are over written. Therefore, this command was created to identify those images and select the most recent.
-
-
-arcsisplitsen2granules.py
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-The first releases of Sentinel-2 data were provided by ESA as whole scenes (i.e., multiple granules). However, due to the size of the download ESA soon split the granules into indivdual downloads. ARCSI process granules and therefore these older files need to be split into individual granule files for processing. This is the functionality provided by this command. Please note that if you download your data from Google this will already have been split into granules as this is how Google have stored the data.
 
 
 Landsat
@@ -185,15 +176,7 @@ Unless you have downloaded your data from Google you will probably have a set of
     arcsiextractdata.py -i ./InputDIR -o ./OutputDIR
 
 
-
-
-arcsiextractroistats.py
-~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-This command can be used to extract, via zonal statistics, values for a region defined by a shapefile from a directory input images. Can you useful for QA checking your ARCSI outputs over expected invarient features.
-
-
-Development Utilties
+Development Utilities
 ---------------------
 
 These tools are not expected to be useful for the average user but are very useful for some creating a new sensor to be added to the ARCSI source code.
@@ -209,12 +192,6 @@ arcsisolarirradiance.py
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
 This command can use the spectral response functions to calculate the solar irradiance for the input band. This value is required for converting at sensor radiance to at sensor reflectance (also called top of atmosphere reflectance; TOA).
-
-
-arcsicreatepy6scall.py
-~~~~~~~~~~~~~~~~~~~~~~~
-
-This command generates the py6S syntax for defining the sensor response function rather than using, if available, the in-built sensor response functions.
 
 
 

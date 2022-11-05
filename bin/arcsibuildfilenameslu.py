@@ -46,6 +46,7 @@ from arcsilib.arcsiutils import ARCSISensorFactory
 import json
 from arcsilib import ARCSI_SENSORS_LIST
 from arcsilib import ARCSI_ARCHIVE_EXE_LIST
+from arcsilib.arcsiexception import ARCSIException
 
 
 class ARCSIBuildFileNameLUT(object):
