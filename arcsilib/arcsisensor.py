@@ -267,16 +267,22 @@ class ARCSIAbstractSensor(object):
         north_south = "n"
         if self.latCentre < 0:
             north_south = "s"
+        
+        # pad lat and lons to a standardised format
+        lat_pad='{:04.1f}'.format(round(abs(self.latCentre), 1))
+        lon_pad='{:05.1f}'.format(round(abs(self.lonCentre), 1))
+
         pos = (
             "lat"
             + north_south
-            + str(round(self.latCentre, 1)).replace(".", "").replace("-", "")
+            + lat_pad.replace(".", "")
             + "lon"
             + east_west
-            + str(round(self.lonCentre, 1)).replace(".", "").replace("-", "")
+            + lon_pad.replace(".", "")
         )
 
         outname = self.sensor + "_" + date + "_" + pos
+
         return outname
 
     def generateOutputBaseName(self):
