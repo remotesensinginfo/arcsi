@@ -58,13 +58,12 @@ from mpi4py import MPI
 import time
 DEBUG = True
 
-# Define MPI message tags
-mpiTags = ARCSIEnum("READY", "DONE", "EXIT", "START")
-
-arcsiStages = ARCSIEnum("ARCSIPART1", "ARCSIPART2", "ARCSIPART3", "ARCSIPART4")
-
 # Initializations and preliminaries
 try: 
+    # Define MPI message tags
+    mpiTags = ARCSIEnum("READY", "DONE", "EXIT", "START")
+    arcsiStages = ARCSIEnum("ARCSIPART1", "ARCSIPART2", "ARCSIPART3", "ARCSIPART4")
+
     # cgi-debug
     mpiComm = MPI.COMM_WORLD  # get MPI communicator object
     print('mpiComm dir = ' + str(dir(mpiComm)))
@@ -79,6 +78,7 @@ try:
     print('mpiRank = ' + str(mpiStatus))
 
 except Exception as error:
+    print(f'ERROR. {error}')
 
 
 if (__name__ == "__main__") and (mpiRank == 0):
