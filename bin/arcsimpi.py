@@ -71,11 +71,12 @@ try:
     mpiSize = mpiComm.size  # total number of processes
     print('mpiSize = ' + str(mpiSize))
     
-    mpiRank = mpiComm.rank  # rank of this process
+    #mpiRank = mpiComm.rank  # rank of this process
+    mpiRank = mpiComm.Get_rank()
     print('mpiRank = ' + str(mpiRank))
 
     mpiStatus = MPI.Status()  # get MPI status object
-    print('mpiRank = ' + str(mpiStatus))
+    print('mpiStatus = ' + str(dir(mpiStatus)))
 
 except Exception as error:
     print(f'ERROR. {error}')
