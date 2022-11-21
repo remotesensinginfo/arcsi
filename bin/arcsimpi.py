@@ -559,6 +559,9 @@ if (__name__ == "__main__") and (mpiRank == 0):
         # Call the parser to parse the arguments.
         args = parser.parse_args()
 
+        # cgi-debug
+        print('CGI-DEBUG. START OF arcsimpi')
+
         if args.sensorlist:
             arcsilib.arcsirun.print2ConsoleListSensors()
         elif args.prodlist:
@@ -613,6 +616,9 @@ if (__name__ == "__main__") and (mpiRank == 0):
                     print(
                         "WARNING: It is recommended that a projection abbreviation or acronym is provided (--projabbv)..."
                     )
+
+            # cgi-debug
+            print('CGI-DEBUG. COMPLETE args checks')
 
             needAOD = False
             needAODMinMax = False
@@ -846,6 +852,10 @@ if (__name__ == "__main__") and (mpiRank == 0):
             runTimer.start(True)
 
             try:
+
+                # cgi-debug
+                print('CGI-DEBUG. BEGIN initialise')
+
                 ######### Initialise and parameters object. #########
                 inputHeadersLst = rsgislib.tools.utils.read_text_file_to_list(
                     args.inputheaders
