@@ -64,10 +64,22 @@ mpiTags = ARCSIEnum("READY", "DONE", "EXIT", "START")
 arcsiStages = ARCSIEnum("ARCSIPART1", "ARCSIPART2", "ARCSIPART3", "ARCSIPART4")
 
 # Initializations and preliminaries
-mpiComm = MPI.COMM_WORLD  # get MPI communicator object
-mpiSize = mpiComm.size  # total number of processes
-mpiRank = mpiComm.rank  # rank of this process
-mpiStatus = MPI.Status()  # get MPI status object
+try: 
+    # cgi-debug
+    mpiComm = MPI.COMM_WORLD  # get MPI communicator object
+    print('mpiComm dir = ' + str(dir(mpiComm)))
+
+    mpiSize = mpiComm.size  # total number of processes
+    print('mpiSize = ' + str(mpiSize))
+    
+    mpiRank = mpiComm.rank  # rank of this process
+    print('mpiRank = ' + str(mpiRank))
+
+    mpiStatus = MPI.Status()  # get MPI status object
+    print('mpiRank = ' + str(mpiStatus))
+
+except Exception as error:
+
 
 if (__name__ == "__main__") and (mpiRank == 0):
     """
@@ -958,6 +970,9 @@ if (__name__ == "__main__") and (mpiRank == 0):
                 taskIdx = 0
                 nWorkers = mpiSize - 1
                 completedTasks = 0
+                print('nTasks = ' + str(nTasks))
+                print('nWorkers = ' + str(nWorkers))
+                print('CGI-DEBUG. START    PART 1')
 
                 # MPI ranks must equal number of granules being processed
                 # get READY status from workers
