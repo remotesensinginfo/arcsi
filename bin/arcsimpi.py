@@ -560,7 +560,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
         args = parser.parse_args()
 
         # cgi-debug
-        print('CGI-DEBUG. START OF arcsimpi')
+        print('CGI-DEBUG. START    arcsimpi')
 
         if args.sensorlist:
             arcsilib.arcsirun.print2ConsoleListSensors()
@@ -854,7 +854,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
             try:
 
                 # cgi-debug
-                print('CGI-DEBUG. BEGIN initialise')
+                print('CGI-DEBUG. START    INTITIALISATION')
 
                 ######### Initialise and parameters object. #########
                 inputHeadersLst = rsgislib.tools.utils.read_text_file_to_list(
@@ -867,6 +867,8 @@ if (__name__ == "__main__") and (mpiRank == 0):
                 useAOTImage = False
                 first = True
                 for inputHeader in inputHeadersLst:
+                    # cgi-debug
+                    print('CGI-DEBUG. START    arcsilib.arcsirun.prepParametersObj')
                     paramsObj = arcsilib.arcsirun.prepParametersObj(
                         inputHeader,
                         None,
@@ -925,6 +927,8 @@ if (__name__ == "__main__") and (mpiRank == 0):
                         args.cloudmethods,
                         args.flatoutdir,
                     )
+                    # cgi-debug
+                    print('CGI-DEBUG. COMPLETE arcsilib.arcsirun.prepParametersObj')
                     paramsLst.append(paramsObj)
                     if first:
                         if (
@@ -943,6 +947,8 @@ if (__name__ == "__main__") and (mpiRank == 0):
                         if paramsObj.prodsToCalc["METADATA"]:
                             exportMetaData = True
                         first = False
+                # cgi-debug
+                print('CGI-DEBUG. COMPLETE INTITIALISATION')
                 ##############################
 
                 ######### RUN PART 1 #########
