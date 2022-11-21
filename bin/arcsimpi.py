@@ -952,6 +952,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
                 ##############################
 
                 ######### RUN PART 1 #########
+                print('CGI-DEBUG. START    PART 1')
                 paramsLstTmp = []
                 nTasks = len(paramsLst)
                 taskIdx = 0
@@ -962,8 +963,12 @@ if (__name__ == "__main__") and (mpiRank == 0):
                 # get READY status from workers
                 for item in range(1, mpiSize):
 
+                    print('CGI-DEBUG. START    mpiComm.recv COMMAND')
+
                     # receive the ready status from worker
                     rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.READY, status=mpiStatus)
+
+                    print('CGI-DEBUG. COMPLETE mpiComm.recv COMMAND')
 
                     if DEBUG:
                         print("DEBUG-master PART 1 || send to rank:", 
