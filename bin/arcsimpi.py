@@ -111,6 +111,9 @@ if (__name__ == "__main__") and (mpiRank == 0):
             " -k meta.json valid.kea toa.kea  -i ./RockallSentinel2B_20170816.txt -o ./Outputs"
         )
     else:
+
+        print(f'CGI debug, mpiSize = {mpiComm.size}')
+
         parser = argparse.ArgumentParser(
             prog="arcsimpi.py",
             formatter_class=argparse.ArgumentDefaultsHelpFormatter,
