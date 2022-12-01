@@ -64,10 +64,7 @@ try:
     mpiTags = ARCSIEnum("READY", "DONE", "EXIT", "START")
     arcsiStages = ARCSIEnum("ARCSIPART1", "ARCSIPART2", "ARCSIPART3", "ARCSIPART4")
 
-    # cgi-debug
     mpiComm = MPI.COMM_WORLD  # get MPI communicator object
-    print('mpiComm dir = ' + str(dir(mpiComm)))
-
     mpiSize = mpiComm.size  # total number of processes
     print('mpiSize = ' + str(mpiSize))
     
@@ -76,7 +73,6 @@ try:
     print('mpiRank = ' + str(mpiRank))
 
     mpiStatus = MPI.Status()  # get MPI status object
-    print('mpiStatus = ' + str(dir(mpiStatus)))
 
 except Exception as error:
     print(f'ERROR. {error}')
@@ -111,8 +107,6 @@ if (__name__ == "__main__") and (mpiRank == 0):
             " -k meta.json valid.kea toa.kea  -i ./RockallSentinel2B_20170816.txt -o ./Outputs"
         )
     else:
-
-        print(f'CGI debug, mpiSize = {mpiComm.size}')
 
         parser = argparse.ArgumentParser(
             prog="arcsimpi.py",
@@ -575,9 +569,6 @@ if (__name__ == "__main__") and (mpiRank == 0):
         # Call the parser to parse the arguments.
         args = parser.parse_args()
 
-        # cgi-debug
-        print('CGI-DEBUG. START    arcsimpi')
-
         if args.sensorlist:
             arcsilib.arcsirun.print2ConsoleListSensors()
         elif args.prodlist:
@@ -632,9 +623,6 @@ if (__name__ == "__main__") and (mpiRank == 0):
                     print(
                         "WARNING: It is recommended that a projection abbreviation or acronym is provided (--projabbv)..."
                     )
-
-            # cgi-debug
-            print('CGI-DEBUG. COMPLETE args checks')
 
             needAOD = False
             needAODMinMax = False
@@ -869,9 +857,6 @@ if (__name__ == "__main__") and (mpiRank == 0):
 
             try:
 
-                # cgi-debug
-                print('CGI-DEBUG. START    INTITIALISATION')
-
                 ######### Initialise and parameters object. #########
                 inputHeadersLst = rsgislib.tools.utils.read_text_file_to_list(
                     args.inputheaders
@@ -883,8 +868,6 @@ if (__name__ == "__main__") and (mpiRank == 0):
                 useAOTImage = False
                 first = True
                 for inputHeader in inputHeadersLst:
-                    # cgi-debug
-                    print('CGI-DEBUG. START    arcsilib.arcsirun.prepParametersObj')
                     paramsObj = arcsilib.arcsirun.prepParametersObj(
                         inputHeader,
                         None,
@@ -943,8 +926,6 @@ if (__name__ == "__main__") and (mpiRank == 0):
                         args.cloudmethods,
                         args.flatoutdir,
                     )
-                    # cgi-debug
-                    print('CGI-DEBUG. COMPLETE arcsilib.arcsirun.prepParametersObj')
                     paramsLst.append(paramsObj)
                     if first:
                         if (
@@ -963,31 +944,21 @@ if (__name__ == "__main__") and (mpiRank == 0):
                         if paramsObj.prodsToCalc["METADATA"]:
                             exportMetaData = True
                         first = False
-                # cgi-debug
-                print('CGI-DEBUG. COMPLETE INTITIALISATION')
                 ##############################
 
                 ######### RUN PART 1 #########
-                print('CGI-DEBUG. START    PART 1')
                 paramsLstTmp = []
                 nTasks = len(paramsLst)
                 taskIdx = 0
                 nWorkers = mpiSize - 1
                 completedTasks = 0
-                print('nTasks = ' + str(nTasks))
-                print('nWorkers = ' + str(nWorkers))
-                print('CGI-DEBUG. START    PART 1')
 
                 # MPI ranks must equal number of granules being processed
                 # get READY status from workers
                 for item in range(1, mpiSize):
 
-                    print('CGI-DEBUG. START    mpiComm.recv COMMAND')
-
                     # receive the ready status from worker
                     rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.READY, status=mpiStatus)
-
-                    print('CGI-DEBUG. COMPLETE mpiComm.recv COMMAND')
 
                     if DEBUG:
                         print("DEBUG-master PART 1 || send to rank:", 
@@ -1067,7 +1038,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
                                 mpiRank, 
                                 flush=True)
 
-                        mpiComm.send([arcsiStages.ARCSIPART1, paramsLst[item - 1]], dest=item, tag=mpiTags.START)
+                        mpiComm.send([arcsiStages.ARCSIPART2, paramsLst[item - 1]], dest=item, tag=mpiTags.START)
 
                     # get DONE status from workers
                     for item in range(1, mpiSize):
@@ -1115,7 +1086,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
                                 mpiRank, 
                                 flush=True)
 
-                        mpiComm.send([arcsiStages.ARCSIPART1, paramsLst[item - 1]], dest=item, tag=mpiTags.START)
+                        mpiComm.send([arcsiStages.ARCSIPART3, paramsLst[item - 1]], dest=item, tag=mpiTags.START)
 
                     # get DONE status from workers
                     for item in range(1, mpiSize):
@@ -1153,7 +1124,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
                     rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.READY, status=mpiStatus)
 
                     if DEBUG:
-                        print("DEBUG-master PART 3 || send to rank:", 
+                        print("DEBUG-master PART 4 || send to rank:", 
                             item, 
                             "time:", 
                             time.asctime(), 
@@ -1162,7 +1133,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
                             mpiRank, 
                             flush=True)
 
-                    mpiComm.send([arcsiStages.ARCSIPART1, paramsLst[item - 1]], dest=item, tag=mpiTags.START)
+                    mpiComm.send([arcsiStages.ARCSIPART4, paramsLst[item - 1]], dest=item, tag=mpiTags.START)
 
                 # get DONE status from workers
                 for item in range(1, mpiSize):
@@ -1171,7 +1142,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
                     rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.DONE, status=mpiStatus)
 
                     if DEBUG:
-                        print("DEBUG-master PART 3 || receive from", 
+                        print("DEBUG-master PART 4 || receive from", 
                             item, 
                             "time:", 
                             time.asctime(), 
