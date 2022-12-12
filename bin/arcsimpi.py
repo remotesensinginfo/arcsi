@@ -1273,10 +1273,8 @@ else:
                     mpiRank, flush=True)
             mpiComm.send(paramsObj, dest=0, tag=mpiTags.DONE)
 
-            if tag == mpiTags.EXIT:
-                break
-            mpiComm.Barrier()
-
         elif tag == mpiTags.EXIT:
             break
+        mpiComm.Barrier()
+
     mpiComm.send(None, dest=0, tag=mpiTags.EXIT)
