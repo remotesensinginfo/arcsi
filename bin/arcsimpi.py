@@ -64,15 +64,13 @@ try:
     mpiTags = ARCSIEnum("READY", "DONE", "EXIT", "START")
     arcsiStages = ARCSIEnum("ARCSIPART1", "ARCSIPART2", "ARCSIPART3", "ARCSIPART4")
 
-    mpiComm = MPI.COMM_WORLD  # get MPI communicator object
-    mpiSize = mpiComm.size  # total number of processes
-    print('mpiSize = ' + str(mpiSize))
-    
-    #mpiRank = mpiComm.rank  # rank of this process
-    mpiRank = mpiComm.Get_rank()
-    print('mpiRank = ' + str(mpiRank))
+    mpiComm = MPI.COMM_WORLD        # get MPI communicator object
+    mpiSize = mpiComm.size          # total number of processes
+    mpiRank = mpiComm.Get_rank()    # get rank
+    mpiStatus = MPI.Status()        # get MPI status object
 
-    mpiStatus = MPI.Status()  # get MPI status object
+    if DEBUG:
+        print(f"DEBUG - Running on rank={mpiRank} out of size={mpiSize} on node={MPI.Get_processor_name()}")
 
 except Exception as error:
     print(f'ERROR. {error}')
