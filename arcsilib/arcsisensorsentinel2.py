@@ -2446,7 +2446,8 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             outputPath, os.path.splitext(os.path.basename(viewAngleImg))[0] + "tmp.kea"
         )
         # Generate the acquasition anagles image.
-        # This scale value will convert between DN and radians in output image file, radians = dn * SCALE_TO_RADIANS
+        # This scale value will convert between DN and radians in output
+        # image file, radians = dn * SCALE_TO_RADIANS
         SCALE_TO_RADIANS = 0.01
 
         drvr = gdal.GetDriverByName("KEA")
@@ -2489,8 +2490,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         )
         stackRadians = numpy.radians(stackDeg)
 
-        stackDN = numpy.round(stackRadians / SCALE_TO_RADIANS).astype(numpy.int16)
         nullmask = numpy.isnan(stackDeg)
+        stackRadians[nullmask] = 0.0
+        stackDN = numpy.round(stackRadians / SCALE_TO_RADIANS).astype(numpy.int16)
         stackDN[nullmask] = nullValDN
 
         lnames = ["SatelliteAzimuth", "SatelliteZenith", "SunAzimuth", "SunZenith"]
