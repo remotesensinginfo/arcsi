@@ -79,6 +79,19 @@ def run_fmask_cloud_msk(
         fmaskConfig.setSen2displacementTest(True)  # Frantz et al implementation.
     else:
         fmaskConfig.setSen2displacementTest(False)  # Frantz et al implementation.
+    off_dict = {
+        fmask.config.BAND_BLUE:        0,
+        fmask.config.BAND_GREEN:       0,
+        fmask.config.BAND_RED:         0,
+        fmask.config.BAND_NIR:         0,
+        fmask.config.BAND_SWIR1:       0,
+        fmask.config.BAND_SWIR2:       0,
+        fmask.config.BAND_WATERVAPOUR: 0,
+        fmask.config.BAND_CIRRUS:      0,
+        fmask.config.BAND_S2CDI_NIR7:  0,
+        fmask.config.BAND_S2CDI_NIR8A: 0
+        }
+    fmaskConfig.setTOARefOffsetDict(off_dict)
 
     missingThermal = True
 
@@ -238,6 +251,7 @@ def run_pyfmask_shadow_masking(
 def run_s2cloudless(
     s2img,
     out_cloud_msk,
+    out_cloud_prob,
     s2_vmsk_img,
     gdalformat,
     tmp_dir,
@@ -275,14 +289,13 @@ def run_s2cloudless(
         )
     ]
 
-    out_score_img = os.path.join(tmp_dir, "{}_s2cls_tmp_score.kea".format(basename))
     out_cls_img = os.path.join(tmp_dir, "{}_s2cls_tmp_cls.kea".format(basename))
     rsgislib.classification.classlightgbm.apply_lightgbm_binary_classifier(
         DEFAULT_ARCSI_S2CLOUDLESS_MODEL,
         s2_vmsk_img,
         1,
         imgs_info,
-        out_score_img,
+        out_cloud_prob,
         "KEA",
         out_cls_img,
         class_thres=5000,

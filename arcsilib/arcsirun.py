@@ -689,6 +689,7 @@ def prepParametersObj(
     paramsObj.sref6SWholeImage = ""
     paramsObj.aotFile = ""
     paramsObj.cloudsImage = ""
+    paramsObj.cloudsProbImage = ""
     paramsObj.clearskyImage = ""
     paramsObj.outDEMName = ""
     paramsObj.outDEMNameMsk = ""
@@ -1340,16 +1341,23 @@ def performCloudMasking(paramsObj):
     if paramsObj.prodsToCalc["CLOUDS"]:
         print("Perform Cloud Classification...")
 
-        outName = paramsObj.outBaseName + "_clouds" + paramsObj.outFormatExt
+        outCloudName = paramsObj.outBaseName + "_clouds" + paramsObj.outFormatExt
+        outCloudProbName = (
+            paramsObj.outBaseName + "_clouds_prob" + paramsObj.outFormatExt
+        )
         if paramsObj.cloudMaskUsrImg is None:
-            paramsObj.cloudsImage = paramsObj.sensorClass.generateCloudMask(
+            (
+                paramsObj.cloudsImage,
+                paramsObj.cloudsProbImage,
+            ) = paramsObj.sensorClass.generateCloudMask(
                 paramsObj.toaImage,
                 paramsObj.saturateImage,
                 paramsObj.thermalBrightImage,
                 paramsObj.viewAngleImg,
                 paramsObj.validMaskImage,
                 paramsObj.outFilePath,
-                outName,
+                outCloudName,
+                outCloudProbName,
                 paramsObj.outFormat,
                 paramsObj.tmpPath,
                 paramsObj.scaleFactor,
@@ -1358,9 +1366,15 @@ def performCloudMasking(paramsObj):
             if paramsObj.calcStatsPy:
                 print("Calculating Statistics...")
                 rsgislib.rastergis.pop_rat_img_stats(paramsObj.cloudsImage, False, True)
+                if paramsObj.cloudsProbImage is not None:
+                    rsgislib.imageutils.pop_img_stats(
+                        paramsObj.cloudsProbImage, True, 0.0, True
+                    )
         else:
             paramsObj.cloudsImage = paramsObj.cloudMaskUsrImg
         paramsObj.finalOutFiles["CLOUD_MASK"] = paramsObj.cloudsImage
+        if paramsObj.cloudsProbImage is not None:
+            paramsObj.finalOutFiles["CLOUD_PROB"] = paramsObj.cloudsProbImage
 
         # Calculate the proportion of the scene cover by cloud.
         paramsObj.propOfCloud = rsgislib.imagecalc.calc_prop_true_exp(
@@ -1862,28 +1876,9 @@ def calculateSREF(paramsObj):
                 + paramsObj.processSREFStr
                 + paramsObj.outFormatExt
             )
-            paramsObj.srefImage = paramsObj.sensorClass.convertImageToSurfaceReflSglParam(
-                paramsObj.radianceImage,
-                paramsObj.outFilePath,
-                outName,
-                paramsObj.outFormat,
-                paramsObj.aeroProfile,
-                paramsObj.atmosProfile,
-                paramsObj.grdRefl,
-                paramsObj.surfaceAltitude,
-                paramsObj.aotVal,
-                paramsObj.useBRDF,
-                paramsObj.scaleFactor,
-            )
-            if paramsObj.fullImgOuts:
-                outName = (
-                    paramsObj.outBaseName
-                    + paramsObj.processStageWholeImgStr
-                    + paramsObj.processSREFStr
-                    + paramsObj.outFormatExt
-                )
-                paramsObj.sref6SWholeImage = paramsObj.sensorClass.convertImageToSurfaceReflSglParam(
-                    paramsObj.radianceImageWhole,
+            paramsObj.srefImage = (
+                paramsObj.sensorClass.convertImageToSurfaceReflSglParam(
+                    paramsObj.radianceImage,
                     paramsObj.outFilePath,
                     outName,
                     paramsObj.outFormat,
@@ -1894,6 +1889,29 @@ def calculateSREF(paramsObj):
                     paramsObj.aotVal,
                     paramsObj.useBRDF,
                     paramsObj.scaleFactor,
+                )
+            )
+            if paramsObj.fullImgOuts:
+                outName = (
+                    paramsObj.outBaseName
+                    + paramsObj.processStageWholeImgStr
+                    + paramsObj.processSREFStr
+                    + paramsObj.outFormatExt
+                )
+                paramsObj.sref6SWholeImage = (
+                    paramsObj.sensorClass.convertImageToSurfaceReflSglParam(
+                        paramsObj.radianceImageWhole,
+                        paramsObj.outFilePath,
+                        outName,
+                        paramsObj.outFormat,
+                        paramsObj.aeroProfile,
+                        paramsObj.atmosProfile,
+                        paramsObj.grdRefl,
+                        paramsObj.surfaceAltitude,
+                        paramsObj.aotVal,
+                        paramsObj.useBRDF,
+                        paramsObj.scaleFactor,
+                    )
                 )
             paramsObj.calcdOutVals["ARCSI_ELEVATION_VALUE"] = paramsObj.surfaceAltitude
         else:

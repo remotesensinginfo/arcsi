@@ -1035,7 +1035,8 @@ class ARCSIAbstractSensor(object):
         inputViewAngleImg,
         inputValidImg,
         outputPath,
-        outputName,
+        outputCloudName,
+        outputCloudProb,
         outFormat,
         tmpPath,
         scaleFactor,
@@ -1549,7 +1550,8 @@ class ARCSIAbstractSensor(object):
 
             for band in range(numBands):
                 offsetImage = os.path.join(
-                    tmpPath, f"{tmpBaseName}_darktargetoffs_b{band + 1}.{imgExtension}",
+                    tmpPath,
+                    f"{tmpBaseName}_darktargetoffs_b{band + 1}.{imgExtension}",
                 )
                 self.calcDarkTargetOffsetsForBand(
                     inputTOAImage,
@@ -1989,7 +1991,8 @@ class ARCSIAbstractSensor(object):
                 print("Interpolating the offset image...")
 
                 offsetImage = os.path.join(
-                    tmpPath, f"{tmpBaseName}_darktargetoffs_b{band + 1}.{imgExtension}",
+                    tmpPath,
+                    f"{tmpBaseName}_darktargetoffs_b{band + 1}.{imgExtension}",
                 )
 
                 ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
@@ -2209,7 +2212,8 @@ class ARCSIAbstractSensor(object):
             )
 
             darkROIMask = os.path.join(
-                tmpPath, outputName + "_darkROIMask." + imgExtension,
+                tmpPath,
+                outputName + "_darkROIMask." + imgExtension,
             )
             expression = "((b1 != 0) && (b1 < " + str(dosOutRefl + 5) + "))?1.0:0.0"
             bandDefns = []
@@ -2219,7 +2223,8 @@ class ARCSIAbstractSensor(object):
             )
 
             darkROIMaskClumps = os.path.join(
-                tmpPath, outputName + "_darkROIMaskClumps." + imgExtension,
+                tmpPath,
+                outputName + "_darkROIMaskClumps." + imgExtension,
             )
             rsgislib.segmentation.clump(
                 darkROIMask, darkROIMaskClumps, outFormat, False, 0.0
@@ -2227,13 +2232,15 @@ class ARCSIAbstractSensor(object):
             rsgislib.rastergis.pop_rat_img_stats(darkROIMaskClumps, True, False)
 
             darkROIMaskClumpsRMSmall = os.path.join(
-                tmpPath, outputName + "_darkROIMaskClumpsRMSmall." + imgExtension,
+                tmpPath,
+                outputName + "_darkROIMaskClumpsRMSmall." + imgExtension,
             )
             rsgislib.segmentation.rm_small_clumps(
                 darkROIMaskClumps, darkROIMaskClumpsRMSmall, 5, outFormat
             )
             darkROIMaskClumpsFinal = os.path.join(
-                tmpPath, outputName + "_darkROIMaskClumpsFinal." + imgExtension,
+                tmpPath,
+                outputName + "_darkROIMaskClumpsFinal." + imgExtension,
             )
             rsgislib.segmentation.relabel_clumps(
                 darkROIMaskClumpsRMSmall, darkROIMaskClumpsFinal, outFormat, False

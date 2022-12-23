@@ -1088,7 +1088,8 @@ class ARCSILandsatOLISensor(ARCSIAbstractSensor):
         inputViewAngleImg,
         inputValidImg,
         outputPath,
-        outputName,
+        outputCloudName,
+        outputCloudProb,
         outFormat,
         tmpPath,
         scaleFactor,
@@ -1097,8 +1098,8 @@ class ARCSILandsatOLISensor(ARCSIAbstractSensor):
         import rsgislib.imageutils
 
         try:
-            outputImage = os.path.join(outputPath, outputName)
-            tmpBaseName = os.path.splitext(outputName)[0]
+            outputImage = os.path.join(outputPath, outputCloudName)
+            tmpBaseName = os.path.splitext(outputCloudName)[0]
             tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
 
             tmpDIRExisted = True
@@ -1360,7 +1361,7 @@ class ARCSILandsatOLISensor(ARCSIAbstractSensor):
                 if not tmpDIRExisted:
                     shutil.rmtree(tmpBaseDIR, ignore_errors=True)
 
-            return outputImage
+            return outputImage, None
         except Exception as e:
             raise e
 
@@ -2261,7 +2262,8 @@ class ARCSILandsatOLISensor(ARCSIAbstractSensor):
     ):
         """Used as part of the optimastion for identifying values of AOD"""
         print(
-            "Testing AOD Val: ", aotVal,
+            "Testing AOD Val: ",
+            aotVal,
         )
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile

@@ -43,7 +43,6 @@ import math
 import os
 import shutil
 import statistics
-import sys
 import xml.etree.ElementTree as ET
 
 import fmask.config
@@ -2965,14 +2964,16 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         inputViewAngleImg,
         inputValidImg,
         outputPath,
-        outputName,
+        outputCloudName,
+        outputCloudProb,
         outFormat,
         tmpPath,
         scaleFactor,
         cloud_msk_methods=None,
     ):
-        outputImage = os.path.join(outputPath, outputName)
-        tmpBaseName = os.path.splitext(outputName)[0]
+        outputImage = os.path.join(outputPath, outputCloudName)
+        outputProbImage = None
+        tmpBaseName = os.path.splitext(outputCloudName)[0]
         tmpBaseDIR = os.path.join(tmpPath, tmpBaseName)
 
         tmpDIRExisted = True
@@ -3125,6 +3126,19 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             fmaskConfig.setTempDir(tmpBaseDIR)
             fmaskConfig.setTOARefScaling(float(self.imgIntScaleFactor))
             fmaskConfig.setMinCloudSize(8)
+            off_dict = {
+                fmask.config.BAND_BLUE: 0,
+                fmask.config.BAND_GREEN: 0,
+                fmask.config.BAND_RED: 0,
+                fmask.config.BAND_NIR: 0,
+                fmask.config.BAND_SWIR1: 0,
+                fmask.config.BAND_SWIR2: 0,
+                fmask.config.BAND_WATERVAPOUR: 0,
+                fmask.config.BAND_CIRRUS: 0,
+                fmask.config.BAND_S2CDI_NIR7: 0,
+                fmask.config.BAND_S2CDI_NIR8A: 0,
+            }
+            fmaskConfig.setTOARefOffsetDict(off_dict)
 
             if (cloud_msk_methods is not None) and ("FMASK_DISP" in cloud_msk_methods):
                 fmaskConfig.setSen2displacementTest(
@@ -3148,6 +3162,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         elif "S2CLOUDLESS" in cloud_msk_methods:
             from arcsilib.s2cloudless import run_pyfmask_shadow_masking, run_s2cloudless
 
+            outputProbImage = os.path.join(outputPath, outputCloudProb)
             out_cloud_msk = os.path.join(
                 tmpBaseDIR, tmpBaseName + "_s2cloudless_cloud_msk.kea"
             )
@@ -3155,6 +3170,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             run_s2cloudless(
                 fmaskReflImg,
                 out_cloud_msk,
+                outputProbImage,
                 inputValidImg,
                 outFormat,
                 tmpBaseDIR,
@@ -3185,9 +3201,11 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             out_s2less_cloud_msk = os.path.join(
                 tmpBaseDIR, tmpBaseName + "_s2cloudless_cloud_msk.kea"
             )
+            outputProbImage = os.path.join(outputPath, outputCloudProb)
             run_s2cloudless(
                 fmaskReflImg,
                 out_s2less_cloud_msk,
+                outputProbImage,
                 inputValidImg,
                 outFormat,
                 tmpBaseDIR,
@@ -3320,12 +3338,14 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             rat.writeColumn(ratDataset, "ClassName", ClassName)
             ratDataset = None
         rsgislib.imageutils.copy_proj_from_img(outputImage, inputReflImage)
+        if outputProbImage is not None:
+            rsgislib.imageutils.copy_proj_from_img(outputProbImage, inputReflImage)
 
         if not self.debugMode:
             if not tmpDIRExisted:
                 shutil.rmtree(tmpBaseDIR, ignore_errors=True)
 
-        return outputImage
+        return outputImage, outputProbImage
 
     def createCloudMaskDataArray(self, inImgDataArr):
         return inImgDataArr
@@ -4008,7 +4028,8 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
     ):
         """Used as part of the optimastion for identifying values of AOD"""
         print(
-            "Testing AOD Val: ", aotVal,
+            "Testing AOD Val: ",
+            aotVal,
         )
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile
