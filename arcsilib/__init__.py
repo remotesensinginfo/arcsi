@@ -20,7 +20,7 @@ ARCSI_COPYRIGHT_NAMES = "Pete Bunting, Dan Clewley"
 
 ARCSI_SUPPORT_EMAIL = "rsgislib-support@googlegroups.com"
 
-ARCSI_WEBSITE = "http://www.rsgislib.org/arcsi"
+ARCSI_WEBSITE = "https://github.com/remotesensinginfo/arcsi"
 
 ARCSI_SENSORS_LIST = ["lsmss", "lstm", "lsetm", "lsoli", "sen2"]
 ARCSI_PRODUCTS_LIST = [
