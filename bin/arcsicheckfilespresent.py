@@ -39,14 +39,13 @@ present following data extraction.
 #
 ############################################################################
 
-import os
-import glob
 import argparse
-from arcsilib import ARCSI_VERSION
-from arcsilib.arcsiutils import ARCSISensorFactory
-from arcsilib import ARCSI_SENSORS_LIST
+import glob
+import os
 import shutil
-from arcsilib import ARCSI_ARCHIVE_EXE_LIST
+
+from arcsilib import ARCSI_ARCHIVE_EXE_LIST, ARCSI_SENSORS_LIST, ARCSI_VERSION
+from arcsilib.arcsiutils import ARCSISensorFactory
 
 
 class ARCSICheckFilesPresent(object):

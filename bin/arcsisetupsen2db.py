@@ -40,14 +40,16 @@ Module that contains the ARSCI command to set up database of Sentinel-2 imagery.
 ############################################################################
 
 
-import os
-import sys
 import argparse
-import pycurl
+import gzip
+import os
+import sqlite3
+import sys
 import tempfile
 import time
-import gzip
-import sqlite3
+
+import pycurl
+
 from arcsilib import ARCSI_VERSION
 from arcsilib.arcsiexception import ARCSIException
 

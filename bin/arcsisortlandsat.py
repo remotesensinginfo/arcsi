@@ -50,13 +50,15 @@ sensors (i.e., Landsat 1, Landsat 2 ... Landsat 8 etc).
 #
 ############################################################################
 
-import os
 import argparse
+import os
+import shutil
+
+import rsgislib.tools.filetools
+
+from arcsilib import ARCSI_VERSION
 from arcsilib.arcsiexception import ARCSIException
 from arcsilib.arcsiutils import ARCSISensorFactory
-import shutil
-from arcsilib import ARCSI_VERSION
-import rsgislib.tools.filetools
 
 
 class ARCSISortLandsatData(object):

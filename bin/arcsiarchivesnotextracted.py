@@ -39,11 +39,11 @@ present following data extraction.
 #
 ############################################################################
 
-import os
-import glob
 import argparse
-from arcsilib import ARCSI_VERSION
-from arcsilib import ARCSI_ARCHIVE_EXE_LIST
+import glob
+import os
+
+from arcsilib import ARCSI_ARCHIVE_EXE_LIST, ARCSI_VERSION
 
 
 class ARCSIFindArchivesNotExtract(object):

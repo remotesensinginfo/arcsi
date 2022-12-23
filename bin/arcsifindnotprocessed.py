@@ -39,10 +39,11 @@ to find scene which have yet to be processed to completion.
 #
 ############################################################################
 
-import os
 import argparse
-from arcsilib import ARCSI_VERSION
 import json
+import os
+
+from arcsilib import ARCSI_VERSION
 
 
 class ARCSIBuildFileNameLUT(object):

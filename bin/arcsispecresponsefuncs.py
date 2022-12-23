@@ -38,11 +38,12 @@ Module that contains the ARCSIResampleSpectralResponseFuncs Class.
 #
 ############################################################################
 
-from arcsilib.arcsiexception import ARCSIException
-import math
 import argparse
-from arcsilib import ARCSI_VERSION
+import math
+
 import arcsilib.arcsiutils
+from arcsilib import ARCSI_VERSION
+from arcsilib.arcsiexception import ARCSIException
 
 
 class ARCSIResampleSpectralResponseFuncs(object):

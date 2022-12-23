@@ -38,42 +38,49 @@ Module that contains the ARSCI Main class.
 #
 ############################################################################
 
-import sys
-import os
 import argparse
-import arcsilib.arcsirun
-from arcsilib.arcsiutils import ARCSIEnum
-from arcsilib.arcsiexception import ARCSIException
-from arcsilib import ARCSI_VERSION
-from arcsilib import ARCSI_COPYRIGHT_YEAR
-from arcsilib import ARCSI_SUPPORT_EMAIL
-from arcsilib import ARCSI_WEBSITE
-from arcsilib import ARCSI_COPYRIGHT_NAMES
-from arcsilib import ARCSI_SENSORS_LIST
-from arcsilib import ARCSI_PRODUCTS_LIST
-from arcsilib import ARCSI_GDALFORMATS_LIST
-from arcsilib import ARCSI_CLOUD_METHODS_LIST
+import os
+import sys
+import time
+
 import rsgislib.tools.utils
 from mpi4py import MPI
-import time
+
+import arcsilib.arcsirun
+from arcsilib import (
+    ARCSI_CLOUD_METHODS_LIST,
+    ARCSI_COPYRIGHT_NAMES,
+    ARCSI_COPYRIGHT_YEAR,
+    ARCSI_GDALFORMATS_LIST,
+    ARCSI_PRODUCTS_LIST,
+    ARCSI_SENSORS_LIST,
+    ARCSI_SUPPORT_EMAIL,
+    ARCSI_VERSION,
+    ARCSI_WEBSITE,
+)
+from arcsilib.arcsiexception import ARCSIException
+from arcsilib.arcsiutils import ARCSIEnum
+
 DEBUG = True
 
 # Initializations and preliminaries
-try: 
+try:
     # Define MPI message tags
     mpiTags = ARCSIEnum("READY", "DONE", "EXIT", "START")
     arcsiStages = ARCSIEnum("ARCSIPART1", "ARCSIPART2", "ARCSIPART3", "ARCSIPART4")
 
-    mpiComm = MPI.COMM_WORLD        # get MPI communicator object
-    mpiSize = mpiComm.size          # total number of processes
-    mpiRank = mpiComm.Get_rank()    # get rank
-    mpiStatus = MPI.Status()        # get MPI status object
+    mpiComm = MPI.COMM_WORLD  # get MPI communicator object
+    mpiSize = mpiComm.size  # total number of processes
+    mpiRank = mpiComm.Get_rank()  # get rank
+    mpiStatus = MPI.Status()  # get MPI status object
 
     if DEBUG:
-        print(f"DEBUG - Running on rank={mpiRank} out of size={mpiSize} on node={MPI.Get_processor_name()}")
+        print(
+            f"DEBUG - Running on rank={mpiRank} out of size={mpiSize} on node={MPI.Get_processor_name()}"
+        )
 
 except Exception as error:
-    print(f'ERROR. {error}')
+    print(f"ERROR. {error}")
 
 
 if (__name__ == "__main__") and (mpiRank == 0):
@@ -489,7 +496,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
             help="""Specify the method(s) of cloud masking. Current Sentinel-2 and Landsat have options).
                                 Sentinel-2: FMASK, FMASK_DISP or S2CLOUDLESS. Landsat: FMASK or LSMSK, FMASK is current
                                 the default for both.""",
-            )
+        )
 
         parser.add_argument(
             "--cs_initdist",
@@ -562,7 +569,7 @@ if (__name__ == "__main__") and (mpiRank == 0):
             default=False,
             help="""Do not create output directory for this image, 
                         just output into the specified output directory""",
-            )
+        )
 
         # Call the parser to parse the arguments.
         args = parser.parse_args()
@@ -956,32 +963,45 @@ if (__name__ == "__main__") and (mpiRank == 0):
                 for item in range(1, mpiSize):
 
                     # receive the ready status from worker
-                    rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.READY, status=mpiStatus)
+                    rtnParamsObj = mpiComm.recv(
+                        source=item, tag=mpiTags.READY, status=mpiStatus
+                    )
 
                     if DEBUG:
-                        print("DEBUG-master PART 1 || send to rank:", 
-                            item, 
-                            "time:", 
-                            time.asctime(), 
-                            "from node:",MPI.Get_processor_name(), 
-                            "from rank", 
-                            mpiRank, 
-                            flush=True)
+                        print(
+                            "DEBUG-master PART 1 || send to rank:",
+                            item,
+                            "time:",
+                            time.asctime(),
+                            "from node:",
+                            MPI.Get_processor_name(),
+                            "from rank",
+                            mpiRank,
+                            flush=True,
+                        )
 
-                    mpiComm.send([arcsiStages.ARCSIPART1, paramsLst[item - 1]], dest=item, tag=mpiTags.START)
+                    mpiComm.send(
+                        [arcsiStages.ARCSIPART1, paramsLst[item - 1]],
+                        dest=item,
+                        tag=mpiTags.START,
+                    )
 
                 # get DONE status from workers
                 for item in range(1, mpiSize):
-                    
+
                     # receive the ready status to unblock the worker
-                    rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.DONE, status=mpiStatus)
+                    rtnParamsObj = mpiComm.recv(
+                        source=item, tag=mpiTags.DONE, status=mpiStatus
+                    )
 
                     if DEBUG:
-                        print("DEBUG-master PART 1 || receive from", 
-                            item, 
-                            "time:", 
-                            time.asctime(), 
-                            flush=True)
+                        print(
+                            "DEBUG-master PART 1 || receive from",
+                            item,
+                            "time:",
+                            time.asctime(),
+                            flush=True,
+                        )
 
                     paramsLstTmp.append(rtnParamsObj)
 
@@ -1024,32 +1044,45 @@ if (__name__ == "__main__") and (mpiRank == 0):
                     for item in range(1, mpiSize):
 
                         # receive the ready status from worker
-                        rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.READY, status=mpiStatus)
+                        rtnParamsObj = mpiComm.recv(
+                            source=item, tag=mpiTags.READY, status=mpiStatus
+                        )
 
                         if DEBUG:
-                            print("DEBUG-master PART 2 || send to rank:", 
-                                item, 
-                                "time:", 
-                                time.asctime(), 
-                                "from node:",MPI.Get_processor_name(), 
-                                "from rank", 
-                                mpiRank, 
-                                flush=True)
+                            print(
+                                "DEBUG-master PART 2 || send to rank:",
+                                item,
+                                "time:",
+                                time.asctime(),
+                                "from node:",
+                                MPI.Get_processor_name(),
+                                "from rank",
+                                mpiRank,
+                                flush=True,
+                            )
 
-                        mpiComm.send([arcsiStages.ARCSIPART2, paramsLst[item - 1]], dest=item, tag=mpiTags.START)
+                        mpiComm.send(
+                            [arcsiStages.ARCSIPART2, paramsLst[item - 1]],
+                            dest=item,
+                            tag=mpiTags.START,
+                        )
 
                     # get DONE status from workers
                     for item in range(1, mpiSize):
-                        
+
                         # receive the ready status to unblock the worker
-                        rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.DONE, status=mpiStatus)
+                        rtnParamsObj = mpiComm.recv(
+                            source=item, tag=mpiTags.DONE, status=mpiStatus
+                        )
 
                         if DEBUG:
-                            print("DEBUG-master PART 2 || receive from", 
-                                item, 
-                                "time:", 
-                                time.asctime(), 
-                                flush=True)
+                            print(
+                                "DEBUG-master PART 2 || receive from",
+                                item,
+                                "time:",
+                                time.asctime(),
+                                flush=True,
+                            )
 
                         paramsLstTmp.append(rtnParamsObj)
 
@@ -1072,32 +1105,45 @@ if (__name__ == "__main__") and (mpiRank == 0):
                     for item in range(1, mpiSize):
 
                         # receive the ready status from worker
-                        rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.READY, status=mpiStatus)
+                        rtnParamsObj = mpiComm.recv(
+                            source=item, tag=mpiTags.READY, status=mpiStatus
+                        )
 
                         if DEBUG:
-                            print("DEBUG-master PART 3 || send to rank:", 
-                                item, 
-                                "time:", 
-                                time.asctime(), 
-                                "from node:",MPI.Get_processor_name(), 
-                                "from rank", 
-                                mpiRank, 
-                                flush=True)
+                            print(
+                                "DEBUG-master PART 3 || send to rank:",
+                                item,
+                                "time:",
+                                time.asctime(),
+                                "from node:",
+                                MPI.Get_processor_name(),
+                                "from rank",
+                                mpiRank,
+                                flush=True,
+                            )
 
-                        mpiComm.send([arcsiStages.ARCSIPART3, paramsLst[item - 1]], dest=item, tag=mpiTags.START)
+                        mpiComm.send(
+                            [arcsiStages.ARCSIPART3, paramsLst[item - 1]],
+                            dest=item,
+                            tag=mpiTags.START,
+                        )
 
                     # get DONE status from workers
                     for item in range(1, mpiSize):
-                        
+
                         # receive the ready status to unblock the worker
-                        rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.DONE, status=mpiStatus)
+                        rtnParamsObj = mpiComm.recv(
+                            source=item, tag=mpiTags.DONE, status=mpiStatus
+                        )
 
                         if DEBUG:
-                            print("DEBUG-master PART 3 || receive from", 
-                                item, 
-                                "time:", 
-                                time.asctime(), 
-                                flush=True)
+                            print(
+                                "DEBUG-master PART 3 || receive from",
+                                item,
+                                "time:",
+                                time.asctime(),
+                                flush=True,
+                            )
 
                         paramsLstTmp.append(rtnParamsObj)
 
@@ -1119,32 +1165,45 @@ if (__name__ == "__main__") and (mpiRank == 0):
                 for item in range(1, mpiSize):
 
                     # receive the ready status from worker
-                    rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.READY, status=mpiStatus)
+                    rtnParamsObj = mpiComm.recv(
+                        source=item, tag=mpiTags.READY, status=mpiStatus
+                    )
 
                     if DEBUG:
-                        print("DEBUG-master PART 4 || send to rank:", 
-                            item, 
-                            "time:", 
-                            time.asctime(), 
-                            "from node:",MPI.Get_processor_name(), 
-                            "from rank", 
-                            mpiRank, 
-                            flush=True)
+                        print(
+                            "DEBUG-master PART 4 || send to rank:",
+                            item,
+                            "time:",
+                            time.asctime(),
+                            "from node:",
+                            MPI.Get_processor_name(),
+                            "from rank",
+                            mpiRank,
+                            flush=True,
+                        )
 
-                    mpiComm.send([arcsiStages.ARCSIPART4, paramsLst[item - 1]], dest=item, tag=mpiTags.START)
+                    mpiComm.send(
+                        [arcsiStages.ARCSIPART4, paramsLst[item - 1]],
+                        dest=item,
+                        tag=mpiTags.START,
+                    )
 
                 # get DONE status from workers
                 for item in range(1, mpiSize):
-                    
+
                     # receive the ready status to unblock the worker
-                    rtnParamsObj = mpiComm.recv(source=item, tag=mpiTags.DONE, status=mpiStatus)
+                    rtnParamsObj = mpiComm.recv(
+                        source=item, tag=mpiTags.DONE, status=mpiStatus
+                    )
 
                     if DEBUG:
-                        print("DEBUG-master PART 4 || receive from", 
-                            item, 
-                            "time:", 
-                            time.asctime(), 
-                            flush=True)
+                        print(
+                            "DEBUG-master PART 4 || receive from",
+                            item,
+                            "time:",
+                            time.asctime(),
+                            flush=True,
+                        )
 
                     paramsLstTmp.append(rtnParamsObj)
 
@@ -1189,86 +1248,114 @@ else:
             # Do work!
             if tskData[0] == arcsiStages.ARCSIPART1:
                 if DEBUG:
-                    print("DEBUG-worker PART 1 START ||", "time:",
+                    print(
+                        "DEBUG-worker PART 1 START ||",
+                        "time:",
                         time.asctime(),
                         "node:",
                         MPI.Get_processor_name(),
                         " my rank:",
                         mpiRank,
-                        flush=True)
+                        flush=True,
+                    )
                 paramsObj = arcsilib.arcsirun._runARCSIPart1(tskData[1])
                 if DEBUG:
-                    print("DEBUG-worker PART 1 END ||",
-                    "time:",
-                    time.asctime(),
-                    "node:",
-                    MPI.Get_processor_name(),
-                    " my rank:",
-                    mpiRank, flush=True)
+                    print(
+                        "DEBUG-worker PART 1 END ||",
+                        "time:",
+                        time.asctime(),
+                        "node:",
+                        MPI.Get_processor_name(),
+                        " my rank:",
+                        mpiRank,
+                        flush=True,
+                    )
             elif tskData[0] == arcsiStages.ARCSIPART2:
                 if DEBUG:
-                    print("DEBUG-worker PART 2 START ||",
-                    "time:",
-                    time.asctime(),
-                    "node:",
-                    MPI.Get_processor_name(),
-                    " my rank:",
-                    mpiRank, flush=True)
+                    print(
+                        "DEBUG-worker PART 2 START ||",
+                        "time:",
+                        time.asctime(),
+                        "node:",
+                        MPI.Get_processor_name(),
+                        " my rank:",
+                        mpiRank,
+                        flush=True,
+                    )
                 paramsObj = arcsilib.arcsirun._runARCSIPart2(tskData[1])
                 if DEBUG:
-                    print("DEBUG-worker PART 2 END ||",
-                    "time:",
-                    time.asctime(),
-                    "node:",
-                    MPI.Get_processor_name(),
-                    " my rank:",
-                    mpiRank, flush=True)
+                    print(
+                        "DEBUG-worker PART 2 END ||",
+                        "time:",
+                        time.asctime(),
+                        "node:",
+                        MPI.Get_processor_name(),
+                        " my rank:",
+                        mpiRank,
+                        flush=True,
+                    )
             elif tskData[0] == arcsiStages.ARCSIPART3:
                 if DEBUG:
-                    print("DEBUG-worker PART 3 START ||",
-                    "time:",
-                    time.asctime(),
-                    "node:",
-                    MPI.Get_processor_name(),
-                    " my rank:",
-                    mpiRank, flush=True)
+                    print(
+                        "DEBUG-worker PART 3 START ||",
+                        "time:",
+                        time.asctime(),
+                        "node:",
+                        MPI.Get_processor_name(),
+                        " my rank:",
+                        mpiRank,
+                        flush=True,
+                    )
                 paramsObj = arcsilib.arcsirun._runARCSIPart3(tskData[1])
                 if DEBUG:
-                    print("DEBUG-worker PART 3 END ||",
-                    "time:",
-                    time.asctime(),
-                    "node:",
-                    MPI.Get_processor_name(),
-                    " my rank:",
-                    mpiRank, flush=True)
+                    print(
+                        "DEBUG-worker PART 3 END ||",
+                        "time:",
+                        time.asctime(),
+                        "node:",
+                        MPI.Get_processor_name(),
+                        " my rank:",
+                        mpiRank,
+                        flush=True,
+                    )
             elif tskData[0] == arcsiStages.ARCSIPART4:
                 if DEBUG:
-                    print("DEBUG-worker PART 4 START ||",
-                    "time:",
-                    time.asctime(),
-                    "node:",
-                    MPI.Get_processor_name(),
-                    " my rank:",
-                    mpiRank, flush=True)
+                    print(
+                        "DEBUG-worker PART 4 START ||",
+                        "time:",
+                        time.asctime(),
+                        "node:",
+                        MPI.Get_processor_name(),
+                        " my rank:",
+                        mpiRank,
+                        flush=True,
+                    )
                 paramsObj = arcsilib.arcsirun._runARCSIPart4(tskData[1])
                 if DEBUG:
-                    print("DEBUG-worker PART 4 END ||",
-                    "time:",
-                    time.asctime(),
-                    "node:",
-                    MPI.Get_processor_name(),
-                    " my rank:",
-                    mpiRank, flush=True)
+                    print(
+                        "DEBUG-worker PART 4 END ||",
+                        "time:",
+                        time.asctime(),
+                        "node:",
+                        MPI.Get_processor_name(),
+                        " my rank:",
+                        mpiRank,
+                        flush=True,
+                    )
             else:
                 raise ARCSIException("Don't recognise processing stage")
             if DEBUG:
-                print("DEBUG-worker arcsiPART",
+                print(
+                    "DEBUG-worker arcsiPART",
                     int(tskData[0]) + 1,
                     "send to master || time:",
-                    time.asctime(), "node:",
+                    time.asctime(),
+                    "node:",
                     MPI.Get_processor_name(),
                     " my rank:",
-                    mpiRank, flush=True)
+                    mpiRank,
+                    flush=True,
+                )
             mpiComm.send(paramsObj, dest=0, tag=mpiTags.DONE)
 
         elif tag == mpiTags.EXIT:

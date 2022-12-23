@@ -41,12 +41,14 @@ deployment on a HPC system.
 #
 ############################################################################
 
+import argparse
 import os
 import sys
-import argparse
-from arcsilib import ARCSI_VERSION
-from arcsilib import ARCSI_ARCHIVE_EXE_LIST
+
 import rsgislib.tools.utils
+
+from arcsilib import ARCSI_ARCHIVE_EXE_LIST, ARCSI_VERSION
+
 
 class ARCSIBuildExtractDataCmds(object):
     def runGenCommandsDIR(self, inputDIR, outputFile, outDIR, nofolders):

@@ -38,15 +38,16 @@ to find scene which have yet to be processed to completion.
 #
 ############################################################################
 
-import os
-import sys
 import argparse
-from arcsilib import ARCSI_VERSION
-from arcsilib.arcsiutils import ARCSISensorFactory
-from arcsilib.arcsiexception import ARCSIException
 import json
-import shutil
+import os
 import random
+import shutil
+import sys
+
+from arcsilib import ARCSI_VERSION
+from arcsilib.arcsiexception import ARCSIException
+from arcsilib.arcsiutils import ARCSISensorFactory
 
 
 class ARCSIRemoveDuplicates(object):

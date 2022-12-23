@@ -38,23 +38,25 @@ Module that contains the ARSCI Main class.
 #
 ############################################################################
 
-import sys
-import os
 import argparse
+import os
+import sys
+
+import rsgislib.tools.utils
+
 import arcsilib
 import arcsilib.arcsirun
 from arcsilib import (
-    ARCSI_VERSION,
-    ARCSI_COPYRIGHT_YEAR,
-    ARCSI_SUPPORT_EMAIL,
-    ARCSI_WEBSITE,
-    ARCSI_COPYRIGHT_NAMES,
-    ARCSI_SENSORS_LIST,
-    ARCSI_PRODUCTS_LIST,
-    ARCSI_GDALFORMATS_LIST,
     ARCSI_CLOUD_METHODS_LIST,
+    ARCSI_COPYRIGHT_NAMES,
+    ARCSI_COPYRIGHT_YEAR,
+    ARCSI_GDALFORMATS_LIST,
+    ARCSI_PRODUCTS_LIST,
+    ARCSI_SENSORS_LIST,
+    ARCSI_SUPPORT_EMAIL,
+    ARCSI_VERSION,
+    ARCSI_WEBSITE,
 )
-import rsgislib.tools.utils
 
 """
 The command line user interface to ARCSI
@@ -585,7 +587,7 @@ don't currently support the sensor you require.""",
         default=False,
         help="""Do not create output directory for this image, 
                 just output into the specified output directory""",
-        )
+    )
 
     # Call the parser to parse the arguments.
     args = parser.parse_args()
@@ -922,7 +924,7 @@ don't currently support the sensor you require.""",
                 args.ncores,
                 args.keepfileends,
                 args.cloudmethods,
-                args.flatoutdir
+                args.flatoutdir,
             )
         else:
             arcsilib.arcsirun.runARCSI(

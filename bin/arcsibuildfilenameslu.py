@@ -38,15 +38,14 @@ Module that contains the ARSCI command to build a LUT for the output file names.
 #
 ############################################################################
 
-import os
-import glob
 import argparse
-from arcsilib import ARCSI_VERSION
-from arcsilib.arcsiutils import ARCSISensorFactory
+import glob
 import json
-from arcsilib import ARCSI_SENSORS_LIST
-from arcsilib import ARCSI_ARCHIVE_EXE_LIST
+import os
+
+from arcsilib import ARCSI_ARCHIVE_EXE_LIST, ARCSI_SENSORS_LIST, ARCSI_VERSION
 from arcsilib.arcsiexception import ARCSIException
+from arcsilib.arcsiutils import ARCSISensorFactory
 
 
 class ARCSIBuildFileNameLUT(object):

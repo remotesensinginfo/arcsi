@@ -39,14 +39,14 @@ for arcsi.py --multi.
 #
 ############################################################################
 
-import os
-import fnmatch
 import argparse
-from arcsilib import ARCSI_VERSION
+import fnmatch
 import os
-from arcsilib.arcsiutils import ARCSISensorFactory
-from arcsilib import ARCSI_SENSORS_LIST
+
 import rsgislib.tools.utils
+
+from arcsilib import ARCSI_SENSORS_LIST, ARCSI_VERSION
+from arcsilib.arcsiutils import ARCSISensorFactory
 
 
 class ARCSIBuildMultiFileList(object):

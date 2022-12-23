@@ -37,10 +37,11 @@ Module that contains the ARSCI command to download imagery using gsutils
 #
 ############################################################################
 
-import os
 import argparse
+import os
 import subprocess
 import sys
+
 import rsgislib.tools.utils
 
 

@@ -40,12 +40,14 @@ Module that contains the ARCSISolarIrradiance Class.
 #
 ############################################################################
 
-import numpy
-import arcsilib.arcsiutils
-from arcsilib.arcsiexception import ARCSIException
-import math
 import argparse
+import math
+
+import numpy
+
+import arcsilib.arcsiutils
 from arcsilib import ARCSI_VERSION
+from arcsilib.arcsiexception import ARCSIException
 
 
 class ARCSISolarIrradiance(object):

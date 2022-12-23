@@ -39,12 +39,14 @@ Module that contains the ARSCI command to extract data from archives.
 #
 ############################################################################
 
+import argparse
+import glob
 import os
 import sys
-import glob
-import argparse
-from arcsilib import ARCSI_VERSION
+
 import rsgislib.tools.utils
+
+from arcsilib import ARCSI_VERSION
 
 
 class ARCSIExtractData(object):

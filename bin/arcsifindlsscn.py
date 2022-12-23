@@ -39,9 +39,10 @@ and create a list of image download commands.
 #
 ############################################################################
 
-import sys
 import argparse
 import sqlite3
+import sys
+
 from arcsilib import ARCSI_VERSION
 from arcsilib.arcsiexception import ARCSIException
 

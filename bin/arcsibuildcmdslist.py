@@ -39,17 +39,22 @@ Module that contains the ARSCI command to build lists of commands for arcsi.py.
 #
 ############################################################################
 
+import argparse
+import fnmatch
 import os
 import sys
-import fnmatch
-import argparse
-from arcsilib import ARCSI_VERSION
-from arcsilib import ARCSI_SENSORS_LIST
-from arcsilib import ARCSI_GDALFORMATS_LIST
-from arcsilib import ARCSI_PRODUCTS_LIST
-from arcsilib import ARCSI_CLOUD_METHODS_LIST
-from arcsilib.arcsiexception import ARCSIException
+
 import rsgislib.tools.utils
+
+from arcsilib import (
+    ARCSI_CLOUD_METHODS_LIST,
+    ARCSI_GDALFORMATS_LIST,
+    ARCSI_PRODUCTS_LIST,
+    ARCSI_SENSORS_LIST,
+    ARCSI_VERSION,
+)
+from arcsilib.arcsiexception import ARCSIException
+
 
 class ARCSIBuildCommands(object):
     def getListOfFiles(self, searchDIR, searchStr, depth):
@@ -207,7 +212,15 @@ class ARCSIBuildCommands(object):
             if (sensorOUT == "lsmss") and ("CLOUDS" in prodsStr):
                 prodsStrSen = prodsStrSen.replace("CLOUDS", "")
 
-            cmd = "arcsi.py -s " + sensorOUT + " -p " + prodsStrSen + ' -i "' + hFile + '"'
+            cmd = (
+                "arcsi.py -s "
+                + sensorOUT
+                + " -p "
+                + prodsStrSen
+                + ' -i "'
+                + hFile
+                + '"'
+            )
             if outpath is not None:
                 cmd = cmd + ' --outpath "' + os.path.abspath(outpath) + '"'
             if stats:
