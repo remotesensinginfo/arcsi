@@ -1293,7 +1293,7 @@ class ARCSIAbstractSensor(object):
             )
 
             slopeImg = os.path.join(tmpBaseDIR, tmpBaseName + "_slope." + imgExtension)
-            rsgislib.elevation.slope(inputDEMFile, slopeImg, "degrees", outFormat)
+            rsgislib.elevation.slope(inputDEMFile, slopeImg, outFormat, "degrees")
 
             # Derive the valid area mask
             validMaskSREF = os.path.join(
