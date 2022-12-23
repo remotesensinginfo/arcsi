@@ -34,35 +34,11 @@ Module that contains the ARCSIUtils class.
 #
 ############################################################################
 
-# Import updated print function into python 2.7
-from __future__ import print_function
 
-# Import updated division operator into python 2.7
-from __future__ import division
-
-# Import the ARCSI exception class
-from .arcsiexception import ARCSIException
-
-# Import the OS python module
-import os
-
-# Import the OSGEO GDAL module
-import osgeo.gdal as gdal
-
-# Import the numpy library
 import numpy
-
-# Import the osr module from gdal.
-from osgeo import osr
-
-# Import the ogr module from gdal.
-from osgeo import ogr
-
-# Import the scipy interpolate module
 import scipy.interpolate
 
-# Import the maths module
-import math
+from .arcsiexception import ARCSIException
 
 
 def ARCSIEnum(*sequential, **named):

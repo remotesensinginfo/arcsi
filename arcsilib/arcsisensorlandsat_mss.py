@@ -36,28 +36,29 @@ Module that contains the ARCSILandsatMSSSensor class.
 #
 ############################################################################
 
-from .arcsisensor import ARCSIAbstractSensor
-from .arcsiexception import ARCSIException
+import collections
 import datetime
-from osgeo import osr
+import json
+import math
 import os
+
+import numpy
+import Py6S
 import rsgislib
-import rsgislib.imagecalibration
-import rsgislib.imageutils
 import rsgislib.imagecalc
+import rsgislib.imagecalibration
+import rsgislib.imagecalibration.solarangles
+import rsgislib.imageutils
+import rsgislib.rastergis
 import rsgislib.segmentation
 import rsgislib.segmentation.shepherdseg
-import rsgislib.rastergis
-import rsgislib.tools.utils
 import rsgislib.tools.geometrytools
-import rsgislib.imagecalibration.solarangles
-import collections
-import Py6S
-import math
+import rsgislib.tools.utils
+from osgeo import gdal, osr
 from rios import rat
-import osgeo.gdal as gdal
-import numpy
-import json
+
+from .arcsiexception import ARCSIException
+from .arcsisensor import ARCSIAbstractSensor
 
 
 class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
@@ -170,7 +171,11 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
             elif headerParams["COLLECTION_NUMBER"] == "02":
                 self.collection_num = 2
             else:
-                raise ARCSIException("Can only process collection 1 and 2 data: {}".format(headerParams["COLLECTION_NUMBER"]))
+                raise ARCSIException(
+                    "Can only process collection 1 and 2 data: {}".format(
+                        headerParams["COLLECTION_NUMBER"]
+                    )
+                )
 
             # Get row/path
             try:
@@ -300,126 +305,144 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
             filesDIR = os.path.dirname(inputHeader)
 
             if "FILE_NAME_BAND_7" in headerParams:
-                self.band1File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_4"])
-                self.band2File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_5"])
-                self.band3File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_6"])
-                self.band4File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_7"])
+                self.band1File = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_BAND_4"]
+                )
+                self.band2File = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_BAND_5"]
+                )
+                self.band3File = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_BAND_6"]
+                )
+                self.band4File = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_BAND_7"]
+                )
 
                 self.b1CalMin = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MIN_BAND_4"], 1.0
-                    )
+                )
                 self.b1CalMax = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MAX_BAND_4"], 255.0
-                    )
+                )
                 self.b2CalMin = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MIN_BAND_5"], 1.0
-                    )
+                )
                 self.b2CalMax = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MAX_BAND_5"], 255.0
-                    )
+                )
                 self.b3CalMin = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MIN_BAND_6"], 1.0
-                    )
+                )
                 self.b3CalMax = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MAX_BAND_6"], 255.0
-                    )
+                )
                 self.b4CalMin = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MIN_BAND_7"], 1.0
-                    )
+                )
                 self.b4CalMax = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MAX_BAND_7"], 255.0
-                    )
+                )
 
                 self.b1MinRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MINIMUM_BAND_4"], 2.500
-                    )
+                )
                 self.b1MaxRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MAXIMUM_BAND_4"], 220.800
-                    )
+                )
                 self.b2MinRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MINIMUM_BAND_5"], 2.700
-                    )
+                )
                 self.b2MaxRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MAXIMUM_BAND_5"], 163.600
-                    )
+                )
                 self.b3MinRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MINIMUM_BAND_6"], 4.700
-                    )
+                )
                 self.b3MaxRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MAXIMUM_BAND_6"], 140.300
-                    )
+                )
                 self.b4MinRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MINIMUM_BAND_7"], 2.900
-                    )
+                )
                 self.b4MaxRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MAXIMUM_BAND_7"], 117.500
-                    )
+                )
             else:
-                self.band1File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_1"])
-                self.band2File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_2"])
-                self.band3File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_3"])
-                self.band4File = os.path.join(filesDIR, headerParams["FILE_NAME_BAND_4"])
+                self.band1File = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_BAND_1"]
+                )
+                self.band2File = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_BAND_2"]
+                )
+                self.band3File = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_BAND_3"]
+                )
+                self.band4File = os.path.join(
+                    filesDIR, headerParams["FILE_NAME_BAND_4"]
+                )
 
                 self.b1CalMin = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MIN_BAND_1"], 1.0
-                    )
+                )
                 self.b1CalMax = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MAX_BAND_1"], 255.0
-                    )
+                )
                 self.b2CalMin = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MIN_BAND_2"], 1.0
-                    )
+                )
                 self.b2CalMax = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MAX_BAND_2"], 255.0
-                    )
+                )
                 self.b3CalMin = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MIN_BAND_3"], 1.0
-                    )
+                )
                 self.b3CalMax = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MAX_BAND_3"], 255.0
-                    )
+                )
                 self.b4CalMin = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MIN_BAND_4"], 1.0
-                    )
+                )
                 self.b4CalMax = rsgislib.tools.utils.str_to_float(
                     headerParams["QUANTIZE_CAL_MAX_BAND_4"], 255.0
-                    )
+                )
 
                 self.b1MinRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MINIMUM_BAND_1"], 2.500
-                    )
+                )
                 self.b1MaxRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MAXIMUM_BAND_1"], 220.800
-                    )
+                )
                 self.b2MinRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MINIMUM_BAND_2"], 2.700
-                    )
+                )
                 self.b2MaxRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MAXIMUM_BAND_2"], 163.600
-                    )
+                )
                 self.b3MinRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MINIMUM_BAND_3"], 4.700
-                    )
+                )
                 self.b3MaxRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MAXIMUM_BAND_3"], 140.300
-                    )
+                )
                 self.b4MinRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MINIMUM_BAND_4"], 2.900
-                    )
+                )
                 self.b4MaxRad = rsgislib.tools.utils.str_to_float(
                     headerParams["RADIANCE_MAXIMUM_BAND_4"], 117.500
-                    )
+                )
 
             if "FILE_NAME_BAND_QUALITY" in headerParams:
                 self.bandQAFile = os.path.join(
                     filesDIR, headerParams["FILE_NAME_BAND_QUALITY"]
-                    )
+                )
             elif "FILE_NAME_QUALITY_L1_PIXEL" in headerParams:
                 self.bandQAFile = os.path.join(
                     filesDIR, headerParams["FILE_NAME_QUALITY_L1_PIXEL"]
-                    )
+                )
             else:
-                print("Warning - the quality band is not available. Are you using collection 1 or 2 data?")
+                print(
+                    "Warning - the quality band is not available. Are you using collection 1 or 2 data?"
+                )
                 self.bandQAFile = ""
 
             if "CLOUD_COVER" in headerParams:
@@ -839,9 +862,7 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
         s.aot550 = aotVal
 
         # Band 1
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_MSS_B1
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_MSS_B1)
         s.run()
         sixsCoeffs[0, 0] = float(s.outputs.values["coef_xa"])
         sixsCoeffs[0, 1] = float(s.outputs.values["coef_xb"])
@@ -851,9 +872,7 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
         sixsCoeffs[0, 5] = float(s.outputs.values["environmental_irradiance"])
 
         # Band 2
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_MSS_B2
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_MSS_B2)
         s.run()
         sixsCoeffs[1, 0] = float(s.outputs.values["coef_xa"])
         sixsCoeffs[1, 1] = float(s.outputs.values["coef_xb"])
@@ -863,9 +882,7 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
         sixsCoeffs[1, 5] = float(s.outputs.values["environmental_irradiance"])
 
         # Band 3
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_MSS_B3
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_MSS_B3)
         s.run()
         sixsCoeffs[2, 0] = float(s.outputs.values["coef_xa"])
         sixsCoeffs[2, 1] = float(s.outputs.values["coef_xb"])
@@ -875,9 +892,7 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
         sixsCoeffs[2, 5] = float(s.outputs.values["environmental_irradiance"])
 
         # Band 4
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_MSS_B4
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_MSS_B4)
         s.run()
         sixsCoeffs[3, 0] = float(s.outputs.values["coef_xa"])
         sixsCoeffs[3, 1] = float(s.outputs.values["coef_xb"])
@@ -1196,8 +1211,7 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
     ):
         """Used as part of the optimastion for identifying values of AOD"""
         print(
-            "Testing AOD Val: ",
-            aotVal,
+            "Testing AOD Val: ", aotVal,
         )
         s = Py6S.SixS()
 
@@ -1219,9 +1233,7 @@ class ARCSILandsatMSSSensor(ARCSIAbstractSensor):
         s.aot550 = aotVal
 
         # Band 1 (Blue!)
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_MSS_B1
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_MSS_B1)
         s.run()
         aX = float(s.outputs.values["coef_xa"])
         bX = float(s.outputs.values["coef_xb"])

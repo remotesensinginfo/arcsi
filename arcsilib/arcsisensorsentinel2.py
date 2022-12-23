@@ -36,33 +36,35 @@ Module that contains the ARCSISentinel2Sensor class.
 #
 ############################################################################
 
-from .arcsisensor import ARCSIAbstractSensor
-from .arcsiexception import ARCSIException
-import arcsilib.arcsiutils
-import datetime
-from osgeo import osr
-import os
-import rsgislib.imagecalibration
-import rsgislib.imagecalc
-import rsgislib.imagemorphology
-import rsgislib.imageutils
-import rsgislib.tools.utils
-import rsgislib.tools.geometrytools
-import rsgislib.segmentation
-import rsgislib.rastergis
 import collections
-import Py6S
-import math
-import statistics
-import xml.etree.ElementTree as ET
-import numpy
-import osgeo.gdal as gdal
-from rios import rat
+import datetime
 import glob
+import math
+import os
 import shutil
+import statistics
+import sys
+import xml.etree.ElementTree as ET
+
 import fmask.config
 import fmask.fmask
-import sys
+import numpy
+import Py6S
+import rsgislib.imagecalc
+import rsgislib.imagecalibration
+import rsgislib.imagemorphology
+import rsgislib.imageutils
+import rsgislib.rastergis
+import rsgislib.segmentation
+import rsgislib.tools.geometrytools
+import rsgislib.tools.utils
+from osgeo import gdal, osr
+from rios import rat
+
+import arcsilib.arcsiutils
+
+from .arcsiexception import ARCSIException
+from .arcsisensor import ARCSIAbstractSensor
 
 
 class ARCSISen2SpectralBandObj(object):
@@ -3144,8 +3146,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
                 rsgislib.TYPE_8UINT,
             )
         elif "S2CLOUDLESS" in cloud_msk_methods:
-            from arcsilib.s2cloudless import run_s2cloudless
-            from arcsilib.s2cloudless import run_pyfmask_shadow_masking
+            from arcsilib.s2cloudless import run_pyfmask_shadow_masking, run_s2cloudless
 
             out_cloud_msk = os.path.join(
                 tmpBaseDIR, tmpBaseName + "_s2cloudless_cloud_msk.kea"
@@ -3175,9 +3176,11 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         elif ("S2LESSFMSK" in cloud_msk_methods) or (
             "S2LESSFMSKD" in cloud_msk_methods
         ):
-            from arcsilib.s2cloudless import run_s2cloudless
-            from arcsilib.s2cloudless import run_fmask_cloud_msk
-            from arcsilib.s2cloudless import run_pyfmask_shadow_masking
+            from arcsilib.s2cloudless import (
+                run_fmask_cloud_msk,
+                run_pyfmask_shadow_masking,
+                run_s2cloudless,
+            )
 
             out_s2less_cloud_msk = os.path.join(
                 tmpBaseDIR, tmpBaseName + "_s2cloudless_cloud_msk.kea"
@@ -4005,8 +4008,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
     ):
         """Used as part of the optimastion for identifying values of AOD"""
         print(
-            "Testing AOD Val: ",
-            aotVal,
+            "Testing AOD Val: ", aotVal,
         )
         s = Py6S.SixS()
         s.atmos_profile = atmosProfile

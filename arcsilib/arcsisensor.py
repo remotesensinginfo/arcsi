@@ -35,36 +35,36 @@ Module that contains the ARCSIAbstractSensor class.
 #
 ############################################################################
 
-from abc import ABCMeta, abstractmethod
-import datetime
-from .arcsiexception import ARCSIException
-from arcsilib import ARCSI_VERSION
-from arcsilib import ARCSI_WEBSITE
 import collections
-import sys
+import datetime
+import json
 import math
-import rsgislib
-import rsgislib.imagecalc
-import rsgislib.segmentation
-import rsgislib.rastergis
-import rsgislib.imageutils
-import rsgislib.imagecalibration
-import rsgislib.elevation
-import rsgislib.imagefilter
-import rsgislib.tools.utils
-import rsgislib.tools.geometrytools
-import osgeo.gdal as gdal
-from osgeo import ogr
-from osgeo import osr
 import os
+import shutil
+import sys
+from abc import ABCMeta, abstractmethod
+
 import numpy
+import rsgislib
+import rsgislib.elevation
+import rsgislib.imagecalc
+import rsgislib.imagecalibration
+import rsgislib.imagefilter
+import rsgislib.imageutils
+import rsgislib.rastergis
+import rsgislib.segmentation
+import rsgislib.tools.geometrytools
+import rsgislib.tools.utils
+import scipy.interpolate
+import scipy.interpolate.rbf
+from osgeo import gdal, ogr, osr
 from rios import rat
 from rios.imagereader import ImageReader
 from rios.imagewriter import ImageWriter
-import scipy.interpolate.rbf
-import scipy.interpolate
-import json
-import shutil
+
+from arcsilib import ARCSI_VERSION, ARCSI_WEBSITE
+
+from .arcsiexception import ARCSIException
 
 
 class ARCSIAbstractSensor(object):
@@ -267,10 +267,10 @@ class ARCSIAbstractSensor(object):
         north_south = "n"
         if self.latCentre < 0:
             north_south = "s"
-        
+
         # pad lat and lons to a standardised format
-        lat_pad='{:04.1f}'.format(round(abs(self.latCentre), 1))
-        lon_pad='{:05.1f}'.format(round(abs(self.lonCentre), 1))
+        lat_pad = "{:04.1f}".format(round(abs(self.latCentre), 1))
+        lon_pad = "{:05.1f}".format(round(abs(self.lonCentre), 1))
 
         pos = (
             "lat"
@@ -1549,8 +1549,7 @@ class ARCSIAbstractSensor(object):
 
             for band in range(numBands):
                 offsetImage = os.path.join(
-                    tmpPath,
-                    f"{tmpBaseName}_darktargetoffs_b{band + 1}.{imgExtension}",
+                    tmpPath, f"{tmpBaseName}_darktargetoffs_b{band + 1}.{imgExtension}",
                 )
                 self.calcDarkTargetOffsetsForBand(
                     inputTOAImage,
@@ -1990,8 +1989,7 @@ class ARCSIAbstractSensor(object):
                 print("Interpolating the offset image...")
 
                 offsetImage = os.path.join(
-                    tmpPath,
-                    f"{tmpBaseName}_darktargetoffs_b{band + 1}.{imgExtension}",
+                    tmpPath, f"{tmpBaseName}_darktargetoffs_b{band + 1}.{imgExtension}",
                 )
 
                 ratDS = gdal.Open(tmpDarkObjsImg, gdal.GA_Update)
@@ -2205,20 +2203,13 @@ class ARCSIAbstractSensor(object):
             srefVal = 0.0
             imgExtension = rsgislib.imageutils.get_file_img_extension(outFormat)
 
-            dosBandFileName = (
-                outputName
-                + "_simbanddos."
-                + imgExtension
-            )
+            dosBandFileName = outputName + "_simbanddos." + imgExtension
             dosBandFile, bandOff = self.convertImageBandToReflectanceSimpleDarkSubtract(
                 toaImage, tmpPath, dosBandFileName, outFormat, dosOutRefl, imgBand
             )
 
             darkROIMask = os.path.join(
-                tmpPath,
-                outputName
-                + "_darkROIMask."
-                + imgExtension,
+                tmpPath, outputName + "_darkROIMask." + imgExtension,
             )
             expression = "((b1 != 0) && (b1 < " + str(dosOutRefl + 5) + "))?1.0:0.0"
             bandDefns = []
@@ -2228,10 +2219,7 @@ class ARCSIAbstractSensor(object):
             )
 
             darkROIMaskClumps = os.path.join(
-                tmpPath,
-                outputName
-                + "_darkROIMaskClumps."
-                + imgExtension,
+                tmpPath, outputName + "_darkROIMaskClumps." + imgExtension,
             )
             rsgislib.segmentation.clump(
                 darkROIMask, darkROIMaskClumps, outFormat, False, 0.0
@@ -2239,19 +2227,13 @@ class ARCSIAbstractSensor(object):
             rsgislib.rastergis.pop_rat_img_stats(darkROIMaskClumps, True, False)
 
             darkROIMaskClumpsRMSmall = os.path.join(
-                tmpPath,
-                outputName
-                + "_darkROIMaskClumpsRMSmall."
-                + imgExtension,
+                tmpPath, outputName + "_darkROIMaskClumpsRMSmall." + imgExtension,
             )
             rsgislib.segmentation.rm_small_clumps(
                 darkROIMaskClumps, darkROIMaskClumpsRMSmall, 5, outFormat
             )
             darkROIMaskClumpsFinal = os.path.join(
-                tmpPath,
-                outputName
-                + "_darkROIMaskClumpsFinal."
-                + imgExtension,
+                tmpPath, outputName + "_darkROIMaskClumpsFinal." + imgExtension,
             )
             rsgislib.segmentation.relabel_clumps(
                 darkROIMaskClumpsRMSmall, darkROIMaskClumpsFinal, outFormat, False

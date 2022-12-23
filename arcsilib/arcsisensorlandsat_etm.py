@@ -36,36 +36,37 @@ Module that contains the ARCSILandsatETMSensor class.
 #
 ############################################################################
 
-from .arcsisensor import ARCSIAbstractSensor
-from .arcsiexception import ARCSIException
-from .arcsiutils import ARCSILandsatMetaUtils
-import datetime
-from osgeo import osr
-import os
-import rsgislib
-import rsgislib.imagecalibration
-import rsgislib.imageutils
-import rsgislib.imagecalc
-import rsgislib.segmentation
-import rsgislib.segmentation.shepherdseg
-import rsgislib.rastergis
-import rsgislib.tools.utils
-import rsgislib.tools.geometrytools
-import rsgislib.imagecalibration.solarangles
 import collections
-import Py6S
-import math
-from rios import rat
-import osgeo.gdal as gdal
-import numpy
-import json
-import shutil
+import datetime
 import glob
+import json
+import math
+import os
+import shutil
 import subprocess
-import fmask.landsatangles
+
 import fmask.config
 import fmask.fmask
+import fmask.landsatangles
+import numpy
+import Py6S
 import rios.fileinfo
+import rsgislib
+import rsgislib.imagecalc
+import rsgislib.imagecalibration
+import rsgislib.imagecalibration.solarangles
+import rsgislib.imageutils
+import rsgislib.rastergis
+import rsgislib.segmentation
+import rsgislib.segmentation.shepherdseg
+import rsgislib.tools.geometrytools
+import rsgislib.tools.utils
+from osgeo import gdal, osr
+from rios import rat
+
+from .arcsiexception import ARCSIException
+from .arcsisensor import ARCSIAbstractSensor
+from .arcsiutils import ARCSILandsatMetaUtils
 
 
 class ARCSILandsatETMSensor(ARCSIAbstractSensor):
@@ -188,7 +189,11 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
             elif headerParams["COLLECTION_NUMBER"] == "02":
                 self.collection_num = 2
             else:
-                raise ARCSIException("Can only process collection 1 and 2 data: {}".format(headerParams["COLLECTION_NUMBER"]))
+                raise ARCSIException(
+                    "Can only process collection 1 and 2 data: {}".format(
+                        headerParams["COLLECTION_NUMBER"]
+                    )
+                )
 
             # Get row/path
             try:
@@ -330,13 +335,15 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
             if "FILE_NAME_BAND_QUALITY" in headerParams:
                 self.bandQAFile = os.path.join(
                     filesDIR, headerParams["FILE_NAME_BAND_QUALITY"]
-                    )
+                )
             elif "FILE_NAME_QUALITY_L1_PIXEL" in headerParams:
                 self.bandQAFile = os.path.join(
                     filesDIR, headerParams["FILE_NAME_QUALITY_L1_PIXEL"]
-                    )
+                )
             else:
-                print("Warning - the quality band is not available. Are you using collection 1 or 2 data?")
+                print(
+                    "Warning - the quality band is not available. Are you using collection 1 or 2 data?"
+                )
                 self.bandQAFile = ""
 
             try:
@@ -1118,6 +1125,7 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
         cloud_msk_methods=None,
     ):
         import rsgislib.imageutils
+
         try:
             outputImage = os.path.join(outputPath, outputName)
             tmpBaseName = os.path.splitext(outputName)[0]
@@ -1251,16 +1259,38 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
                     )
                 elif self.collection_num == 2:
                     import rsgislib.imagecalibration.sensorlvl2data
-                    c2_bqa_ind_img_file = os.path.join(tmpBaseDIR, tmpBaseName + "c2_qa_ind_bands.kea")
+
+                    c2_bqa_ind_img_file = os.path.join(
+                        tmpBaseDIR, tmpBaseName + "c2_qa_ind_bands.kea"
+                    )
                     rsgislib.imagecalibration.sensorlvl2data.parse_landsat_c2_qa_pixel_img(
-                        bqa_img_file, c2_bqa_ind_img_file, gdalformat = "KEA")
+                        bqa_img_file, c2_bqa_ind_img_file, gdalformat="KEA"
+                    )
                     band_defns = list()
-                    band_defns.append(rsgislib.imagecalc.BandDefn('DilatedCloud', c2_bqa_ind_img_file, 2))
-                    band_defns.append(rsgislib.imagecalc.BandDefn('Cloud', c2_bqa_ind_img_file, 4))
-                    band_defns.append(rsgislib.imagecalc.BandDefn('CloudShadow', c2_bqa_ind_img_file, 5))
-                    rsgislib.imagecalc.band_math(outputImage, '(DilatedCloud == 1)||(Cloud == 1)?1:(CloudShadow == 1)?2:0', 'KEA', rsgislib.TYPE_8UINT, band_defns)
+                    band_defns.append(
+                        rsgislib.imagecalc.BandDefn(
+                            "DilatedCloud", c2_bqa_ind_img_file, 2
+                        )
+                    )
+                    band_defns.append(
+                        rsgislib.imagecalc.BandDefn("Cloud", c2_bqa_ind_img_file, 4)
+                    )
+                    band_defns.append(
+                        rsgislib.imagecalc.BandDefn(
+                            "CloudShadow", c2_bqa_ind_img_file, 5
+                        )
+                    )
+                    rsgislib.imagecalc.band_math(
+                        outputImage,
+                        "(DilatedCloud == 1)||(Cloud == 1)?1:(CloudShadow == 1)?2:0",
+                        "KEA",
+                        rsgislib.TYPE_8UINT,
+                        band_defns,
+                    )
                 else:
-                    raise ARCSIException("Can only read Collection 1 and 2 cloud masks.")
+                    raise ARCSIException(
+                        "Can only read Collection 1 and 2 cloud masks."
+                    )
 
             else:
                 raise ARCSIException(
@@ -1339,9 +1369,7 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
         s.aot550 = aotVal
 
         # Band 1
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_ETM_B1
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_ETM_B1)
         s.run()
         sixsCoeffs[0, 0] = float(s.outputs.values["coef_xa"])
         sixsCoeffs[0, 1] = float(s.outputs.values["coef_xb"])
@@ -1351,9 +1379,7 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
         sixsCoeffs[0, 5] = float(s.outputs.values["environmental_irradiance"])
 
         # Band 2
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_ETM_B2
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_ETM_B2)
         s.run()
         sixsCoeffs[1, 0] = float(s.outputs.values["coef_xa"])
         sixsCoeffs[1, 1] = float(s.outputs.values["coef_xb"])
@@ -1363,9 +1389,7 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
         sixsCoeffs[1, 5] = float(s.outputs.values["environmental_irradiance"])
 
         # Band 3
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_ETM_B3
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_ETM_B3)
         s.run()
         sixsCoeffs[2, 0] = float(s.outputs.values["coef_xa"])
         sixsCoeffs[2, 1] = float(s.outputs.values["coef_xb"])
@@ -1375,9 +1399,7 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
         sixsCoeffs[2, 5] = float(s.outputs.values["environmental_irradiance"])
 
         # Band 4
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_ETM_B4
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_ETM_B4)
         s.run()
         sixsCoeffs[3, 0] = float(s.outputs.values["coef_xa"])
         sixsCoeffs[3, 1] = float(s.outputs.values["coef_xb"])
@@ -1387,9 +1409,7 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
         sixsCoeffs[3, 5] = float(s.outputs.values["environmental_irradiance"])
 
         # Band 5
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_ETM_B5
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_ETM_B5)
         s.run()
         sixsCoeffs[4, 0] = float(s.outputs.values["coef_xa"])
         sixsCoeffs[4, 1] = float(s.outputs.values["coef_xb"])
@@ -1399,9 +1419,7 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
         sixsCoeffs[4, 5] = float(s.outputs.values["environmental_irradiance"])
 
         # Band 7
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_ETM_B7
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_ETM_B7)
         s.run()
         sixsCoeffs[5, 0] = float(s.outputs.values["coef_xa"])
         sixsCoeffs[5, 1] = float(s.outputs.values["coef_xb"])
@@ -1787,8 +1805,7 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
     ):
         """Used as part of the optimastion for identifying values of AOD"""
         print(
-            "Testing AOD Val: ",
-            aotVal,
+            "Testing AOD Val: ", aotVal,
         )
         s = Py6S.SixS()
 
@@ -1810,9 +1827,7 @@ class ARCSILandsatETMSensor(ARCSIAbstractSensor):
         s.aot550 = aotVal
 
         # Band 1 (Blue!)
-        s.wavelength = Py6S.Wavelength(
-            Py6S.PredefinedWavelengths.LANDSAT_ETM_B1
-        )
+        s.wavelength = Py6S.Wavelength(Py6S.PredefinedWavelengths.LANDSAT_ETM_B1)
         s.run()
         aX = float(s.outputs.values["coef_xa"])
         bX = float(s.outputs.values["coef_xb"])

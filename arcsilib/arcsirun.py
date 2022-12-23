@@ -35,26 +35,28 @@ Module that contains the ARCSIRun class.
 #
 ############################################################################
 
-import sys
-import subprocess
-import os
 import copy
 import glob
-import shutil
-import arcsilib
-from arcsilib.arcsiexception import ARCSIException
-import arcsilib.arcsiutils
-from arcsilib.arcsisensor import ARCSIAbstractSensor
-import rsgislib
-import rsgislib.imageutils
-import rsgislib.imagecalc
-import rsgislib.rastergis
-import rsgislib.imagecalibration
-import rsgislib.tools.utils
-import Py6S
-import osgeo.gdal as gdal
 import math
+import os
+import shutil
+import subprocess
+import sys
 from multiprocessing import Pool
+
+import Py6S
+import rsgislib
+import rsgislib.imagecalc
+import rsgislib.imagecalibration
+import rsgislib.imageutils
+import rsgislib.rastergis
+import rsgislib.tools.utils
+from osgeo import gdal
+
+import arcsilib
+import arcsilib.arcsiutils
+from arcsilib.arcsiexception import ARCSIException
+from arcsilib.arcsisensor import ARCSIAbstractSensor
 
 
 class ARCSIParamsObj(object):
@@ -173,6 +175,7 @@ class ARCSIParamsObj(object):
         cloud_methods = None
         flat_out_dir = False
 
+
 def prepParametersObj(
     inputHeader,
     inputImage,
@@ -241,7 +244,9 @@ def prepParametersObj(
     paramsObj.tmpPath = tmpPath
     paramsObj.outFilePath = outFilePath
     paramsObj.outFormat = outFormat
-    paramsObj.outFormatExt = ".{}".format(rsgislib.imageutils.get_file_img_extension(outFormat))
+    paramsObj.outFormatExt = ".{}".format(
+        rsgislib.imageutils.get_file_img_extension(outFormat)
+    )
     paramsObj.calcStatsPy = calcStatsPy
     paramsObj.outBaseName = outBaseName
     paramsObj.cloudMaskUsrImg = cloudMaskUsrImg
@@ -310,7 +315,10 @@ def prepParametersObj(
     print("")
 
     if not paramsObj.flat_out_dir:
-        scnOutPath = os.path.join(paramsObj.outFilePath, "{}".format(paramsObj.sensorClass.generateOutputBaseName()))
+        scnOutPath = os.path.join(
+            paramsObj.outFilePath,
+            "{}".format(paramsObj.sensorClass.generateOutputBaseName()),
+        )
         if not os.path.exists(scnOutPath):
             os.mkdir(scnOutPath)
         paramsObj.outFilePath = scnOutPath
@@ -318,7 +326,10 @@ def prepParametersObj(
     # Create a custom tmp directory for the scene.
     if (paramsObj.tmpPath is not None) and (paramsObj.tmpPath != ""):
         uidStr = rsgislib.tools.utils.uid_generator()
-        scnTmpPath = os.path.join(paramsObj.tmpPath, "{}_{}".format(paramsObj.sensorClass.generateOutputBaseName(), uidStr))
+        scnTmpPath = os.path.join(
+            paramsObj.tmpPath,
+            "{}_{}".format(paramsObj.sensorClass.generateOutputBaseName(), uidStr),
+        )
         if not os.path.exists(scnTmpPath):
             os.mkdir(scnTmpPath)
         paramsObj.tmpPath = scnTmpPath
@@ -1851,9 +1862,28 @@ def calculateSREF(paramsObj):
                 + paramsObj.processSREFStr
                 + paramsObj.outFormatExt
             )
-            paramsObj.srefImage = (
-                paramsObj.sensorClass.convertImageToSurfaceReflSglParam(
-                    paramsObj.radianceImage,
+            paramsObj.srefImage = paramsObj.sensorClass.convertImageToSurfaceReflSglParam(
+                paramsObj.radianceImage,
+                paramsObj.outFilePath,
+                outName,
+                paramsObj.outFormat,
+                paramsObj.aeroProfile,
+                paramsObj.atmosProfile,
+                paramsObj.grdRefl,
+                paramsObj.surfaceAltitude,
+                paramsObj.aotVal,
+                paramsObj.useBRDF,
+                paramsObj.scaleFactor,
+            )
+            if paramsObj.fullImgOuts:
+                outName = (
+                    paramsObj.outBaseName
+                    + paramsObj.processStageWholeImgStr
+                    + paramsObj.processSREFStr
+                    + paramsObj.outFormatExt
+                )
+                paramsObj.sref6SWholeImage = paramsObj.sensorClass.convertImageToSurfaceReflSglParam(
+                    paramsObj.radianceImageWhole,
                     paramsObj.outFilePath,
                     outName,
                     paramsObj.outFormat,
@@ -1864,29 +1894,6 @@ def calculateSREF(paramsObj):
                     paramsObj.aotVal,
                     paramsObj.useBRDF,
                     paramsObj.scaleFactor,
-                )
-            )
-            if paramsObj.fullImgOuts:
-                outName = (
-                    paramsObj.outBaseName
-                    + paramsObj.processStageWholeImgStr
-                    + paramsObj.processSREFStr
-                    + paramsObj.outFormatExt
-                )
-                paramsObj.sref6SWholeImage = (
-                    paramsObj.sensorClass.convertImageToSurfaceReflSglParam(
-                        paramsObj.radianceImageWhole,
-                        paramsObj.outFilePath,
-                        outName,
-                        paramsObj.outFormat,
-                        paramsObj.aeroProfile,
-                        paramsObj.atmosProfile,
-                        paramsObj.grdRefl,
-                        paramsObj.surfaceAltitude,
-                        paramsObj.aotVal,
-                        paramsObj.useBRDF,
-                        paramsObj.scaleFactor,
-                    )
                 )
             paramsObj.calcdOutVals["ARCSI_ELEVATION_VALUE"] = paramsObj.surfaceAltitude
         else:

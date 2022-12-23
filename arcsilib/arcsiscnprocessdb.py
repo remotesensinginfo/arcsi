@@ -1,12 +1,13 @@
-import sqlalchemy
-import sqlalchemy.orm
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.engine import Engine
-from sqlalchemy import event
-from sqlite3 import Connection as SQLite3Connection
 import logging
 import os
 import shutil
+from sqlite3 import Connection as SQLite3Connection
+
+import sqlalchemy
+import sqlalchemy.orm
+from sqlalchemy import event
+from sqlalchemy.engine import Engine
+from sqlalchemy.ext.declarative import declarative_base
 
 logger = logging.getLogger(__name__)
 

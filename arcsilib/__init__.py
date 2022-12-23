@@ -4,12 +4,12 @@ ARCSI - this file is needed to ensure it can be imported
 See other source files for details
 """
 
-from distutils.version import LooseVersion
 import os
+from distutils.version import LooseVersion
 
 ARCSI_VERSION_MAJOR = 4
 ARCSI_VERSION_MINOR = 0
-ARCSI_VERSION_PATCH = 1
+ARCSI_VERSION_PATCH = 2
 
 ARCSI_VERSION = f"{ARCSI_VERSION_MAJOR}.{ARCSI_VERSION_MINOR}.{ARCSI_VERSION_PATCH}"
 ARCSI_VERSION_OBJ = LooseVersion(ARCSI_VERSION)
@@ -22,13 +22,7 @@ ARCSI_SUPPORT_EMAIL = "rsgislib-support@googlegroups.com"
 
 ARCSI_WEBSITE = "http://www.rsgislib.org/arcsi"
 
-ARCSI_SENSORS_LIST = [
-    "lsmss",
-    "lstm",
-    "lsetm",
-    "lsoli",
-    "sen2"
-]
+ARCSI_SENSORS_LIST = ["lsmss", "lstm", "lsetm", "lsoli", "sen2"]
 ARCSI_PRODUCTS_LIST = [
     "RAD",
     "SATURATE",
