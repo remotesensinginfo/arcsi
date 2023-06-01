@@ -100,9 +100,9 @@ def resampleSpectralResponseFunc(wvlens, respFunc, outSamp, sampleMethod):
 
 
 def findMinimumElev(elev):
-    elevVal = -500
+    elevVal = -550
     outElev = 0
-    for i in range(50):
+    for i in range(100):
         if (elev > elevVal) & (elev < (elevVal + 100)):
             outElev = elevVal
             break
@@ -111,9 +111,9 @@ def findMinimumElev(elev):
 
 
 def findMaximumElev(elev):
-    elevVal = -500
+    elevVal = -550
     outElev = 0
-    for i in range(90):
+    for i in range(105):
         if (elev > elevVal) & (elev < (elevVal + 100)):
             outElev = elevVal + 100
             break
