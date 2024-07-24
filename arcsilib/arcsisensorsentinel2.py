@@ -256,16 +256,24 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
                 psd_version = int(schemaLocation.split(".")[0].split("-")[-1])
                 tag_search = "{{https://psd-{}.sentinel2.eo.esa.int/PSD/User_Product_Level-1C.xsd}}General_Info".format(psd_version)
                 generalInfoTag = root.find(tag_search)
+                print(f'generalInfoTag = {generalInfoTag} :: type = {type(generalInfoTag)}')
+
+                if generalInfoTag is None:
+                    raise ARCSIException(f'Unable to find General_Info tag using search: {tag_search}')
 
                 if psd_version == 13:
                     hdrFileVersion = "psd13"
-                elif psd_version == 14 or psd_version == 15:
+                elif psd_version >= 14:
                     # force version15 to version14 (version15 is introduced in baseline 5.11 on 2024-07-23)
                     hdrFileVersion = "psd14"
+                else:
+                    raise ARCSIException(
+                    f"PSD version = {psd_version}. Expected versions 13 or above"
+                )
 
-            except:
+            except Exception as error:
                 raise ARCSIException(
-                    "Cannot open top level section 'General_Info' - is this really a Sentinel-2 image file?"
+                    f"Problem parsing xml 'General_Info' tag. Message = {error}"
                 )
 
             productInfoTag = generalInfoTag.find("Product_Info")
