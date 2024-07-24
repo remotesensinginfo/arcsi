@@ -256,7 +256,6 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
                 psd_version = int(schemaLocation.split(".")[0].split("-")[-1])
                 tag_search = "{{https://psd-{}.sentinel2.eo.esa.int/PSD/User_Product_Level-1C.xsd}}General_Info".format(psd_version)
                 generalInfoTag = root.find(tag_search)
-                print(f'generalInfoTag = {generalInfoTag} :: type = {type(generalInfoTag)}')
 
                 if generalInfoTag is None:
                     raise ARCSIException(f'Unable to find General_Info tag using search: {tag_search}')
