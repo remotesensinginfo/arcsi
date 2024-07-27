@@ -43,7 +43,7 @@ import argparse
 import sqlite3
 import sys
 
-import rsgislib
+import rsgislib.tools.utils
 
 from arcsilib import ARCSI_VERSION
 from arcsilib.arcsiexception import ARCSIException

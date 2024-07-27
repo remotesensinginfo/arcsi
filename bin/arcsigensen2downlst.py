@@ -42,7 +42,7 @@ and create a list of image download commands.
 import argparse
 import sys
 
-import rsgislib
+import rsgislib.tools.utils
 
 from arcsilib import ARCSI_VERSION
 from arcsilib.arcsiexception import ARCSIException
