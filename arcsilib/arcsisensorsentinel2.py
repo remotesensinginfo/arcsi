@@ -251,21 +251,29 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             tree = ET.parse(inputHeader)
             root = tree.getroot()
 
-            generalInfoTag = root.find(
-                "{https://psd-14.sentinel2.eo.esa.int/PSD/User_Product_Level-1C.xsd}General_Info"
-            )
-            if generalInfoTag == None:
-                generalInfoTag = root.find(
-                    "{https://psd-13.sentinel2.eo.esa.int/PSD/User_Product_Level-1C.xsd}General_Info"
-                )
-                if generalInfoTag == None:
-                    raise ARCSIException(
-                        "Cannot open top level section 'General_Info' - is this really a Sentinel-2 image file?"
-                    )
-                else:
+            try:
+                schemaLocation = root.attrib.get('{http://www.w3.org/2001/XMLSchema-instance}schemaLocation')
+                psd_version = int(schemaLocation.split(".")[0].split("-")[-1])
+                tag_search = "{{https://psd-{}.sentinel2.eo.esa.int/PSD/User_Product_Level-1C.xsd}}General_Info".format(psd_version)
+                generalInfoTag = root.find(tag_search)
+
+                if generalInfoTag is None:
+                    raise ARCSIException(f'Unable to find General_Info tag using search: {tag_search}')
+
+                if psd_version == 13:
                     hdrFileVersion = "psd13"
-            else:
-                hdrFileVersion = "psd14"
+                elif psd_version >= 14:
+                    # force version15 to version14 (version15 is introduced in baseline 5.11 on 2024-07-23)
+                    hdrFileVersion = "psd14"
+                else:
+                    raise ARCSIException(
+                    f"PSD version = {psd_version}. Expected versions 13 or above"
+                )
+
+            except Exception as error:
+                raise ARCSIException(
+                    f"Problem parsing xml 'General_Info' tag. Message = {error}"
+                )
 
             productInfoTag = generalInfoTag.find("Product_Info")
             if productInfoTag == None:
@@ -1884,7 +1892,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             geometricInfoTag = None
 
             # Try for diffrent versions
-            for hdr_format_version in [12, 14]:
+            for hdr_format_version in [12, 15]:
                 if geometricInfoTag is None:
                     geometricInfoTag = root.find(
                         "{{https://psd-{}.sentinel2.eo.esa.int/PSD/S2_PDI_Level-1C_Tile_Metadata.xsd}}Geometric_Info".format(
@@ -2742,11 +2750,10 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         img_band11_tmp = None
         img_band12_tmp = None
 
-        basename = self.generateOutputBaseName() # use a basename which has the generation time for uniqueness
-
         if abs(self.ratiometric_offs_B1) > 0:
+            basename = os.path.splitext(os.path.basename(img_band02))[0]
             img_band02_tmp = os.path.join(
-                outputPath, "{}_B02_tmpoffapply.kea".format(basename)
+                outputPath, "{}_tmpoffapply.kea".format(basename)
             )
             exp = "b1 + {}".format(self.ratiometric_offs_B1)
             rsgislib.imagecalc.image_math(
@@ -2755,8 +2762,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             img_band02 = img_band02_tmp
 
         if abs(self.ratiometric_offs_B2) > 0:
+            basename = os.path.splitext(os.path.basename(img_band03))[0]
             img_band03_tmp = os.path.join(
-                outputPath, "{}_B03_tmpoffapply.kea".format(basename)
+                outputPath, "{}_tmpoffapply.kea".format(basename)
             )
             exp = "b1 + {}".format(self.ratiometric_offs_B2)
             rsgislib.imagecalc.image_math(
@@ -2765,8 +2773,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             img_band03 = img_band03_tmp
 
         if abs(self.ratiometric_offs_B3) > 0:
+            basename = os.path.splitext(os.path.basename(img_band04))[0]
             img_band04_tmp = os.path.join(
-                outputPath, "{}_B04_tmpoffapply.kea".format(basename)
+                outputPath, "{}_tmpoffapply.kea".format(basename)
             )
             exp = "b1 + {}".format(self.ratiometric_offs_B3)
             rsgislib.imagecalc.image_math(
@@ -2775,8 +2784,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             img_band04 = img_band04_tmp
 
         if abs(self.ratiometric_offs_B4) > 0:
+            basename = os.path.splitext(os.path.basename(img_band05))[0]
             img_band05_tmp = os.path.join(
-                outputPath, "{}_B05_tmpoffapply.kea".format(basename)
+                outputPath, "{}_tmpoffapply.kea".format(basename)
             )
             exp = "b1 + {}".format(self.ratiometric_offs_B4)
             rsgislib.imagecalc.image_math(
@@ -2785,8 +2795,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             img_band05 = img_band05_tmp
 
         if abs(self.ratiometric_offs_B5) > 0:
+            basename = os.path.splitext(os.path.basename(img_band06))[0]
             img_band06_tmp = os.path.join(
-                outputPath, "{}_B06_tmpoffapply.kea".format(basename)
+                outputPath, "{}_tmpoffapply.kea".format(basename)
             )
             exp = "b1 + {}".format(self.ratiometric_offs_B5)
             rsgislib.imagecalc.image_math(
@@ -2795,8 +2806,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             img_band06 = img_band06_tmp
 
         if abs(self.ratiometric_offs_B6) > 0:
+            basename = os.path.splitext(os.path.basename(img_band07))[0]
             img_band07_tmp = os.path.join(
-                outputPath, "{}_B07_tmpoffapply.kea".format(basename)
+                outputPath, "{}_tmpoffapply.kea".format(basename)
             )
             exp = "b1 + {}".format(self.ratiometric_offs_B6)
             rsgislib.imagecalc.image_math(
@@ -2805,8 +2817,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             img_band07 = img_band07_tmp
 
         if abs(self.ratiometric_offs_B7) > 0:
+            basename = os.path.splitext(os.path.basename(img_band08))[0]
             img_band08_tmp = os.path.join(
-                outputPath, "{}_B08_tmpoffapply.kea".format(basename)
+                outputPath, "{}_tmpoffapply.kea".format(basename)
             )
             exp = "b1 + {}".format(self.ratiometric_offs_B7)
             rsgislib.imagecalc.image_math(
@@ -2815,8 +2828,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             img_band08 = img_band08_tmp
 
         if abs(self.ratiometric_offs_B8) > 0:
+            basename = os.path.splitext(os.path.basename(img_band08A))[0]
             img_band08A_tmp = os.path.join(
-                outputPath, "{}_B8A_tmpoffapply.kea".format(basename)
+                outputPath, "{}_tmpoffapply.kea".format(basename)
             )
             exp = "b1 + {}".format(self.ratiometric_offs_B8)
             rsgislib.imagecalc.image_math(
@@ -2825,8 +2839,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             img_band08A = img_band08A_tmp
 
         if abs(self.ratiometric_offs_B11) > 0:
+            basename = os.path.splitext(os.path.basename(img_band11))[0]
             img_band11_tmp = os.path.join(
-                outputPath, "{}_B11_tmpoffapply.kea".format(basename)
+                outputPath, "{}_tmpoffapply.kea".format(basename)
             )
             exp = "b1 + {}".format(self.ratiometric_offs_B11)
             rsgislib.imagecalc.image_math(
@@ -2835,8 +2850,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             img_band11 = img_band11_tmp
 
         if abs(self.ratiometric_offs_B12) > 0:
+            basename = os.path.splitext(os.path.basename(img_band12))[0]
             img_band12_tmp = os.path.join(
-                outputPath, "{}_B12_tmpoffapply.kea".format(basename)
+                outputPath, "{}_tmpoffapply.kea".format(basename)
             )
             exp = "b1 + {}".format(self.ratiometric_offs_B12)
             rsgislib.imagecalc.image_math(
