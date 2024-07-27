@@ -254,7 +254,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             try:
                 schemaLocation = root.attrib.get('{http://www.w3.org/2001/XMLSchema-instance}schemaLocation')
                 psd_version = int(schemaLocation.split(".")[0].split("-")[-1])
-                tag_search = "{{https://psd-{}.sentinel2.eo.esa.int/PSD/User_Product_Level-1C.xsd}}General_Info".format(psd_version)
+                tag_search = f"{{https://psd-{psd_version}.sentinel2.eo.esa.int/PSD/User_Product_Level-1C.xsd}}General_Info"
                 generalInfoTag = root.find(tag_search)
 
                 if generalInfoTag is None:
@@ -1892,12 +1892,10 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             geometricInfoTag = None
 
             # Try for diffrent versions
-            for hdr_format_version in [12, 15]:
+            for hdr_format_version in [12, 14, 15]:
                 if geometricInfoTag is None:
                     geometricInfoTag = root.find(
-                        "{{https://psd-{}.sentinel2.eo.esa.int/PSD/S2_PDI_Level-1C_Tile_Metadata.xsd}}Geometric_Info".format(
-                            hdr_format_version
-                        )
+                        f"{{https://psd-{hdr_format_version}.sentinel2.eo.esa.int/PSD/S2_PDI_Level-1C_Tile_Metadata.xsd}}Geometric_Info"
                     )
 
             # If not found raise exception
@@ -2753,9 +2751,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B1) > 0:
             basename = os.path.splitext(os.path.basename(img_band02))[0]
             img_band02_tmp = os.path.join(
-                outputPath, "{}_tmpoffapply.kea".format(basename)
+                outputPath, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B1)
+            exp = f"b1 + {self.ratiometric_offs_B1}"
             rsgislib.imagecalc.image_math(
                 img_band02, img_band02_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -2764,9 +2762,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B2) > 0:
             basename = os.path.splitext(os.path.basename(img_band03))[0]
             img_band03_tmp = os.path.join(
-                outputPath, "{}_tmpoffapply.kea".format(basename)
+                outputPath, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B2)
+            exp = f"b1 + {self.ratiometric_offs_B2}"
             rsgislib.imagecalc.image_math(
                 img_band03, img_band03_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -2775,9 +2773,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B3) > 0:
             basename = os.path.splitext(os.path.basename(img_band04))[0]
             img_band04_tmp = os.path.join(
-                outputPath, "{}_tmpoffapply.kea".format(basename)
+                outputPath, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B3)
+            exp = f"b1 + {self.ratiometric_offs_B3}"
             rsgislib.imagecalc.image_math(
                 img_band04, img_band04_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -2786,9 +2784,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B4) > 0:
             basename = os.path.splitext(os.path.basename(img_band05))[0]
             img_band05_tmp = os.path.join(
-                outputPath, "{}_tmpoffapply.kea".format(basename)
+                outputPath, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B4)
+            exp = f"b1 + {self.ratiometric_offs_B4}"
             rsgislib.imagecalc.image_math(
                 img_band05, img_band05_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -2797,9 +2795,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B5) > 0:
             basename = os.path.splitext(os.path.basename(img_band06))[0]
             img_band06_tmp = os.path.join(
-                outputPath, "{}_tmpoffapply.kea".format(basename)
+                outputPath, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B5)
+            exp = f"b1 + {self.ratiometric_offs_B5}"
             rsgislib.imagecalc.image_math(
                 img_band06, img_band06_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -2808,9 +2806,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B6) > 0:
             basename = os.path.splitext(os.path.basename(img_band07))[0]
             img_band07_tmp = os.path.join(
-                outputPath, "{}_tmpoffapply.kea".format(basename)
+                outputPath, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B6)
+            exp = f"b1 + {self.ratiometric_offs_B6}"
             rsgislib.imagecalc.image_math(
                 img_band07, img_band07_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -2819,9 +2817,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B7) > 0:
             basename = os.path.splitext(os.path.basename(img_band08))[0]
             img_band08_tmp = os.path.join(
-                outputPath, "{}_tmpoffapply.kea".format(basename)
+                outputPath, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B7)
+            exp = f"b1 + {self.ratiometric_offs_B7}"
             rsgislib.imagecalc.image_math(
                 img_band08, img_band08_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -2830,9 +2828,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B8) > 0:
             basename = os.path.splitext(os.path.basename(img_band08A))[0]
             img_band08A_tmp = os.path.join(
-                outputPath, "{}_tmpoffapply.kea".format(basename)
+                outputPath, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B8)
+            exp = f"b1 + {self.ratiometric_offs_B8}"
             rsgislib.imagecalc.image_math(
                 img_band08A, img_band08A_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -2841,9 +2839,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B11) > 0:
             basename = os.path.splitext(os.path.basename(img_band11))[0]
             img_band11_tmp = os.path.join(
-                outputPath, "{}_tmpoffapply.kea".format(basename)
+                outputPath, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B11)
+            exp = f"b1 + {self.ratiometric_offs_B11}"
             rsgislib.imagecalc.image_math(
                 img_band11, img_band11_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -2852,9 +2850,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B12) > 0:
             basename = os.path.splitext(os.path.basename(img_band12))[0]
             img_band12_tmp = os.path.join(
-                outputPath, "{}_tmpoffapply.kea".format(basename)
+                outputPath, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B12)
+            exp = f"b1 + {self.ratiometric_offs_B12}"
             rsgislib.imagecalc.image_math(
                 img_band12, img_band12_tmp, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -2993,7 +2991,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
 
         #########################################################################################################
         # Create 13 band tmp images which has all image bands for input into cloud masking.
-        sen2ImgB01_tmp = os.path.join(tmpBaseDIR, tmpBaseName + "_B01.kea")
+        sen2ImgB01_tmp = os.path.join(tmpBaseDIR, f"{tmpBaseName}_B01.kea")
         rsgislib.imageutils.resample_img_to_match(
             inputReflImage,
             self.sen2ImgB01,
@@ -3003,7 +3001,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             rsgislib.TYPE_16UINT,
             multicore=False,
         )
-        sen2ImgB09_tmp = os.path.join(tmpBaseDIR, tmpBaseName + "_B09.kea")
+        sen2ImgB09_tmp = os.path.join(tmpBaseDIR, f"{tmpBaseName}_B09.kea")
         rsgislib.imageutils.resample_img_to_match(
             inputReflImage,
             self.sen2ImgB09,
@@ -3013,7 +3011,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             rsgislib.TYPE_16UINT,
             multicore=False,
         )
-        sen2ImgB10_tmp = os.path.join(tmpBaseDIR, tmpBaseName + "_B10.kea")
+        sen2ImgB10_tmp = os.path.join(tmpBaseDIR, f"{tmpBaseName}_B10.kea")
         rsgislib.imageutils.resample_img_to_match(
             inputReflImage,
             self.sen2ImgB10,
@@ -3027,9 +3025,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B0) > 0:
             basename = os.path.splitext(os.path.basename(sen2ImgB01_tmp))[0]
             sen2ImgB01_tmp2 = os.path.join(
-                tmpBaseDIR, "{}_tmpoffapply.kea".format(basename)
+                tmpBaseDIR, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B0)
+            exp = f"b1 + {self.ratiometric_offs_B0}"
             rsgislib.imagecalc.image_math(
                 sen2ImgB01_tmp, sen2ImgB01_tmp2, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -3038,9 +3036,9 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B9) > 0:
             basename = os.path.splitext(os.path.basename(sen2ImgB09_tmp))[0]
             sen2ImgB09_tmp2 = os.path.join(
-                tmpBaseDIR, "{}_tmpoffapply.kea".format(basename)
+                tmpBaseDIR, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B9)
+            exp = f"b1 + {self.ratiometric_offs_B9}"
             rsgislib.imagecalc.image_math(
                 sen2ImgB09_tmp, sen2ImgB09_tmp2, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
@@ -3049,31 +3047,31 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
         if abs(self.ratiometric_offs_B10) > 0:
             basename = os.path.splitext(os.path.basename(sen2ImgB10_tmp))[0]
             sen2ImgB10_tmp2 = os.path.join(
-                tmpBaseDIR, "{}_tmpoffapply.kea".format(basename)
+                tmpBaseDIR, f"{basename}_tmpoffapply.kea"
             )
-            exp = "b1 + {}".format(self.ratiometric_offs_B10)
+            exp = f"b1 + {self.ratiometric_offs_B10}"
             rsgislib.imagecalc.image_math(
                 sen2ImgB10_tmp, sen2ImgB10_tmp2, exp, "KEA", rsgislib.TYPE_32FLOAT
             )
             sen2ImgB10_tmp = sen2ImgB10_tmp2
 
         # Stack Image Bands
-        tmpTOAImg = os.path.join(tmpBaseDIR, tmpBaseName + "_pyfmasktmpTOA.kea")
+        tmpTOAImg = os.path.join(tmpBaseDIR, f"{tmpBaseName}_pyfmasktmpTOA.kea")
         if self.imgIntScaleFactor != 10000:
             vrtImgB1B9B10 = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_b01b09b10_60mBands.vrt"
+                tmpBaseDIR, f"{tmpBaseName}_b01b09b10_60mBands.vrt"
             )
             rsgislib.imageutils.create_stack_images_vrt(
                 [sen2ImgB01_tmp, sen2ImgB09_tmp, sen2ImgB10_tmp], vrtImgB1B9B10
             )
 
             sen2ImgB1B9B10Rescaled = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_B01B09B10Rescaled.kea"
+                tmpBaseDIR, f"{tmpBaseName}_B01B09B10Rescaled.kea"
             )
             rsgislib.imagecalc.image_math(
                 vrtImgB1B9B10,
                 sen2ImgB1B9B10Rescaled,
-                "(b1/10000)*{}".format(self.imgIntScaleFactor),
+                f"(b1/10000)*{self.imgIntScaleFactor}",
                 "KEA",
                 rsgislib.TYPE_16UINT,
             )
@@ -3098,7 +3096,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             )
 
         # Re-order image bands to be in correct order.
-        fmaskReflImg = os.path.join(tmpBaseDIR, tmpBaseName + "_pyfmaskRefl.kea")
+        fmaskReflImg = os.path.join(tmpBaseDIR, f"{tmpBaseName}_pyfmaskRefl.kea")
         rsgislib.imageutils.select_img_bands(
             tmpTOAImg,
             fmaskReflImg,
@@ -3122,7 +3120,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
                 0,
             )
             fmaskCloudsImg = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_pyfmaskCloudsResult.kea"
+                tmpBaseDIR, f"{tmpBaseName}_pyfmaskCloudsResult.kea"
             )
             fmaskFilenames = fmask.config.FmaskFilenames()
             fmaskFilenames.setTOAReflectanceFile(fmaskReflImg)
@@ -3174,7 +3172,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
 
             outputProbImage = os.path.join(outputPath, outputCloudProb)
             out_cloud_msk = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_s2cloudless_cloud_msk.kea"
+                tmpBaseDIR, f"{tmpBaseName}_s2cloudless_cloud_msk.kea"
             )
 
             run_s2cloudless(
@@ -3209,7 +3207,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             )
 
             out_s2less_cloud_msk = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_s2cloudless_cloud_msk.kea"
+                tmpBaseDIR, f"{tmpBaseName}_s2cloudless_cloud_msk.kea"
             )
             outputProbImage = os.path.join(outputPath, outputCloudProb)
             run_s2cloudless(
@@ -3226,7 +3224,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
             )
 
             out_fmsk_cloud_msk = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_fmsk_cloud_msk.kea"
+                tmpBaseDIR, f"{tmpBaseName}_fmsk_cloud_msk.kea"
             )
             use_frantz_disp = False
             if "S2LESSFMSKD" in cloud_msk_methods:
@@ -3243,7 +3241,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
 
             # Combine cloud masks
             out_cloud_msk = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_fmsk_s2l_cloud_msk.kea"
+                tmpBaseDIR, f"{tmpBaseName}_fmsk_s2l_cloud_msk.kea"
             )
             bandDefns = []
             bandDefns.append(
@@ -3260,7 +3258,7 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
 
             # Remove small cloud features
             out_cloud_msk_clumps = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_fmsk_s2l_cloud_msk_clumps.kea"
+                tmpBaseDIR, f"{tmpBaseName}_fmsk_s2l_cloud_msk_clumps.kea"
             )
             rsgislib.segmentation.clump(
                 out_cloud_msk, out_cloud_msk_clumps, "KEA", False, 0, False
@@ -3269,13 +3267,13 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
                 out_cloud_msk_clumps, True, False, True
             )
             out_cloud_msk_clumps_rmsml = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_fmsk_s2l_cloud_msk_clumps_rmsml.kea"
+                tmpBaseDIR, f"{tmpBaseName}_fmsk_s2l_cloud_msk_clumps_rmsml.kea"
             )
             rsgislib.segmentation.rm_small_clumps(
                 out_cloud_msk_clumps, out_cloud_msk_clumps_rmsml, 8, "KEA"
             )
             out_cloud_msk_rmsml = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_fmsk_s2l_cloud_msk_rmsml.kea"
+                tmpBaseDIR, f"{tmpBaseName}_fmsk_s2l_cloud_msk_rmsml.kea"
             )
             rsgislib.imagecalc.image_math(
                 out_cloud_msk_clumps_rmsml,
@@ -3287,11 +3285,11 @@ class ARCSISentinel2Sensor(ARCSIAbstractSensor):
 
             # Buffer the cloud features
             morph_operator = os.path.join(tmpBaseDIR, "morph_circ5")
-            morph_operator_file = "{}.gmtxt".format(morph_operator)
+            morph_operator_file = f"{morph_operator}.gmtxt"
             morph_op_size = 5
             rsgislib.imagemorphology.create_circular_op(morph_operator, morph_op_size)
             out_cloud_msk_dil = os.path.join(
-                tmpBaseDIR, tmpBaseName + "_fmsk_s2l_cloud_msk_dilate.kea"
+                tmpBaseDIR, f"{tmpBaseName}_fmsk_s2l_cloud_msk_dilate.kea"
             )
             rsgislib.imagemorphology.image_dilate(
                 out_cloud_msk_rmsml,
