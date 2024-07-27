@@ -2,7 +2,7 @@
 
 The Atmospheric and Radiometric Correction of Satellite Imagery (ARCSI) software provides a command line tool for the atmospheric correction of Earth Observation imagery. The aim of ARCSI is to provide as automatic as possible method of retrieving the atmospheric correction parameters and using them to parameterise 6S.
 
-To install ARCSI tot eh default location following command is to be used from within the ARCSI source directory:
+To install ARCSI to the default location, the following command is to be used from within the ARCSI source directory:
 
 ``
 pip install .
