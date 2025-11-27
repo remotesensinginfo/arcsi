@@ -1,6 +1,3 @@
-
-
-
 Tutorial
 ============
 
@@ -63,6 +60,7 @@ To use ARCSI to generate a surface reflectance product (alongside top of atmosph
 .. code-block:: bash
 
     arcsi.py -s lstm -f KEA --stats -p RAD TOA SREF --aot 0.25 \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --surfacealtitude 0.4 -o ./Outputs \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
@@ -73,13 +71,11 @@ To use ARCSI to generate a surface reflectance product (alongside top of atmosph
 
 ``--stats``: specifies that the output images should be populate with statistics and pyramids, makes data display much faster
 
-``-p RAD TOA SREF``: specifies the output products to be generated. You only need to specify what you want, e.g., SREF but if other products (e.g., RAD) are required then these will also be produced even if they are not
-    specified.
+``-p RAD TOA SREF``: specifies the output products to be generated. You only need to specify what you want, e.g., SREF but if other products (e.g., RAD) are required then these will also be produced even if they are not specified.
 
 ``--aeropro Maritime``: specifies that the 'Maritime' aerosol profile should be used.
 
-``--atmospro MidlatitudeSummer``: specifies that the 'MidlatitudeSummer' atmosphere profile should be
-    used.
+``--atmospro MidlatitudeSummer``: specifies that the 'MidlatitudeSummer' atmosphere profile should be used.
 
 ``--aot 0.25``: specifies that an AOT value of 0.25 will be used for the correction.
 
@@ -123,21 +119,25 @@ For example,
 
     # AOT 0.05
     arcsi.py -s lstm -f KEA --stats -p RAD TOA SREF --aot 0.05 \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --surfacealtitude 0.4 -o ./OutputsAOT005 \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
     # AOT 0.1
     arcsi.py -s lstm -f KEA --stats -p RAD TOA SREF --aot 0.1 \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --surfacealtitude 0.4 -o ./OutputsAOT01 \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
     # AOT 0.5
     arcsi.py -s lstm -f KEA --stats -p RAD TOA SREF --aot 0.5 \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --surfacealtitude 0.4 -o ./OutputsAOT05 \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
     # AOT 0.95
     arcsi.py -s lstm -f KEA --stats -p RAD TOA SREF --aot 0.95 \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --surfacealtitude 0.4 -o ./OutputsAOT95 \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
@@ -173,16 +173,19 @@ For example,
 
     # Water Content 0.5
     arcsi.py -s lstm -f KEA --stats -p RAD TOA SREF --aot 0.25 \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --surfacealtitude 0.4 --atmoswater 0.5 --atmosozone 0.9 -o ./OutputsWater05 \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
     # Water Content 3
     arcsi.py -s lstm -f KEA --stats -p RAD TOA SREF --aot 0.25 \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --surfacealtitude 0.4 --atmoswater 3 --atmosozone 0.9 -o ./OutputsWater3 \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
     # Water Content 9
     arcsi.py -s lstm -f KEA --stats -p RAD TOA SREF --aot 0.25 \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --surfacealtitude 0.4 --atmoswater 9 --atmosozone 0.9 -o ./OutputsWater9 \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
@@ -200,6 +203,7 @@ ARCSI provides a method of doing this using a dark object subtraction (DOS) to e
 .. code-block:: bash
 
     arcsi.py -s lstm -f KEA --stats -p RAD DOSAOTSGL SREF METADATA \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     -o ./OutputsAOTInv  --dem ./UKSRTM_90m.kea --tmpath ./tmp \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
@@ -224,6 +228,7 @@ ARCSI has a number of other products and options which can be applied. However, 
 .. code-block:: bash
 
     arcsi.py -s lstm -p CLOUDS DOSAOTSGL STDSREF METADATA -o ./OutputsStdSREF/ \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --stats --format KEA --tmpath ./tmp \
     --dem ./UKSRTM_90m.kea --cloudmethods LSMSK \
     --keepfileends  stdsref.kea clouds.kea meta.json \
@@ -235,6 +240,10 @@ Where:
     standardised reflectance, estimation of AOT via a dark object subtractions, undertake a cloud mask and produce metadata file.
 
 ``-o ./OutputsStdSREF/``:  directory where outputs will be outputted.
+
+``--aeropro Maritime``: specifies that the 'Maritime' aerosol profile should be used.
+
+``--atmospro MidlatitudeSummer``: specifies that the 'MidlatitudeSummer' atmosphere profile should be used.
 
 ``--stats``: statistics and pyramids (overviews) should be created for visualisation.
 
@@ -263,6 +272,7 @@ Depending on your use case you may want to keep more outputs, in this case the t
 .. code-block:: bash
 
     arcsi.py -s lstm -p CLOUDS DOSAOTSGL STDSREF SATURATE TOPOSHADOW FOOTPRINT \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     -o ./OutputsStdSREF2/ --stats --format KEA --tmpath ./tmp \
     --dem ./UKSRTM_90m.kea --cloudmethods LSMSK \
     --k  clouds.kea meta.json sat.kea toposhad.kea valid.kea stdsref.kea \
@@ -277,6 +287,7 @@ By default the masks generated by ARCSI are applied to the image being processed
 .. code-block:: bash
 
     arcsi.py -s lstm -p CLOUDS DOSAOTSGL STDSREF SATURATE TOPOSHADOW FOOTPRINT \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     -o ./OutputsStdSREFFull/ --stats --format KEA --tmpath ./tmp \
     --dem ./UKSRTM_90m.kea --cloudmethods LSMSK \
     --fullimgouts --k  clouds.kea meta.json sat.kea toposhad.kea valid.kea stdsref.kea \
@@ -324,6 +335,7 @@ The following command will undertake the same analysis as above but the output w
 .. code-block:: bash
 
     arcsi.py -s lstm -p CLOUDS DOSAOTSGL STDSREF SATURATE TOPOSHADOW FOOTPRINT \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     -o ./OutputsStdSREFOSGB/ --stats --format KEA --tmpath ./tmp --dem ./UKSRTM_90m.kea \
     --cloudmethods LSMSK --projabbv osgb --outwkt BritishNationalGrid.wkt \
     --k  clouds.kea meta.json sat.kea toposhad.kea valid.kea stdsref.kea \
@@ -342,6 +354,7 @@ The 'clear-sky' product can produced by simply adding ``CLEARSKY`` to the list o
 .. code-block:: bash
 
     arcsi.py -s lstm -p CLOUDS DOSAOTSGL STDSREF SATURATE TOPOSHADOW FOOTPRINT CLEARSKY \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     -o ./OutputsStdSREFClearSky/ --stats --format KEA --tmpath ./tmp \
     --dem ./UKSRTM_90m.kea --cloudmethods LSMSK \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
@@ -355,6 +368,7 @@ Some sensors (e.g., Landsat) have thermal channels and ARCSI can process these a
 .. code-block:: bash
 
     arcsi.py -s lstm -p DOSAOTSGL SREF THERMAL \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     -o ./OutputsThermal/ --stats --format KEA --tmpath ./tmp --dem ./UKSRTM_90m.kea \
     -i LT05_L1TP_203024_19950815_20180217_01_T1/LT05_L1TP_203024_19950815_20180217_01_T1_MTL.txt
 
@@ -376,6 +390,7 @@ I have provided a sample Sentinel-2 scene over North Wales, just cutting off Nor
 .. code-block:: bash
 
     arcsi.py -s sen2 -f KEA --stats -p DOSAOTSGL SREF METADATA \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     -o ./OutputsSen2_10m  --dem ./UKSRTM_90m.kea --tmpath ./tmp \
     -i S2A_MSIL1C_20170617T113321_N0205_R080_T30UVD_20170617T113319.SAFE/MTD_MSIL1C.xml
 
@@ -385,6 +400,7 @@ The following command produces a 20 m resolution output:
 .. code-block:: bash
 
     arcsi.py -s sen2 -f KEA --stats -p DOSAOTSGL SREF METADATA \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     -o ./OutputsSen2_20m  --dem ./UKSRTM_90m.kea --tmpath ./tmp --resample2lowres \
     -i S2A_MSIL1C_20170617T113321_N0205_R080_T30UVD_20170617T113319.SAFE/MTD_MSIL1C.xml
 
@@ -394,6 +410,7 @@ Finally, the following command produces a 10 m resolution product where the 20 m
 .. code-block:: bash
 
     arcsi.py -s sen2 -f KEA --stats -p DOSAOTSGL SREF METADATA SHARP \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     -o ./OutputsSen2_10mSharp  --dem ./UKSRTM_90m.kea --tmpath ./tmp \
     -i S2A_MSIL1C_20170617T113321_N0205_R080_T30UVD_20170617T113319.SAFE/MTD_MSIL1C.xml
 
@@ -406,6 +423,7 @@ When running through Sentinel-2 to create an Analysis Ready Data (ARD) product t
 .. code-block:: bash
 
     arcsi.py -s sen2 -p CLOUDS DOSAOTSGL STDSREF SHARP METADATA -o ./OutputsSen2ARD/ \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --stats --format KEA --tmpath ./tmp --dem ./UKSRTM_90m.kea \
     --cloudmethods S2LESSFMSK --keepfileends  stdsref.kea clouds.kea meta.json \
     -i S2A_MSIL1C_20170617T113321_N0205_R080_T30UVD_20170617T113319.SAFE/MTD_MSIL1C.xml
@@ -480,6 +498,7 @@ Notice that these are very similar to the individual commands that you previousl
 .. code-block:: bash
 
     arcsibuildcmdslist.py -s lstm -f KEA --stats -p CLOUDS DOSAOTSGL STDSREF \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --outpath ./Outputs --dem ../UKSRTM_90m.kea --cloudmethods LSMSK \
     --keepfileends stdsref.kea clouds.kea \
     --tmpath ./tmp -i ./Inputs -e "*MTL.txt" -o LSARCSICmds.sh
@@ -492,6 +511,7 @@ If you have a selection of landsat scenes from different versions of the sensor 
 .. code-block:: bash
 
     arcsibuildcmdslist.py -s LANDSAT -f KEA --stats -p CLOUDS DOSAOTSGL STDSREF \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     --outpath ./Outputs --dem ../UKSRTM_90m.kea --cloudmethods LSMSK \
     --keepfileends stdsref.kea clouds.kea \
     --tmpath ./tmp -i ./Inputs -e "*MTL.txt" -o LSARCSICmds.sh
@@ -528,10 +548,11 @@ As an example, the following command was used to process several thousand Sentin
 .. code-block:: bash
 
     arcsibuildcmdslist.py -i ./Inputs -o ./Sen2ARCSICmds.sh \
+    --aeropro Maritime --atmospro MidlatitudeSummer \
     -e "*MTD*.xml" -d 1 -f KEA --stats --outpath ./Outputs --cloudmethods LSMSK \
     -p RAD SATURATE TOPOSHADOW TOA CLOUDS DOSAOTSGL SREF STDSREF SHARP FOOTPRINT METADATA \
     -s sen2 --checkouts --fullimgouts --outproj4 ./osgb_proj4.prj \
-    --projabbv osgb --tmpath ./tmp --dem ./SRTM_1arc_UK.kea
+    --projabbv osgb --tmpath ./tmp --dem ./UKSRTM_90m.kea
 
 
 Downloading Landsat and Sentinel-2 Data
@@ -602,7 +623,8 @@ To download image for the French Guiana coast to assess mangrove change then the
 
 Note. the ``--lstcmds`` switch requests that the full commands are outputted rather than just the urls and ``--multi`` specifies that multiple connections are used for the download.
 
-### Perform Download
+Perform Download
+~~~~~~~~~~~~~~~~~~~~
 
 To perform the download requires that the Google Cloud tools are downloaded and set up on your machine such that the ``gsutils`` commands is available on your system.
 
